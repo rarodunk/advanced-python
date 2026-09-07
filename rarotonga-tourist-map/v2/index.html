@@ -25,7 +25,8 @@ button{border:0;background:none;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
 /* ---------- stage ---------- */
-#stage{position:fixed;inset:0;touch-action:none}
+#stage{position:fixed;inset:0;touch-action:none;
+  background:linear-gradient(#0a2740 0%,#0e4b6b 42%,#12688c 62%,#0a3f5c 100%)}
 #gl{display:block;width:100%;height:100%}
 #markers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
@@ -736,82 +737,143 @@ for (const [k, c] of Object.entries(CATS)) for (const r of c.raw) CAT_OF[r] = k;
 PLACES.forEach(p => { p.group = CAT_OF[p.cat] || "do"; });
 
 /* =========================================================================
-   THE ISLAND'S SHAPE — one model, used for the mesh, the pins and the maths
+   THE ISLAND'S SHAPE — built from published figures, not from imagination.
+
+   Rarotonga covers 67.4 km2 and the coast road runs 32 km, which fits an
+   ellipse about 5.18 km east–west by 4.14 km north–south. Every peak below
+   sits at its surveyed coordinate, converted to a bearing and a distance from
+   the island's centre. The ridges between them are generated — no elevation
+   model was reachable from here — but they are generated the way volcanic
+   islands actually erode: knife-edge spurs radiating from the caldera rim with
+   deep valleys between, which is why Rarotonga looks the way it does from a
+   plane and why the Cross-Island Track has to climb one ridge and drop off it.
    ========================================================================= */
 const CX = 500, CY = 400, RING_KM = 32, RING_MIN = 38;
+const UNITS_PER_KM = 56.2;
+const A_UNITS = 5.18 * UNITS_PER_KM, B_UNITS = 4.14 * UNITS_PER_KM;
+
 const px = (deg, r) => CX + r * Math.sin(deg * Math.PI / 180);
 const py = (deg, r) => CY - r * Math.cos(deg * Math.PI / 180);
 const bump = (deg, c, w, a) => { let d = ((deg - c + 540) % 360) - 180; return a * Math.exp(-(d*d)/(2*w*w)); };
+const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+// The ellipse, then the features that actually notch it: Avana passage on the
+// east, the Ngatangiia embayment behind Muri, the Black Rock headland, and the
+// flatter northern shore where the airport and town sit on reclaimed flat.
 function coastR(deg){
-  return 262
-    + bump(deg, 316,  9,  16)   // Black Rock headland
-    - bump(deg, 103, 11,  22)   // Avana passage
-    - bump(deg, 128, 15,  10)   // land recedes behind Muri lagoon
-    + bump(deg, 232, 22,  10)   // Aroa foreland
-    - bump(deg, 356, 26,   8)   // Avarua's flatter shore
-    + Math.sin(deg * 0.122) * 5 + Math.sin(deg * 0.213 + 1.4) * 3.5;
+  const t = deg * Math.PI / 180;
+  const ell = (A_UNITS * B_UNITS) / Math.hypot(B_UNITS * Math.sin(t), A_UNITS * Math.cos(t));
+  return ell
+    + bump(deg, 313,  8,  14)
+    - bump(deg, 103, 10,  26)
+    - bump(deg, 126, 16,  13)
+    + bump(deg, 236, 20,   8)
+    - bump(deg, 352, 24,  10)
+    + Math.sin(deg * 0.118) * 5 + Math.sin(deg * 0.207 + 1.4) * 3.4;
 }
+// The reef hugs the north shore and stands well off Muri and Titikaveka —
+// which is exactly why the snorkelling is on the south and east.
 function lagoonWidth(deg){
-  return 12 + bump(deg,120,26,46) + bump(deg,182,34,30) + bump(deg,236,24,16) + bump(deg,60,20,8);
+  return 11 + bump(deg,120,26,52) + bump(deg,182,34,34) + bump(deg,236,24,17) + bump(deg,60,20,9);
 }
-const PEAKS = [
-  { name:"Te Manga",     m:653, deg:45,  r:138, spread:64 },
-  { name:"Te Kou",       m:588, deg:215, r:118, spread:60 },
-  { name:"Ikurangi",     m:485, deg:18,  r:120, spread:44 },
-  { name:"Te Rua Manga", m:413, deg:335, r:95,  spread:24 },
-  { name:"Raemaru",      m:350, deg:268, r:145, spread:46 },
-  { name:"Maungatea",    m:509, deg:350, r:150, spread:44 }
-];
-// The valleys are what make Rarotonga read as Rarotonga from the air: deep
-// radial clefts running from the ridge to the coast, each with a road up it.
-const VALLEYS = [345, 358, 85, 105, 205, 240, 285, 60];
 
-const SEA = 0, VSCALE = 0.20;   // world units per metre — about 3x life, which is
-                                // enough for the ridges to read without turning the
-                                // island into a spire
+// Surveyed positions, converted from latitude and longitude.
+const PEAKS = [
+  { name:"Te Manga",     m:653, deg:81.0,  km:3.30, spread:52 },
+  { name:"Ikurangi",     m:485, deg:57.7,  km:2.37, spread:34 },
+  { name:"Te Kou",       m:588, deg:152.6, km:1.08, spread:48 },
+  { name:"Te Rua Manga", m:413, deg:226.3, km:0.99, spread:20 },
+  { name:"Raemaru",      m:357, deg:268.0, km:2.00, spread:34 },
+  { name:"Maungatea",    m:523, deg:350.0, km:1.90, spread:36 }
+];
+PEAKS.forEach(p => { p.r = p.km * UNITS_PER_KM; p.x = px(p.deg, p.r); p.y = py(p.deg, p.r); });
+
+// The big valleys, each of which really does carry a road or a stream inland.
+const VALLEYS = [
+  { deg:345, w:7 },  // Avatiu, where the Cross-Island Track starts
+  { deg:357, w:7 },  // Takuvaine, the town's water supply
+  { deg:35,  w:6 },  // Tupapa
+  { deg:88,  w:7 },  // Turangi
+  { deg:107, w:7 },  // Avana
+  { deg:205, w:8 },  // Papua, and Wigmore's waterfall
+  { deg:243, w:7 },  // Rutaki
+  { deg:283, w:7 }   // Arorangi
+];
+
+/* ---------- deterministic noise, for ridges that erode like real ones ---------- */
+function hash2(x, y){
+  let h = (x | 0) * 374761393 + (y | 0) * 668265263;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+function vnoise(x, y){
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  return hash2(xi, yi)     * (1-u) * (1-v) + hash2(xi+1, yi)   * u * (1-v)
+       + hash2(xi, yi+1)   * (1-u) * v     + hash2(xi+1, yi+1) * u * v;
+}
+// Ridged multifractal: the standard way to get sharp crests rather than dunes.
+function ridged(x, y, oct){
+  let sum = 0, amp = 0.5, freq = 1, norm = 0;
+  for (let i = 0; i < oct; i++){
+    const n = 1 - Math.abs(vnoise(x * freq, y * freq) * 2 - 1);
+    sum += n * n * amp; norm += amp;
+    amp *= 0.52; freq *= 2.07;
+  }
+  return sum / norm;
+}
+
+const SEA = 0, VSCALE = 0.185;   // world units per metre, about 3x life so the
+                                 // relief reads from an orbiting camera
 function elevation(deg, rad){
   const cr = coastR(deg);
   if (rad >= cr) return 0;
-  const t = 1 - rad / cr;
-  let h = 150 * Math.pow(t, 1.45);
+  const t = 1 - rad / cr;                       // 0 at the shore, 1 at the centre
   const X = px(deg, rad), Y = py(deg, rad);
+
+  let h = 88 * Math.pow(t, 1.3);                // the eroded shield
   for (const pk of PEAKS){
-    const d = Math.hypot(X - px(pk.deg, pk.r), Y - py(pk.deg, pk.r));
-    h += pk.m * 0.95 * Math.exp(-(d*d) / (2 * pk.spread * pk.spread));
+    const d = Math.hypot(X - pk.x, Y - pk.y);
+    h += pk.m * 0.92 * Math.exp(-(d*d) / (2 * pk.spread * pk.spread));
   }
+  // Knife ridges, held off the coastal flat where the villages and plantations are.
+  const belt = smoothstep(0.05, 0.34, t);
+  const rg = ridged(X * 0.0152, Y * 0.0152, 5);
+  h += (rg - 0.40) * 425 * belt * Math.min(1, 0.28 + h / 430);
+  // Then the named valleys cut down through all of it.
   let cut = 0;
-  for (const v of VALLEYS){ const dd = ((deg - v + 540) % 360) - 180; cut += Math.exp(-(dd*dd)/(2*7.5*7.5)); }
-  h *= 1 - 0.44 * Math.min(1, cut) * (1 - Math.pow(t, 2.4));
-  return h;
+  for (const v of VALLEYS){
+    const dd = ((deg - v.deg + 540) % 360) - 180;
+    cut = Math.max(cut, Math.exp(-(dd*dd) / (2 * v.w * v.w)));
+  }
+  h *= 1 - 0.52 * cut * smoothstep(0.02, 0.5, t);
+  return Math.max(5.5, h);   // the coastal flat is a few metres up, not at sea level
 }
-// Below the waterline: a shallow lagoon shelf, then the reef crest, then the
-// wall — which really does fall away to a thousand metres within sight of shore.
+// Below the waterline: the lagoon shelf, the reef crest, then the wall — which
+// really does fall past a thousand metres within sight of the beach.
 function seabed(deg, rad){
   const cr = coastR(deg), lw = lagoonWidth(deg), reef = cr + lw;
   if (rad < cr) return 0;
-  if (rad < reef){ const u = (rad - cr) / lw; return -(2 + 26 * Math.pow(u, 1.6)); }
-  const u = (rad - reef) / 120;
-  return -(6 + 300 * Math.pow(Math.min(1, u), 1.5));
+  if (rad < reef){ const u = (rad - cr) / lw; return -(1.5 + 22 * Math.pow(u, 1.7)); }
+  const u = Math.min(1, (rad - reef) / 110);
+  return -(4 + 330 * Math.pow(u, 1.4));
 }
-function heightAt(x, z){                       // world x/z -> metres
-  const dx = x - CX, dz = z - CY;
-  const rad = Math.hypot(dx, dz);
+function heightAt(x, z){
+  const dx = x - CX, dz = z - CY, rad = Math.hypot(dx, dz);
   let deg = Math.atan2(dx, -dz) * 180 / Math.PI; if (deg < 0) deg += 360;
   return rad < coastR(deg) ? elevation(deg, rad) : seabed(deg, rad);
 }
 
 /* =========================================================================
    THE RENDERER — raw WebGL, no library.
-   A 3D library would be ~600 KB for one lit mesh, and this app has to work
-   with no signal, so the whole renderer is here: two shaders, one terrain
-   mesh, a water sheet, and the road as a ribbon laid on the ground.
+   A 3D library would be ~600 KB for one lit mesh, and this app has to work with
+   no signal, so the whole renderer is here: two shaders, the island, a water
+   sheet, the reef surf and the road.
    ========================================================================= */
 const canvas = document.getElementById("gl");
-const gl = canvas.getContext("webgl", { antialias:true, alpha:false })
-        || canvas.getContext("experimental-webgl");
+const gl = canvas.getContext("webgl", { antialias:true, alpha:true })
+        || canvas.getContext("experimental-webgl", { alpha:true });
 
-/* ---------- 4x4 matrix maths, only the three operations needed ---------- */
 function mPerspective(fovy, aspect, near, far){
   const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
   return [f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0];
@@ -834,7 +896,6 @@ const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1
 const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
 
-/* ---------- shaders ---------- */
 const VS = `
 attribute vec3 aPos; attribute vec3 aNorm; attribute vec3 aCol;
 uniform mat4 uMVP; uniform vec3 uLight;
@@ -842,8 +903,10 @@ varying vec3 vCol; varying float vShade; varying float vDepth;
 void main(){
   vec4 clip = uMVP * vec4(aPos, 1.0);
   gl_Position = clip;
-  float d = max(dot(normalize(aNorm), normalize(uLight)), 0.0);
-  vShade = 0.34 + 0.72 * d;          // ambient floor, then the sun
+  vec3 n = normalize(aNorm);
+  float key = max(dot(n, normalize(uLight)), 0.0);
+  float sky = 0.5 + 0.5 * n.y;                 // light bouncing off the sky
+  vShade = 0.22 * sky + 0.86 * key;
   vCol = aCol;
   vDepth = clip.w;
 }`;
@@ -852,9 +915,9 @@ precision mediump float;
 varying vec3 vCol; varying float vShade; varying float vDepth;
 uniform float uAlpha; uniform vec3 uFog;
 void main(){
-  float fog = clamp((vDepth - 900.0) / 1400.0, 0.0, 0.72);
-  vec3 c = mix(vCol * vShade, uFog, fog);
-  gl_FragColor = vec4(c, uAlpha);
+  // aerial perspective: distance washes toward the haze on the horizon
+  float fog = clamp((vDepth - 700.0) / 1500.0, 0.0, 0.66);
+  gl_FragColor = vec4(mix(vCol * vShade, uFog, fog), uAlpha);
 }`;
 function compile(type, src){
   const sh = gl.createShader(type);
@@ -874,18 +937,18 @@ const U = { mvp:gl.getUniformLocation(prog,"uMVP"), light:gl.getUniformLocation(
             alpha:gl.getUniformLocation(prog,"uAlpha"), fog:gl.getUniformLocation(prog,"uFog") };
 
 function makeMesh(pos, norm, col, idx){
-  const mk = (data, n) => { const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-    return b; };
+  const buf = data => { const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
   const ib = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
-  return { pos:mk(pos), norm:mk(norm), col:mk(col), idx:ib, count:idx.length };
+  return { pos:buf(pos), norm:buf(norm), col:buf(col), idx:ib, count:idx.length };
 }
 function drawMesh(m, alpha){
   gl.uniform1f(U.alpha, alpha);
-  for (const [buf, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  for (const [b, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
   }
@@ -893,75 +956,110 @@ function drawMesh(m, alpha){
   gl.drawElements(gl.TRIANGLES, m.count, gl.UNSIGNED_SHORT, 0);
 }
 
-/* ---------- the island itself ---------- */
-const GRID = 168, SPAN = 1240, VSCALE_Y = VSCALE;
+/* ---------- the island ---------- */
+// 241x241 keeps the vertex count under the 65,536 that 16-bit indices allow,
+// which is what lets the ridges resolve without an extension.
+const GRID = 240, SPAN = 980;
 const lerp3 = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const rgb = h => [(h>>16&255)/255, (h>>8&255)/255, (h&255)/255];
-// Colour by what the ground is at that height, not by an arbitrary ramp: reef
-// and lagoon turquoise, a thin bright beach, planted lowland, forest, bare ridge.
-function groundColour(m){
-  if (m <= -40)      return rgb(0x06263c);
-  if (m <= -12)      return lerp3(rgb(0x0a3f5e), rgb(0x11809b), (m + 40) / 28);
-  if (m < 0)         return lerp3(rgb(0x19a5b4), rgb(0x63e0d6), (m + 12) / 12);
-  if (m < 4)         return rgb(0xf2e3bd);
-  if (m < 60)        return lerp3(rgb(0x67bb6d), rgb(0x3f8f52), m / 56);
-  if (m < 250)       return lerp3(rgb(0x3f8f52), rgb(0x22633e), (m - 60) / 190);
-  if (m < 430)       return lerp3(rgb(0x22633e), rgb(0x2f5f3d), (m - 250) / 180);
-  return lerp3(rgb(0x2f5f3d), rgb(0x8a8172), Math.min(1, (m - 430) / 220));
+
+// Colour by what the ground IS — height for the zone, then steepness, because
+// on Rarotonga the flat land is planted and the near-vertical faces are bare
+// rock and fern. That single rule is most of what makes it read as real.
+function groundColour(m, flatness){
+  let c;
+  if (m <= -60)      c = rgb(0x05203a);
+  else if (m <= -18) c = lerp3(rgb(0x0a3f66), rgb(0x1180a8), (m + 60) / 42);
+  else if (m < -1.5) c = lerp3(rgb(0x21b5bd), rgb(0x86ecdd), (m + 18) / 16.5);
+  else if (m < 3)    c = rgb(0xf6e8c4);
+  else if (m < 45)   c = lerp3(rgb(0x74c26f), rgb(0x4d9c57), m / 42);
+  else if (m < 200)  c = lerp3(rgb(0x4d9c57), rgb(0x2c7444), (m - 45) / 155);
+  else if (m < 420)  c = lerp3(rgb(0x2c7444), rgb(0x24603c), (m - 200) / 220);
+  else               c = lerp3(rgb(0x24603c), rgb(0x6f6a58), Math.min(1, (m - 420) / 210));
+  if (m > 6){
+    const steep = 1 - flatness;                       // 0 flat, 1 cliff
+    c = lerp3(c, rgb(0x8a7f6b), Math.pow(steep, 2.2) * 0.72);   // exposed rock
+    c = lerp3(c, rgb(0x8fd07a), Math.pow(flatness, 3) * 0.28);  // planted flat
+  }
+  return c;
 }
 const islandMesh = (() => {
-  const n = GRID + 1, pos = [], col = [], norm = new Array(n * n * 3).fill(0), idx = [];
+  const n = GRID + 1, pos = [], col = [], norm = [], idx = [];
   const H = new Float32Array(n * n);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
     const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
-    const m = heightAt(x + CX, z + CY);
-    H[j*n+i] = m;
-    pos.push(x, m * VSCALE_Y, z);
-    col.push(...groundColour(m));
+    H[j*n+i] = heightAt(x + CX, z + CY);
   }
-  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++){
-    const a = j*n+i, b = a+1, c = a+n, d = c+1;
-    idx.push(a, c, b, b, c, d);
-  }
-  // Per-vertex normals from the height field directly — cheaper and smoother
-  // than accumulating face normals over 56,000 triangles.
   const step = SPAN / GRID;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
+    const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
+    const m = H[j*n+i];
+    pos.push(x, m * VSCALE, z);
+    // normals straight from the height field: cheaper and smoother than
+    // accumulating them over 115,000 triangles
     const hl = H[j*n + Math.max(0, i-1)], hr = H[j*n + Math.min(n-1, i+1)];
     const hd = H[Math.max(0, j-1)*n + i], hu = H[Math.min(n-1, j+1)*n + i];
-    const nx = (hl - hr) * VSCALE_Y, nz = (hd - hu) * VSCALE_Y;
-    const v = norm3([nx, 2 * step, nz]);
-    const o = (j*n+i)*3; norm[o] = v[0]; norm[o+1] = v[1]; norm[o+2] = v[2];
+    const v = norm3([(hl - hr) * VSCALE, 2 * step, (hd - hu) * VSCALE]);
+    norm.push(v[0], v[1], v[2]);
+    col.push(...groundColour(m, v[1]));
+  }
+  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++){
+    const a = j*n+i; idx.push(a, a+n, a+1, a+1, a+n, a+n+1);
   }
   return makeMesh(pos, norm, col, idx);
 })();
 
-// One translucent sheet at sea level: everything under it reads as underwater,
-// which is what makes the lagoon look like water rather than paint.
+const abyssMesh = (() => {                    // hides the mesh's own edge
+  const S = 3200, c = rgb(0x072742);
+  return makeMesh([-S,-24,-S, S,-24,-S, S,-24,S, -S,-24,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
+                  [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
+})();
 const waterMesh = (() => {
-  const S = 1900, c = rgb(0x1592b4);
-  return makeMesh([-S,0.4,-S, S,0.4,-S, S,0.4,S, -S,0.4,S],
-                  [0,1,0, 0,1,0, 0,1,0, 0,1,0],
+  const S = 2100, c = rgb(0x1a93b6);
+  return makeMesh([-S,0.30,-S, S,0.30,-S, S,0.30,S, -S,0.30,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
                   [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
 })();
 
-// Ara Tapu as a ribbon that follows the actual ground it sits on, and the reef
-// crest as a band of foam where the swell breaks.
-function ribbon(radiusFn, yLift, halfWidth, colour){
-  const pos = [], col = [], norm = [], idx = [], N = 400;
+// A ribbon that follows the ground it sits on: used for the road, and for the
+// band of white water where the swell stands up on the reef.
+function ribbon(radiusFn, yLift, halfWidth, colour, jitter){
+  const pos = [], col = [], norm = [], idx = [], N = 460;
   for (let i = 0; i <= N; i++){
-    const deg = i / N * 360, r = radiusFn(deg);
+    const deg = i / N * 360;
+    const hw = halfWidth * (jitter ? 0.55 + 0.9 * vnoise(deg * 0.9, 3.7) : 1);
+    const r = radiusFn(deg);
     const x = px(deg, r) - CX, z = py(deg, r) - CY;
     const tx = Math.cos(deg * Math.PI/180), tz = Math.sin(deg * Math.PI/180);
-    const y = Math.max(0, heightAt(x + CX, z + CY)) * VSCALE_Y + yLift;
-    pos.push(x - tx*halfWidth, y, z - tz*halfWidth, x + tx*halfWidth, y, z + tz*halfWidth);
+    const y = Math.max(0, heightAt(x + CX, z + CY)) * VSCALE + yLift;
+    pos.push(x - tx*hw, y, z - tz*hw, x + tx*hw, y, z + tz*hw);
     norm.push(0,1,0, 0,1,0); col.push(...colour, ...colour);
     if (i < N){ const a = i*2; idx.push(a, a+1, a+2, a+1, a+3, a+2); }
   }
   return makeMesh(pos, norm, col, idx);
 }
-const roadMesh = ribbon(d => coastR(d) - 16, 1.1, 2.6, rgb(0xf7eed6));
-const reefMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 2, 1.0, 4.5, rgb(0xe8fbf7));
+const roadMesh = ribbon(d => coastR(d) - 15, 1.3, 2.4, rgb(0xf7eed6), false);
+const surfMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 1, 0.9, 7, rgb(0xf2fdfb), true);
+const foamMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 12, 0.7, 4, rgb(0xcdeee9), true);
+
+function drawScene(){
+  gl.clearColor(0, 0, 0, 0);                    // the sky is painted in CSS behind
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.uniformMatrix4fv(U.mvp, false, new Float32Array(viewProj));
+  gl.uniform3f(U.light, -0.55, 0.62, 0.40);     // late afternoon, from the west
+  gl.uniform3f(U.fog, 0.09, 0.30, 0.42);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(true);
+  drawMesh(abyssMesh, 1);
+  drawMesh(islandMesh, 1);
+  drawMesh(roadMesh, 1);
+  gl.depthMask(false);
+  drawMesh(waterMesh, 0.58);
+  drawMesh(surfMesh, 0.92);
+  drawMesh(foamMesh, 0.45);
+  gl.depthMask(true);
+}
 
 /* =========================================================================
    CAMERA — orbit, tilt, dolly, written here so touch and mouse behave alike
@@ -990,25 +1088,6 @@ function resize(){
   placeCamera();
 }
 addEventListener("resize", resize);
-
-function drawScene(){
-  gl.clearColor(0.016, 0.071, 0.122, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.enable(gl.DEPTH_TEST);
-  gl.uniformMatrix4fv(U.mvp, false, new Float32Array(viewProj));
-  gl.uniform3f(U.light, -0.52, 0.66, 0.42);
-  gl.uniform3f(U.fog, 0.016, 0.071, 0.122);
-  gl.disable(gl.BLEND);
-  gl.depthMask(true);
-  drawMesh(islandMesh, 1);
-  drawMesh(roadMesh, 1);
-  drawMesh(reefMesh, 1);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthMask(false);                       // water tints what is under it
-  drawMesh(waterMesh, 0.62);
-  gl.depthMask(true);
-}
 
 /* ---------- gestures ---------- */
 const stage = document.getElementById("stage");
@@ -1096,7 +1175,7 @@ document.getElementById("tiltBtn").onclick = () => {
    Kept as DOM rather than sprites so they stay crisp, tappable and legible.
    ========================================================================= */
 // Real coordinates, so Directions opens the phone's maps app on the actual spot.
-const ISLAND = { lat:-21.2330, lon:-159.7820, aKm:4.87, bKm:3.54 };
+const ISLAND = { lat:-21.2330, lon:-159.7820, aKm:5.18, bKm:4.14 };
 const KM_LAT = 110.57, kmLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
 function latLonOf(p){
   const t = p.deg * Math.PI / 180, a = ISLAND.aKm, b = ISLAND.bKm;
@@ -1211,7 +1290,7 @@ function directionsURL(p){
 }
 
 const state = { cats:new Set(Object.keys(CATS)), q:"", sel:null, favOnly:false,
-                favs:load("raro2.favs", []), biz:{}, ratings:{} };
+                favs:load("raro2.favs", []), biz:{}, ratings:{}, pending:{}, canEdit:false };
 function load(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
 function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 
@@ -1275,6 +1354,16 @@ let db = null;
   // page simply runs without shared listings.
   db = window.claude && claude.use ? await claude.use("db") : null;
   if (!db) return;
+  // Can this viewer publish live listings? The platform decides, not the page:
+  // a write below the required level is rejected, so we find out by trying once
+  // against a scratch document rather than by trusting anything client-side.
+  try { await db.doc("meta/editcheck").set({ at: Date.now() }); state.canEdit = true; }
+  catch { state.canEdit = false; }
+  db.collection("submissions").onSnapshot(snap => {
+    state.pending = {};
+    snap.docs.forEach(d => { state.pending[d.id] = d.data(); });
+    if (state.sel) openPlace(state.sel, false);
+  }, () => {});
   db.collection("businesses").onSnapshot(snap => {
     state.biz = {};
     snap.docs.forEach(d => { state.biz[d.id] = d.data(); });
@@ -1369,8 +1458,14 @@ function openPlace(id, fly = true){
       <div id="revs"></div>
       <div class="btnrow">
         <button class="btn ghost" id="rateBtn">Rate this place</button>
-        <button class="btn ghost" id="claimBtn">${b.updatedAt ? "Edit listing" : "I own this — add details"}</button>
+        <button class="btn ghost" id="claimBtn">${b.updatedAt ? "Update this listing" : "I own this — add details"}</button>
       </div>
+      ${state.pending[id] && state.canEdit ? `<div class="note" style="margin-top:12px">
+        <b>A submission is waiting.</b> ${esc(state.pending[id].tagline || state.pending[id].description || "").slice(0,140)}…
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn primary" id="approveBtn">Publish it</button>
+          <button class="btn ghost" id="rejectBtn">Discard</button></div></div>` : ""}
+      ${state.pending[id] && !state.canEdit ? `<p class="empty">An update from this business is waiting to be reviewed.</p>` : ""}
     </div>`);
 
   document.getElementById("favAct").onclick = () => {
@@ -1379,6 +1474,13 @@ function openPlace(id, fly = true){
     save("raro2.favs", state.favs); openPlace(id, false); camDirty = true;
   };
   document.getElementById("rateBtn").onclick = () => rateDialog(p);
+  const ap = document.getElementById("approveBtn"), rj = document.getElementById("rejectBtn");
+  if (ap) ap.onclick = async () => {
+    await db.doc("businesses/" + id).set(state.pending[id]);
+    await db.doc("submissions/" + id).delete();
+    openPlace(id, false);
+  };
+  if (rj) rj.onclick = async () => { await db.doc("submissions/" + id).delete(); openPlace(id, false); };
   document.getElementById("claimBtn").onclick = () => claimDialog(p);
   loadReviews(id);
 
@@ -1404,6 +1506,15 @@ async function loadReviews(id){
 }
 
 /* ---------- modals ---------- */
+function toast(msg){
+  const t = document.createElement("div");
+  t.style.cssText = "position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:90;" +
+    "background:var(--panel-3);color:var(--ink);padding:13px 18px;border-radius:14px;font-size:13.5px;" +
+    "box-shadow:var(--shadow);max-width:min(420px,88vw);text-align:center;border:1px solid var(--line)";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
 const modal = document.getElementById("modal"), modalCard = document.getElementById("modalCard");
 function openModal(html){ modalCard.innerHTML = html; modal.classList.add("on"); }
 function closeModal(){ modal.classList.remove("on"); }
@@ -1460,20 +1571,32 @@ function claimDialog(p){
         <input id="f_price" maxlength="12" value="${esc(b.price || "")}" placeholder="${esc(p.price)}"></div>
       <div class="btnrow"><button class="btn ghost" id="c">Cancel</button>
         <button class="btn primary" id="s">Publish listing</button></div>
-      <p class="hint" style="margin-top:12px">Anyone who can open this map can edit a listing, so this is a
-      community board rather than a verified register. Edits are visible immediately and attributed by time.</p>
+      <p class="hint" style="margin-top:12px">Only the guide's editors can publish straight to a live page.
+      Anyone else's changes go to a review queue first, so a business's own listing cannot be rewritten by a
+      passing visitor.</p>
     </div>`);
   modalCard.querySelector("#x").onclick = closeModal;
   modalCard.querySelector("#c").onclick = closeModal;
   modalCard.querySelector("#s").onclick = async () => {
     if (!db){ alert("The shared database is not available in this view, so listings cannot be saved."); return; }
-    const out = { updatedAt: Date.now() };
+    const out = { updatedAt: Date.now(), place: p.name };
     for (const k of ["tagline","description","phone","website","book","hours","price"]){
       const val = modalCard.querySelector("#f_" + k).value.trim();
       if (val) out[k] = val;
     }
-    try { await db.doc("businesses/" + p.id).set(out); closeModal(); openPlace(p.id, false); }
-    catch { alert("That did not save. Try again in a moment."); }
+    // A live listing is admin-only at the database level. Everyone else's edit
+    // lands in the review queue — enforced by the platform, not by hiding this
+    // button, so a determined visitor cannot overwrite a business's own page.
+    try {
+      await db.doc("businesses/" + p.id).set(out);
+      closeModal(); openPlace(p.id, false);
+    } catch {
+      try {
+        await db.doc("submissions/" + p.id).set(out);
+        closeModal(); openPlace(p.id, false);
+        toast("Sent for review. The island guide's editor will publish it to your page.");
+      } catch { alert("That did not send. Try again in a moment."); }
+    }
   };
 }
 
