@@ -1,83 +1,70 @@
 <title>Raro Live Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* ---------- tokens: light is the base, dark redefines only values ---------- */
 :root{
-  /* ui — warm bone paper, ink biased toward the water */
-  --ink:#132C34;
-  --ink-2:#4C6870;
-  --ink-3:#82979C;
-  --surface:#FCFAF5;
-  --surface-2:#F3EEE3;
-  --surface-3:#E8E1D2;
-  --line:#DFD7C6;
-  --shadow:0 12px 34px rgba(12,44,54,.14);
-  --accent:#C4432F;
-  --accent-soft:#F7E7E1;
-  --accent-ink:#FDF8F0;
-  --gold:#C8912F;
-  --good:#2E8B6B;
-  /* map — hypsometric tints, shallow-to-deep water */
-  --ocean-far:#0A3548;
-  --ocean-near:#125E79;
-  --lagoon-deep:#2E8CA0;
-  --lagoon-mid:#4FB6BC;
-  --lagoon-shallow:#A2DFD8;
-  --foam:#F7FBF9;
-  --sand:#E7DAB8;
-  --relief1:#84A06A;
-  --relief2:#71915C;
-  --relief3:#5F8251;
-  --relief4:#4E7147;
-  --relief5:#3F5E3D;
-  --contour:#2A4530;
-  --veg:#3B5C3C;
-  --rock:#7B6E5C;
-  --road:#FAF4E7;
-  --road-ink:#BFAE8C;
-  --maplabel:#12303A;
-  --maplabel-halo:rgba(252,250,245,.9);
-  --waterlabel:#DCF1EE;
+  /* ui */
+  --ink:#10323C;
+  --ink-2:#3C5B64;
+  --ink-3:#6E8A91;
+  --surface:#FFFDF7;
+  --surface-2:#F3EFE3;
+  --surface-3:#E7E1D1;
+  --line:#DCD5C3;
+  --shadow:0 10px 30px rgba(10,60,70,.16);
+  --accent:#F2513F;
+  --accent-soft:#FDE3DE;
+  --accent-ink:#FFF4DF;
+  --gold:#FFB23F;
+  --good:#17A67C;
+  /* map */
+  --ocean-far:#0A4F63;
+  --ocean-near:#12809B;
+  --lagoon:#2FCBC0;
+  --lagoon-hi:#8CEFE4;
+  --foam:#FFFFFF;
+  --sand:#FFE9BC;
+  --land:#4FB06B;
+  --land-hi:#6FCB85;
+  --ridge:#1F6B45;
+  --ridge-hi:#2E8F58;
+  --rock:#8E7C63;
+  --road:#FFF4DF;
+  --road-ink:#C8B892;
+  --maplabel:#0B3A45;
+  --maplabel-halo:rgba(255,244,223,.85);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --ink:#E7F1EE; --ink-2:#A4BEC0; --ink-3:#78939A;
-    --surface:#0C222B; --surface-2:#12303B; --surface-3:#1B4150;
-    --line:#1E4557; --shadow:0 12px 34px rgba(0,0,0,.5);
-    --accent:#E4614A; --accent-soft:#38201B; --accent-ink:#180A07;
-    --gold:#DFAE55; --good:#3DBB92;
-    --ocean-far:#03161F; --ocean-near:#0A3A4C;
-    --lagoon-deep:#146B7C; --lagoon-mid:#1D8A90; --lagoon-shallow:#37A79F;
-    --foam:#CFE9E4; --sand:#B9A87F;
-    --relief1:#3E5A43; --relief2:#36503C; --relief3:#2E4635; --relief4:#273C2E; --relief5:#203227;
-    --contour:#8FBE9A; --veg:#79A385; --rock:#5A5044;
-    --road:#E8DCC0; --road-ink:#7E7156;
-    --maplabel:#E8F3EE; --maplabel-halo:rgba(3,22,31,.85);
-    --waterlabel:#7FB8B6;
+    --ink:#EAF6F4; --ink-2:#A9C6C8; --ink-3:#7A9BA0;
+    --surface:#0B2A36; --surface-2:#123844; --surface-3:#1B4854;
+    --line:#1F5062; --shadow:0 10px 30px rgba(0,0,0,.45);
+    --accent:#FF6A55; --accent-soft:#3A1E1C; --accent-ink:#1A0B09; --gold:#FFC163; --good:#3FD3A5;
+    --ocean-far:#031C27; --ocean-near:#0A4256; --lagoon:#1B8E92; --lagoon-hi:#3FBFB6;
+    --foam:#BFEFE9; --sand:#C6A874; --land:#2E7A50; --land-hi:#3E9862;
+    --ridge:#12452F; --ridge-hi:#1D6641; --rock:#5E5344;
+    --road:#F0E2C3; --road-ink:#8A7A58;
+    --maplabel:#EAF6F4; --maplabel-halo:rgba(3,28,39,.8);
   }
 }
 :root[data-theme="dark"]{
-  --ink:#E7F1EE; --ink-2:#A4BEC0; --ink-3:#78939A;
-  --surface:#0C222B; --surface-2:#12303B; --surface-3:#1B4150;
-  --line:#1E4557; --shadow:0 12px 34px rgba(0,0,0,.5);
-  --accent:#E4614A; --accent-soft:#38201B; --accent-ink:#180A07;
-  --gold:#DFAE55; --good:#3DBB92;
-  --ocean-far:#03161F; --ocean-near:#0A3A4C;
-  --lagoon-deep:#146B7C; --lagoon-mid:#1D8A90; --lagoon-shallow:#37A79F;
-  --foam:#CFE9E4; --sand:#B9A87F;
-  --relief1:#3E5A43; --relief2:#36503C; --relief3:#2E4635; --relief4:#273C2E; --relief5:#203227;
-  --contour:#8FBE9A; --veg:#79A385; --rock:#5A5044;
-  --road:#E8DCC0; --road-ink:#7E7156;
-  --maplabel:#E8F3EE; --maplabel-halo:rgba(3,22,31,.85);
-  --waterlabel:#7FB8B6;
+  --ink:#EAF6F4; --ink-2:#A9C6C8; --ink-3:#7A9BA0;
+  --surface:#0B2A36; --surface-2:#123844; --surface-3:#1B4854;
+  --line:#1F5062; --shadow:0 10px 30px rgba(0,0,0,.45);
+  --accent:#FF6A55; --accent-soft:#3A1E1C; --accent-ink:#1A0B09; --gold:#FFC163; --good:#3FD3A5;
+  --ocean-far:#031C27; --ocean-near:#0A4256; --lagoon:#1B8E92; --lagoon-hi:#3FBFB6;
+  --foam:#BFEFE9; --sand:#C6A874; --land:#2E7A50; --land-hi:#3E9862;
+  --ridge:#12452F; --ridge-hi:#1D6641; --rock:#5E5344;
+  --road:#F0E2C3; --road-ink:#8A7A58;
+  --maplabel:#EAF6F4; --maplabel-halo:rgba(3,28,39,.8);
 }
 
 *{box-sizing:border-box}
 body{
   margin:0; background:var(--ocean-far); color:var(--ink);
-  font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-family:"Nunito Sans",system-ui,-apple-system,Segoe UI,sans-serif;
   -webkit-font-smoothing:antialiased; overflow:hidden;
 }
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
@@ -86,7 +73,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 /* ---------- shell ---------- */
 .shell{position:fixed;inset:0;display:grid;grid-template-columns:1fr min(400px,34vw);}
 .stage{position:relative;overflow:hidden;background:var(--ocean-far)}
-/* pan-y keeps the page scrollable on a phone; drag and pinch are handled here */
+/* pan-y keeps a phone able to scroll the page; drag and pinch are handled here */
 #map{width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
 #map.dragging{cursor:grabbing}
 
@@ -104,7 +91,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   background:linear-gradient(150deg,var(--lagoon),var(--ocean-near));font-size:19px;
 }
 .brand h1{
-  margin:0;font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;
+  margin:0;font-family:Fredoka,system-ui,sans-serif;font-weight:600;
   font-size:19px;letter-spacing:-.01em;line-height:1;
 }
 .brand p{margin:3px 0 0;font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
@@ -146,7 +133,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .zoomstack{right:14px;bottom:14px;display:flex;flex-direction:column;gap:7px;align-items:flex-end}
 .zbtn{
   width:42px;height:42px;border-radius:14px;background:var(--surface);box-shadow:var(--shadow);
-  display:grid;place-items:center;font-size:19px;font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;
+  display:grid;place-items:center;font-size:19px;font-family:Fredoka,sans-serif;font-weight:600;
 }
 .zbtn.small{font-size:13px;letter-spacing:.04em}
 .zbtn:hover{background:var(--surface-2)}
@@ -168,7 +155,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
 }
 .hero h2{
-  margin:8px 0 0;font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;font-size:28px;
+  margin:8px 0 0;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:28px;
   line-height:1.08;letter-spacing:-.02em;text-wrap:balance;
 }
 .hero .where{margin:7px 0 0;font-size:13px;color:var(--ink-2)}
@@ -187,7 +174,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   display:grid;grid-template-columns:26px 1fr;gap:11px;padding:14px 15px;border-radius:14px;
   background:var(--accent-soft);color:var(--ink);font-size:13.5px;line-height:1.55;margin:0 0 16px;
 }
-.tip b{font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;display:block;margin-bottom:2px;font-size:12px;
+.tip b{font-family:Fredoka,sans-serif;font-weight:600;display:block;margin-bottom:2px;font-size:12px;
   text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
 .tip .ic{font-size:17px;line-height:1.2}
 
@@ -249,7 +236,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 
 /* ---------- location card ---------- */
 .loccard{padding:20px 22px;border-bottom:1px solid var(--line)}
-.loccard h3{margin:0 0 6px;font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;font-size:19px;letter-spacing:-.01em}
+.loccard h3{margin:0 0 6px;font-family:Fredoka,sans-serif;font-weight:600;font-size:19px;letter-spacing:-.01em}
 .loccard p{margin:0 0 14px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
 .loccard p.small{font-size:12px;color:var(--ink-3);margin:12px 0 0}
 .fix{
@@ -288,7 +275,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   font-family:"IBM Plex Mono",monospace;font-size:12.5px;text-align:right;color:var(--ink);
   font-variant-numeric:tabular-nums;line-height:1.3;
 }
-.row .d small{display:block;font-size:10.5px;color:var(--ink-3);font-family:Archivo,system-ui,sans-serif}
+.row .d small{display:block;font-size:10.5px;color:var(--ink-3);font-family:"Nunito Sans",sans-serif}
 
 .legs{padding:6px 18px 4px;display:flex;flex-direction:column}
 .leg{
@@ -312,7 +299,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   margin:12px 22px 18px;padding:14px 16px;border-radius:14px;background:var(--surface-2);
   display:flex;justify-content:space-between;align-items:baseline;gap:12px;
 }
-.summary .big{font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;font-size:24px;letter-spacing:-.02em}
+.summary .big{font-family:Fredoka,sans-serif;font-weight:600;font-size:24px;letter-spacing:-.02em}
 .summary .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:700}
 .blank{padding:34px 24px;text-align:center;color:var(--ink-3);font-size:13.5px;line-height:1.6}
 .blank .big{font-size:30px;display:block;margin-bottom:10px}
@@ -343,7 +330,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 /* ---------- island brief ---------- */
 .brief{padding:20px 22px 6px}
 .brief h3{
-  margin:22px 0 4px;font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;font-size:18px;letter-spacing:-.01em;
+  margin:22px 0 4px;font-family:Fredoka,sans-serif;font-weight:600;font-size:18px;letter-spacing:-.01em;
 }
 .brief h3:first-child{margin-top:0}
 .brief .lede{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
@@ -360,7 +347,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 }
 .brief .stat:last-child{border-bottom:0}
 .brief .stat b{
-  font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-weight:600;font-size:19px;color:var(--accent);letter-spacing:-.02em;
+  font-family:Fredoka,sans-serif;font-weight:600;font-size:19px;color:var(--accent);letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;white-space:nowrap;
 }
 .brief .stat span{font-size:12.5px;line-height:1.5;color:var(--ink-2)}
@@ -388,57 +375,67 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 }
 @keyframes ping{0%{r:14;opacity:.6}80%,100%{r:34;opacity:0}}
 
-/* ---------- map pieces ----------
-   Cartographic convention, borrowed on purpose: physical and water features
-   are set in an italic serif, human settlement in tracked sans, and anything
-   numeric in mono. It is the fastest way to make a drawing read as a map. */
+/* ---------- map pieces ---------- */
 .pin{cursor:pointer}
-.pin .bubble{transition:transform .16s cubic-bezier(.32,1.4,.5,1)}
-.pin:hover .bubble,.pin:focus-visible .bubble{transform:scale(1.16)}
-.pin.sel .bubble{transform:scale(1.22)}
-.pin.sel .plabel{font-weight:700}
+.pin .bubble{transition:transform .14s cubic-bezier(.3,1.5,.5,1)}
+.pin:hover .bubble,.pin:focus-visible .bubble{transform:scale(1.14)}
 .pin .plabel{
-  font-family:Archivo,system-ui,sans-serif;font-weight:600;font-size:11.5px;fill:var(--maplabel);
-  letter-spacing:.005em;paint-order:stroke;stroke:var(--maplabel-halo);stroke-width:3.5px;
-  stroke-linejoin:round;text-anchor:middle;pointer-events:none;
-}
-.districtlabel{
-  font-family:Archivo,system-ui,sans-serif;font-weight:500;font-size:13px;fill:var(--maplabel);opacity:.5;
-  letter-spacing:.34em;text-anchor:middle;pointer-events:none;text-transform:uppercase;
-}
-.roadlabel{
-  font-family:"IBM Plex Mono",monospace;font-size:9.5px;fill:var(--road-ink);letter-spacing:.24em;
-  pointer-events:none;text-transform:uppercase;
-}
-.peaklabel{
-  font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-style:italic;font-weight:500;font-size:11.5px;
-  fill:var(--maplabel);paint-order:stroke;stroke:var(--maplabel-halo);stroke-width:3px;stroke-linejoin:round;
+  font-family:Fredoka,sans-serif;font-weight:600;font-size:13px;fill:var(--maplabel);
+  paint-order:stroke;stroke:var(--maplabel-halo);stroke-width:4px;stroke-linejoin:round;
   text-anchor:middle;pointer-events:none;
 }
-.peaklabel .m{font-family:"IBM Plex Mono",monospace;font-style:normal;font-size:9px;opacity:.7}
-.oceanlabel{
-  font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-style:italic;font-size:15px;fill:var(--waterlabel);
-  opacity:.55;letter-spacing:.42em;text-anchor:middle;pointer-events:none;
+.districtlabel{
+  font-family:Fredoka,sans-serif;font-weight:500;font-size:19px;fill:var(--maplabel);opacity:.62;
+  letter-spacing:.16em;text-anchor:middle;pointer-events:none;text-transform:uppercase;
 }
-.waterlabel{
-  font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-style:italic;font-size:11px;fill:var(--waterlabel);
-  opacity:.85;letter-spacing:.16em;text-anchor:middle;pointer-events:none;
+.roadlabel{font-family:"IBM Plex Mono",monospace;font-size:11px;fill:var(--road-ink);letter-spacing:.14em;pointer-events:none}
+.peaklabel{
+  font-family:Fredoka,sans-serif;font-weight:600;font-size:12px;fill:var(--maplabel);
+  paint-order:stroke;stroke:var(--maplabel-halo);stroke-width:3.5px;stroke-linejoin:round;
+  text-anchor:middle;pointer-events:none;
 }
-.motulabel{
-  font-family:Fraunces,"Iowan Old Style",Georgia,serif;font-style:italic;font-size:10.5px;fill:var(--maplabel);
-  paint-order:stroke;stroke:var(--maplabel-halo);stroke-width:2.5px;stroke-linejoin:round;
-  text-anchor:middle;pointer-events:none;opacity:.9;
-}
+.oceanlabel{font-family:Fredoka,sans-serif;font-size:15px;fill:var(--foam);opacity:.4;letter-spacing:.3em;text-anchor:middle;pointer-events:none}
 
-/* scroll hint — the map only zooms when you ask it to */
+/* scroll hint */
 .hint{
   position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:7;
-  background:rgba(8,32,42,.34);opacity:0;transition:opacity .18s ease;
+  background:rgba(6,34,44,.3);opacity:0;transition:opacity .18s ease;
 }
 .hint.show{opacity:1}
 .hint span{
   padding:11px 20px;border-radius:999px;background:var(--surface);color:var(--ink);
-  font-size:13.5px;font-weight:600;box-shadow:var(--shadow);
+  font-size:13.5px;font-weight:700;box-shadow:var(--shadow);
+}
+
+/* the selected pin sits proud of the rest */
+.pin.sel .bubble{transform:scale(1.22)}
+.pin.sel .plabel{font-weight:700}
+
+/* search results */
+.results{
+  position:absolute;top:calc(100% + 8px);left:0;right:0;background:var(--surface);border-radius:18px;
+  box-shadow:var(--shadow);overflow:hidden;max-height:min(52vh,380px);overflow-y:auto;z-index:9;
+  padding:6px;
+}
+.rrow{
+  width:100%;display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;text-align:left;
+  padding:9px 10px;border-radius:12px;
+}
+.rrow:hover,.rrow.active{background:var(--surface-2)}
+.rrow .ric{
+  width:32px;height:32px;border-radius:11px;display:grid;place-items:center;font-size:15px;
+  background:var(--surface-2);
+}
+.rrow .rt{font-weight:700;font-size:13.5px;line-height:1.25;display:block}
+.rrow .rs{font-size:11.5px;color:var(--ink-3);margin-top:2px;display:block}
+.rrow .rk{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.noresult{margin:0;padding:16px 14px;font-size:13px;line-height:1.55;color:var(--ink-3)}
+.reshead{
+  margin:0;padding:8px 12px 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;
+  color:var(--ink-3);font-weight:700;
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -479,7 +476,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 <div class="shell">
   <div class="stage">
     <svg id="map" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid slice" role="application"
-         aria-label="Relief map of Rarotonga with tappable places"></svg>
+         aria-label="Exaggerated cartoon map of Rarotonga with tappable places"></svg>
     <div class="hint" id="hint" aria-hidden="true"><span>Hold ⌘ or Ctrl and scroll to zoom · drag to pan</span></div>
 
     <div class="hud topbar">
@@ -499,7 +496,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       </div>
       <div class="searchwrap">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="search" type="search" placeholder="Search reef, curry, waterfall…" aria-label="Search places on Rarotonga">
+        <input id="search" type="search" placeholder="Search reef, curry, waterfall…" autocomplete="off"
+               aria-label="Search places on Rarotonga" aria-expanded="false" aria-controls="results">
+        <div class="results" id="results" role="listbox" hidden></div>
       </div>
     </div>
 
@@ -1080,70 +1079,11 @@ function ringPath(rFn, steps = 240){
 }
 
 const PEAKS = [
-  { name:"Te Manga",     m:653, deg:45,  r:136, spread:60, lx: 12, ly:  6, anchor:"start" },
-  { name:"Te Kou",       m:588, deg:212, r:116, spread:56, lx:  0, ly: -2 },
-  { name:"Maungatea",    m:509, deg:352, r:152, spread:44, lx:-12, ly: -6, anchor:"end" },
-  { name:"Ikurangi",     m:485, deg:20,  r:120, spread:42, lx: 12, ly:-14, anchor:"start" },
-  { name:"Te Rua Manga", m:413, deg:333, r:98,  spread:24, lx:-14, ly: -8, anchor:"end", needle:true },
-  { name:"Raemaru",      m:350, deg:268, r:148, spread:40, lx: -6, ly: -2 }
+  { name:"Te Manga",    m:653, deg:45,  r:138, w:104, h:118 },
+  { name:"Te Rua Manga",m:413, deg:335, r:95,  w:30,  h:130, needle:true },
+  { name:"Raemaru",     m:350, deg:268, r:145, w:96,  h:76,  flat:true },
+  { name:"Te Kou",      m:588, deg:215, r:118, w:88,  h:100 }
 ];
-
-/* The island's real drainage: deep radial valleys cut from the summit ridge to
-   the coast, which is why Rarotonga looks like a cog from the air rather than a
-   cone. Bearings of the main ones, used to carve the elevation field. */
-const VALLEYS = [345, 358, 22, 84, 104, 152, 205, 240, 286, 312];
-
-// Metres above the sea at a given bearing and cartoon radius.
-function elevation(deg, r){
-  const cr = coastR(deg);
-  if (r >= cr) return 0;
-  const t = 1 - r / cr;
-  let h = 250 * Math.pow(t, 1.3);
-  const X = px(deg, r), Y = py(deg, r);
-  for (const p of PEAKS){
-    const d = Math.hypot(X - px(p.deg, p.r), Y - py(p.deg, p.r));
-    h += p.m * 0.78 * Math.exp(-(d * d) / (2 * p.spread * p.spread));
-  }
-  let cut = 0;
-  for (const v of VALLEYS){
-    const dd = ((deg - v + 540) % 360) - 180;
-    cut += Math.exp(-(dd * dd) / (2 * 36));                    // ~6° wide
-  }
-  return h * (1 - 0.36 * Math.min(1, cut) * (1 - t * t));
-}
-
-/* Contour extraction: walk the bearings, and for each one find the outermost
-   radius where the land is still above the level. Angles with no crossing break
-   the ring, which is exactly what happens to a real contour around a summit. */
-function contourRings(level, step = 2){
-  const rings = [], STEPS = 360 / step;
-  let cur = null;
-  for (let i = 0; i <= STEPS; i++){
-    const deg = (i % STEPS) * step, cr = coastR(deg);
-    let hit = null;
-    for (let r = cr; r > 2; r -= 3){
-      if (elevation(deg, r) >= level){ hit = r; break; }
-    }
-    if (hit === null){ if (cur && cur.length > 2) rings.push(cur); cur = null; }
-    else { (cur ||= []).push([px(deg, hit), py(deg, hit)]); }
-  }
-  if (cur && cur.length > 2) rings.push(cur);
-  // one unbroken ring means the contour closes right round the island
-  const closed = rings.length === 1 && rings[0].length >= STEPS;
-  return { rings, closed };
-}
-const toPath = (pts, close) =>
-  pts.map((p,i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + (close ? " Z" : "");
-
-// Deterministic noise, so the vegetation and reef texture are identical on every load.
-function mulberry(seed){
-  return function(){
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
 
 const DISTRICTS = [
   { n:"Avarua",     deg:350, r:208 },
@@ -1167,203 +1107,136 @@ const el = (tag, attrs = {}, parent) => {
 
 function buildBaseMap(){
   const defs = el("defs", {}, svg);
-  const rnd = mulberry(20260907);
 
-  const grad = (id, stops, attrs) => {
-    const g = el("radialGradient", { id, ...attrs }, defs);
-    stops.forEach(([o,c,op]) => el("stop", { offset:o, "stop-color":c, ...(op !== undefined ? {"stop-opacity":op} : {}) }, g));
-    return g;
-  };
-  grad("oceanG", [["0%","var(--ocean-near)"],["100%","var(--ocean-far)"]], { cx:"50%", cy:"47%", r:"64%" });
-  // hillshade: light from the north-west, the way every legible relief map is lit
-  const shade = el("linearGradient", { id:"shadeG", x1:"0.15", y1:"0", x2:"0.85", y2:"1" }, defs);
-  el("stop", { offset:"0%",   "stop-color":"#FFFFFF", "stop-opacity":".28" }, shade);
-  el("stop", { offset:"46%",  "stop-color":"#FFFFFF", "stop-opacity":"0"   }, shade);
-  el("stop", { offset:"58%",  "stop-color":"#0B2A18", "stop-opacity":"0"   }, shade);
-  el("stop", { offset:"100%", "stop-color":"#0B2A18", "stop-opacity":".30" }, shade);
+  const og = el("radialGradient", { id:"oceanG", cx:"50%", cy:"46%", r:"62%" }, defs);
+  el("stop", { offset:"0%",  "stop-color":"var(--ocean-near)" }, og);
+  el("stop", { offset:"100%","stop-color":"var(--ocean-far)"  }, og);
+
+  const lg = el("radialGradient", { id:"lagoonG", cx:"50%", cy:"50%", r:"55%" }, defs);
+  el("stop", { offset:"70%",  "stop-color":"var(--lagoon-hi)" }, lg);
+  el("stop", { offset:"100%","stop-color":"var(--lagoon)"    }, lg);
+
+  const ld = el("linearGradient", { id:"landG", x1:"0", y1:"0", x2:"0", y2:"1" }, defs);
+  el("stop", { offset:"0%",  "stop-color":"var(--land-hi)" }, ld);
+  el("stop", { offset:"100%","stop-color":"var(--land)"    }, ld);
+
+  const rg = el("linearGradient", { id:"ridgeG", x1:"0", y1:"0", x2:"0", y2:"1" }, defs);
+  el("stop", { offset:"0%",  "stop-color":"var(--ridge-hi)" }, rg);
+  el("stop", { offset:"100%","stop-color":"var(--ridge)"    }, rg);
+
+  // tiare māori — the national flower — as a faint repeating motif in the open ocean,
+  // standing in for the tivaevae quilt patterns you see on every veranda here.
+  const pat = el("pattern", { id:"tiare", width:"120", height:"120", patternUnits:"userSpaceOnUse" }, defs);
+  const pg = el("g", { fill:"var(--foam)", opacity:".05" }, pat);
+  for (let i = 0; i < 6; i++){
+    const a = (i / 6) * Math.PI * 2;
+    el("ellipse", { cx:60 + Math.cos(a) * 15, cy:60 + Math.sin(a) * 15, rx:12, ry:7,
+                    transform:`rotate(${(a * 180 / Math.PI).toFixed(0)} ${60 + Math.cos(a) * 15} ${60 + Math.sin(a) * 15})` }, pg);
+  }
+  el("circle", { cx:60, cy:60, r:5, fill:"var(--gold)", opacity:".08" }, pat);
 
   const world = el("g", { id:"world" }, svg);
-  el("rect", { x:-700, y:-700, width:2400, height:2200, fill:"url(#oceanG)" }, world);
 
-  /* ---------- open ocean: swell, drawn as arcs that thin with distance ---------- */
-  const swell = el("g", { stroke:"var(--foam)", fill:"none", opacity:".12", "stroke-linecap":"round" }, world);
-  for (let ring = 0; ring < 5; ring++){
-    const count = 30 + ring * 6;
-    for (let i = 0; i < count; i++){
-      const deg = (i / count) * 360 + ring * 7.5;
-      const r = coastR(deg) + lagoonWidth(deg) + 40 + ring * 40 + rnd() * 14;
-      const x = px(deg, r), y = py(deg, r), w = 9 + ring;
-      el("path", { d:`M${x-w} ${y} q ${w/2} -4 ${w} 0 q ${w/2} 4 ${w} 0`, "stroke-width":(2.2 - ring*0.3).toFixed(1) }, swell);
+  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#oceanG)" }, world);
+  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#tiare)" }, world);
+
+  // open-ocean swell lines, drawn only outside the reef
+  const swell = el("g", { stroke:"var(--foam)", "stroke-width":2, fill:"none", opacity:".16",
+                          "stroke-linecap":"round" }, world);
+  for (let ring = 0; ring < 3; ring++){
+    for (let i = 0; i < 26; i++){
+      const deg = (i / 26) * 360 + ring * 5;
+      const r = coastR(deg) + lagoonWidth(deg) + 46 + ring * 34;
+      const x = px(deg, r), y = py(deg, r);
+      el("path", { d:`M${x - 13} ${y} q 6.5 -5 13 0 q 6.5 5 13 0` }, swell);
     }
   }
-  el("text", { class:"oceanlabel", x:500, y:52 }, world).textContent = "SOUTH PACIFIC OCEAN";
 
-  /* ---------- reef, lagoon, shelf ----------
-     Three real passages break the fringing reef: Avatiu and Avarua on the north
-     coast and Avana on the east. They are the only ways in by boat, and they are
-     why the harbours are where they are. */
-  const PASSAGES = [{ deg:352, w:5 }, { deg:2, w:4 }, { deg:102, w:6 }];
-  const inPassage = deg => PASSAGES.some(p => Math.abs(((deg - p.deg + 540) % 360) - 180) > 180 - p.w);
+  el("text", { class:"oceanlabel", x:500, y:56 }, world).textContent = "SOUTH  PACIFIC  OCEAN";
 
-  const reefOuter = d => coastR(d) + lagoonWidth(d) + 20;
-  const reefLine  = d => coastR(d) + lagoonWidth(d) + 6;
+  // reef → lagoon → beach → land, outside in
+  el("path", { d:ringPath(d => coastR(d) + lagoonWidth(d) + 16), fill:"var(--foam)", opacity:".55" }, world);
+  el("path", { d:ringPath(d => coastR(d) + lagoonWidth(d) + 7), fill:"var(--foam)", opacity:".9" }, world);
+  el("path", { d:ringPath(d => coastR(d) + lagoonWidth(d)), fill:"url(#lagoonG)" }, world);
+  el("path", { d:ringPath(d => coastR(d) + 9), fill:"var(--sand)" }, world);
+  el("path", { d:ringPath(coastR), fill:"url(#landG)" }, world);
 
-  el("path", { d:ringPath(reefOuter), fill:"var(--lagoon-deep)", opacity:".55" }, world);
-  el("path", { d:ringPath(d => coastR(d) + lagoonWidth(d)), fill:"var(--lagoon-mid)" }, world);
-  // the sand shelf: shallow water hugging the beach, wide where the lagoon is wide
-  el("path", { d:ringPath(d => coastR(d) + lagoonWidth(d) * 0.42 + 4), fill:"var(--lagoon-shallow)" }, world);
+  // interior ridge mass, then individual exaggerated peaks
+  el("path", { d:ringPath(d => 168 + Math.sin(d * 0.07) * 26 + Math.sin(d * 0.14 + 2) * 16), fill:"url(#ridgeG)", opacity:".92" }, world);
 
-  // breaking surf along the reef crest, interrupted at the passages
-  const surf = el("g", { stroke:"var(--foam)", fill:"none", "stroke-linecap":"round", opacity:".9" }, world);
-  for (let i = 0; i < 460; i++){
-    const deg = (i / 460) * 360;
-    if (inPassage(deg)) continue;
-    const r = reefLine(deg) + (rnd() - 0.5) * 5;
-    const a = deg * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a);
-    const x = px(deg, r), y = py(deg, r), len = 4 + rnd() * 5;
-    el("path", { d:`M${(x - dx*len).toFixed(1)} ${(y - dy*len).toFixed(1)} L${(x + dx*len).toFixed(1)} ${(y + dy*len).toFixed(1)}`,
-                 "stroke-width":(1 + rnd() * 1.6).toFixed(1) }, surf);
-  }
-  el("path", { d:ringPath(reefLine), fill:"none", stroke:"var(--foam)", "stroke-width":2.4, opacity:".75",
-               "stroke-dasharray":"46 9 22 9" }, world);
-
-  // coral heads scattered through the wider lagoons — the things you snorkel to
-  const heads = el("g", { fill:"var(--lagoon-deep)", opacity:".5" }, world);
-  for (let i = 0; i < 150; i++){
-    const deg = rnd() * 360, lw = lagoonWidth(deg);
-    if (lw < 24) continue;
-    const r = coastR(deg) + 8 + rnd() * (lw - 12);
-    el("ellipse", { cx:px(deg,r).toFixed(1), cy:py(deg,r).toFixed(1),
-                    rx:(1.6 + rnd()*3.4).toFixed(1), ry:(1.2 + rnd()*2.4).toFixed(1) }, heads);
-  }
-
-  /* ---------- the island ---------- */
-  el("path", { d:ringPath(d => coastR(d) + 8), fill:"var(--sand)" }, world);
-
-  const islandClip = el("clipPath", { id:"islandClip" }, defs);
-  el("path", { d:ringPath(coastR) }, islandClip);
-  const land = el("g", { "clip-path":"url(#islandClip)" }, world);
-
-  // hypsometric tints: each band is the ground above one contour
-  const LEVELS = [0, 90, 180, 280, 400, 530];
-  const TINTS  = ["var(--relief1)","var(--relief2)","var(--relief3)","var(--relief4)","var(--relief5)"];
-  el("path", { d:ringPath(coastR), fill:TINTS[0] }, land);
-  const contourStore = [];
-  for (let i = 1; i < LEVELS.length; i++){
-    const { rings, closed } = contourRings(LEVELS[i]);
-    contourStore.push({ level:LEVELS[i], rings, closed });
-    rings.forEach(r => el("path", { d:toPath(r, closed || r.length > 40), fill:TINTS[Math.min(i, TINTS.length-1)] }, land));
-  }
-  // contour lines on top of the tints, the way a topographic sheet prints them
-  const lines = el("g", { fill:"none", stroke:"var(--contour)", opacity:".26" }, land);
-  contourStore.forEach(({ rings, closed, level }) =>
-    rings.forEach(r => el("path", { d:toPath(r, closed || r.length > 40),
-                                    "stroke-width":level % 180 === 0 ? 1.4 : 0.8 }, lines)));
-
-  // vegetation stipple, denser on the coastal plain where the plantations are
-  const veg = el("g", { fill:"var(--veg)" }, land);
-  for (let i = 0; i < 1500; i++){
-    const deg = rnd() * 360, cr = coastR(deg), r = Math.sqrt(rnd()) * cr;
-    const h = elevation(deg, r);
-    if (rnd() > (h > 300 ? 0.16 : h > 140 ? 0.42 : 0.7)) continue;
-    const x = px(deg, r), y = py(deg, r), s = 1 + rnd() * 1.5;
-    el("path", { d:`M${(x-s).toFixed(1)} ${y.toFixed(1)} q${s.toFixed(1)} ${(-s*1.5).toFixed(1)} ${(s*2).toFixed(1)} 0`,
-                 fill:"none", stroke:"var(--veg)", "stroke-width":(0.8 + rnd()*0.7).toFixed(1),
-                 opacity:(0.16 + rnd()*0.24).toFixed(2) }, veg);
-  }
-
-  // the streams that made the valleys, running summit to sea
-  const streams = el("g", { fill:"none", stroke:"var(--lagoon-deep)", opacity:".3", "stroke-linecap":"round" }, land);
-  VALLEYS.forEach((v, i) => {
-    const wob = (i % 2 ? 1 : -1) * 5;
-    const pts = [], head = 108 + (i % 3) * 16;
-    for (let r = head; r < coastR(v) + 4; r += 10){
-      const f = (r - head) / (coastR(v) - head);
-      pts.push([px(v - wob * f + Math.sin(r / 19) * 2.2, r), py(v - wob * f + Math.sin(r / 19) * 2.2, r)]);
-    }
-    el("path", { d:toPath(pts, false), "stroke-width":1.2 }, streams);
-  });
-
-  el("path", { d:ringPath(coastR), fill:"url(#shadeG)" }, land);
-  el("path", { d:ringPath(coastR), fill:"none", stroke:"var(--contour)", "stroke-width":1.6, opacity:".45" }, world);
-
-  /* ---------- summits ---------- */
-  const summits = el("g", {}, world);
-  PEAKS.forEach(p => {
-    const x = px(p.deg, p.r), y = py(p.deg, p.r);
+  const peaks = el("g", {}, world);
+  PEAKS.sort((a,b) => py(a.deg,a.r) - py(b.deg,b.r)).forEach(p => {
+    const x = px(p.deg, p.r), y = py(p.deg, p.r), w = p.w, h = p.h;
     if (p.needle){
-      // Te Rua Manga is a bare basalt fin, so it gets rock rather than a tick
-      el("path", { d:`M${x-7} ${y+4} L${x-2} ${y-16} L${x+3} ${y-19} L${x+8} ${y+4} Z`, fill:"var(--rock)" }, summits);
-      el("path", { d:`M${x-2} ${y-16} L${x+3} ${y-19} L${x+8} ${y+4} L${x+1} ${y+4} Z`, fill:"#000", opacity:".22" }, summits);
+      // Te Rua Manga: a basalt fin. Pushed well past its real prominence on purpose —
+      // it is the island's silhouette, so on a cartoon map it gets to be the hero.
+      el("path", { d:`M${x - w*1.9} ${y} Q${x - w*0.7} ${y - h*0.38} ${x - w*0.5} ${y - h*0.52} L${x + w*0.5} ${y - h*0.52} Q${x + w*0.8} ${y - h*0.34} ${x + w*1.9} ${y} Z`,
+                   fill:"var(--ridge-hi)" }, peaks);
+      el("path", { d:`M${x - w/2} ${y - h*0.46} L${x - w/6} ${y - h*0.97} L${x + w/5} ${y - h} L${x + w/2} ${y - h*0.5} Z`,
+                   fill:"var(--rock)" }, peaks);
+      el("path", { d:`M${x - w/6} ${y - h*0.97} L${x + w/5} ${y - h} L${x + w/2} ${y - h*0.5} L${x} ${y - h*0.48} Z`,
+                   fill:"#000", opacity:".22" }, peaks);
+    } else if (p.flat){
+      el("path", { d:`M${x - w/2} ${y} L${x - w/3.4} ${y - h} L${x + w/3.4} ${y - h} L${x + w/2} ${y} Z`,
+                   fill:"var(--ridge-hi)" }, peaks);
+      el("path", { d:`M${x} ${y} L${x + w/3.4} ${y - h} L${x + w/2} ${y} Z`, fill:"#000", opacity:".14" }, peaks);
     } else {
-      el("path", { d:`M${x} ${y-7} L${x+6} ${y+4} L${x-6} ${y+4} Z`, fill:"var(--maplabel)", opacity:".72" }, summits);
+      el("path", { d:`M${x - w/2} ${y} Q${x - w/4} ${y - h*0.82} ${x} ${y - h} Q${x + w/4} ${y - h*0.82} ${x + w/2} ${y} Z`,
+                   fill:"var(--ridge-hi)" }, peaks);
+      el("path", { d:`M${x} ${y - h} Q${x + w/4} ${y - h*0.82} ${x + w/2} ${y} L${x} ${y} Z`, fill:"#000", opacity:".13" }, peaks);
+      // no snowcaps in the tropics: the highlight is the sunlit windward face
+      el("path", { d:`M${x - w*0.18} ${y - h*0.74} Q${x - w*0.06} ${y - h*0.95} ${x} ${y - h} Q${x - w*0.1} ${y - h*0.8} ${x - w*0.06} ${y - h*0.6} Z`,
+                   fill:"var(--land-hi)", opacity:".85" }, peaks);
     }
-    const t = el("text", { class:"peaklabel", x:x + (p.lx || 0), y:y - (p.needle ? 22 : 12) + (p.ly || 0),
-                           style:p.anchor ? `text-anchor:${p.anchor}` : "" }, summits);
-    t.textContent = p.name + " ";
-    el("tspan", { class:"m" }, t).textContent = p.m + " m";
+    el("text", { class:"peaklabel", x, y:y - h - 9 }, peaks)
+      .textContent = `${p.name} ${p.m}m`;
   });
 
-  /* ---------- motu, the four islets in Muri lagoon ---------- */
+  // Muri's four motu, blown up so you can actually see which is which
   const MOTU = [
-    { n:"Taakoka",  deg:136, r:294, rx:20, ry:13 },
-    { n:"Koromiri", deg:123, r:298, rx:25, ry:16 },
-    { n:"Oneroa",   deg:115, r:299, rx:17, ry:11 },
-    { n:"Motutapu", deg:108, r:297, rx:14, ry:10 }
+    { n:"Taakoka",  deg:135, r:296, rx:26, ry:17 },
+    { n:"Koromiri", deg:122, r:300, rx:31, ry:20 },
+    { n:"Oneroa",   deg:114, r:301, rx:22, ry:15 },
+    { n:"Motutapu", deg:108, r:299, rx:19, ry:13 }
   ];
   const motuG = el("g", {}, world);
   MOTU.forEach(m => {
     const x = px(m.deg, m.r), y = py(m.deg, m.r);
-    el("ellipse", { cx:x, cy:y, rx:m.rx + 6, ry:m.ry + 5, fill:"var(--lagoon-shallow)" }, motuG);
-    el("ellipse", { cx:x, cy:y, rx:m.rx + 2.5, ry:m.ry + 2, fill:"var(--sand)" }, motuG);
-    el("ellipse", { cx:x, cy:y, rx:m.rx, ry:m.ry, fill:"var(--relief2)" }, motuG);
-    for (let i = 0; i < 14; i++){
-      const a = rnd() * Math.PI * 2, rr = Math.sqrt(rnd());
-      el("circle", { cx:(x + Math.cos(a) * m.rx * rr * 0.85).toFixed(1),
-                     cy:(y + Math.sin(a) * m.ry * rr * 0.85).toFixed(1),
-                     r:(1.4 + rnd() * 1.6).toFixed(1), fill:"var(--relief4)", opacity:".55" }, motuG);
+    el("ellipse", { cx:x, cy:y + 2, rx:m.rx + 5, ry:m.ry + 4, fill:"var(--sand)" }, motuG);
+    el("ellipse", { cx:x, cy:y, rx:m.rx, ry:m.ry, fill:"var(--land)" }, motuG);
+    for (let i = -1; i <= 1; i++){
+      const tx = x + i * (m.rx * 0.45);
+      el("path", { d:`M${tx} ${y - 2} l0 -${m.ry + 9}`, stroke:"var(--ridge)", "stroke-width":2.4, "stroke-linecap":"round" }, motuG);
+      el("circle", { cx:tx, cy:y - m.ry - 12, r:6.5, fill:"var(--ridge-hi)" }, motuG);
     }
-    el("text", { class:"motulabel", x, y:y + m.ry + 12 }, motuG).textContent = m.n;
+    el("text", { class:"peaklabel", x, y:y + m.ry + 15 }, motuG).textContent = m.n;
   });
 
-  /* ---------- the two roads ---------- */
+  // Ara Tapu (coast road) and Ara Metua (the thousand-year-old inland road)
   const roads = el("g", { fill:"none", "stroke-linecap":"round" }, world);
-  el("path", { d:ringPath(d => coastR(d) - 15), stroke:"var(--road-ink)", "stroke-width":8, opacity:".7" }, roads);
-  el("path", { d:ringPath(d => coastR(d) - 15), stroke:"var(--road)", "stroke-width":5.2 }, roads);
-  el("path", { d:ringPath(d => coastR(d) - 58), stroke:"var(--road)", "stroke-width":2.6,
-               "stroke-dasharray":"9 8", opacity:".72" }, roads);
+  el("path", { d:ringPath(d => coastR(d) - 17), stroke:"var(--road-ink)", "stroke-width":13, opacity:".5" }, roads);
+  el("path", { d:ringPath(d => coastR(d) - 17), stroke:"var(--road)", "stroke-width":9 }, roads);
+  el("path", { d:ringPath(d => coastR(d) - 62), stroke:"var(--road)", "stroke-width":4.5,
+               "stroke-dasharray":"12 11", opacity:".8" }, roads);
 
-  el("path", { id:"araTapuLine", d:ringPath(d => coastR(d) - 30), fill:"none" }, defs);
+  const rp1 = el("path", { id:"araTapuLine", d:ringPath(d => coastR(d) - 17), fill:"none" }, defs);
   const t1 = el("text", { class:"roadlabel" }, world);
-  el("textPath", { href:"#araTapuLine", startOffset:"64%" }, t1).textContent = "Ara Tapu · 32 km";
-  el("path", { id:"araMetuaLine", d:ringPath(d => coastR(d) - 68), fill:"none" }, defs);
-  const t2 = el("text", { class:"roadlabel" }, world);
-  el("textPath", { href:"#araMetuaLine", startOffset:"22%" }, t2).textContent = "Ara Metua · c. 1000 years old";
+  const tp1 = el("textPath", { href:"#araTapuLine", startOffset:"63%" }, t1);
+  tp1.textContent = "ARA TAPU · 32 km · ONE ROAD, TWO DIRECTIONS";
 
-  /* ---------- named water and settlement ---------- */
-  [{ n:"Muri Lagoon", deg:126, r:300 }, { n:"Avana Passage", deg:102, r:290 },
-   { n:"Titikaveka Lagoon", deg:181, r:296 }, { n:"Aroa Lagoon", deg:236, r:288 }]
-    .forEach(w => el("text", { class:"waterlabel", x:px(w.deg, w.r), y:py(w.deg, w.r) }, world).textContent = w.n);
+  DISTRICTS.forEach(d => {
+    el("text", { class:"districtlabel", x:px(d.deg, d.r), y:py(d.deg, d.r) }, world).textContent = d.n;
+  });
 
-  DISTRICTS.forEach(d =>
-    el("text", { class:"districtlabel", x:px(d.deg, d.r), y:py(d.deg, d.r) }, world).textContent = d.n);
-
-  /* ---------- compass and scale ---------- */
-  const comp = el("g", { transform:"translate(112,640)" }, world);
-  el("circle", { r:26, fill:"none", stroke:"var(--foam)", "stroke-width":1, opacity:".35" }, comp);
-  el("path", { d:"M0 -24 L6 3 L0 -1 L-6 3 Z", fill:"var(--accent)" }, comp);
-  el("path", { d:"M0 24 L6 -3 L0 1 L-6 -3 Z", fill:"var(--foam)", opacity:".55" }, comp);
-  el("text", { class:"peaklabel", y:-31, style:"font-size:11px" }, comp).textContent = "N";
-
-  const scale = el("g", { transform:"translate(66,712)" }, world);
-  el("path", { d:"M0 0 H108 M0 -5 V5 M54 -3 V3 M108 -5 V5", stroke:"var(--foam)", "stroke-width":1.4, opacity:".6", fill:"none" }, scale);
-  el("text", { class:"roadlabel", x:0, y:-10, style:"fill:var(--foam);opacity:.6" }, scale).textContent = "0";
-  el("text", { class:"roadlabel", x:108, y:-10, style:"fill:var(--foam);opacity:.6;text-anchor:end" }, scale)
-    .textContent = "2 km";
+  // compass
+  const comp = el("g", { transform:"translate(112,636)", opacity:".8" }, world);
+  el("circle", { r:36, fill:"var(--foam)", opacity:".14" }, comp);
+  el("path", { d:"M0 -30 L9 4 L0 -3 L-9 4 Z", fill:"var(--accent)" }, comp);
+  el("path", { d:"M0 30 L9 -4 L0 3 L-9 -4 Z", fill:"var(--foam)", opacity:".7" }, comp);
+  el("text", { class:"peaklabel", y:-38, style:"font-size:13px" }, comp).textContent = "N";
 
   return world;
 }
-
 const world = buildBaseMap();
 const pinLayer = el("g", { id:"pins" }, world);
 
@@ -1376,22 +1249,6 @@ const meAvatar = el("g", { id:"meAvatar" }, meLayer);
 /* =========================================================================
    PINS
    ========================================================================= */
-/* Category glyphs, drawn rather than typed. Emoji render differently on every
-   platform and at map sizes they turn to mush; twelve path commands do not. */
-const GLYPHS = {
-  eat:      g => { el("path",{d:"M-4.4 -5 v4.6 M-4.4 -5 v10 M-6.6 -5 v4.6 M-2.2 -5 v4.6",...G},g);
-                   el("path",{d:"M4.6 -5 c-2.4 0 -2.4 5.6 0 5.6 v4.4",...G},g); },
-  drink:    g => { el("path",{d:"M-5 -5 h10 l-5 6 z M0 1 v5 M-3.4 6 h6.8",...G},g); },
-  swim:     g => { el("path",{d:"M-6.4 -1.6 q3.2 -3.4 6.4 0 q3.2 3.4 6.4 0 M-6.4 3.4 q3.2 -3.4 6.4 0 q3.2 3.4 6.4 0",...G},g); },
-  adventure:g => { el("path",{d:"M-7 5 L-1.4 -5 L1.6 0 L3.4 -2.6 L7 5 Z",...G},g); },
-  culture:  g => { el("circle",{cx:0,cy:0,r:1.9,...G},g);
-                   for(let i=0;i<5;i++){const a=i/5*Math.PI*2-Math.PI/2;
-                     el("ellipse",{cx:(Math.cos(a)*4).toFixed(1),cy:(Math.sin(a)*4).toFixed(1),rx:2.6,ry:1.5,
-                       transform:`rotate(${(a*180/Math.PI).toFixed(0)} ${(Math.cos(a)*4).toFixed(1)} ${(Math.sin(a)*4).toFixed(1)})`,...G},g);} },
-  knowhow:  g => { el("circle",{cx:0,cy:0,r:6.2,...G},g); el("path",{d:"M0 -3.4 v0.2 M0 -0.6 v4",...G},g); }
-};
-const G = { fill:"none", stroke:"currentColor", "stroke-width":1.5, "stroke-linecap":"round", "stroke-linejoin":"round" };
-
 const pinNodes = new Map();
 function buildPins(){
   PLACES.forEach(p => {
@@ -1399,31 +1256,19 @@ function buildPins(){
     const g = el("g", { class:"pin", tabindex:"0", role:"button",
                         "aria-label":`${p.name} — ${c.label} in ${p.district}` }, pinLayer);
     const b = el("g", { class:"bubble" }, g);
-
-    if (p.hero){
-      // headline places get a full marker; everything else gets a quiet dot
-      el("ellipse", { cx:0, cy:1.5, rx:7, ry:2.5, fill:"#06222C", opacity:".28" }, b);
-      el("path", { d:"M0 0 C-3.2 -7 -13.5 -10.5 -13.5 -19.5 A13.5 13.5 0 1 1 13.5 -19.5 C13.5 -10.5 3.2 -7 0 0 Z",
-                   fill:c.color, stroke:"var(--road)", "stroke-width":2 }, b);
-      const gl = el("g", { transform:"translate(0,-19.5)", color:"var(--road)", style:"color:var(--road)" }, b);
-      GLYPHS[p.cat](gl);
-    } else {
-      el("circle", { cx:0, cy:0, r:6.5, fill:"var(--road)", opacity:".9" }, b);
-      el("circle", { cx:0, cy:0, r:4.6, fill:c.color }, b);
-    }
-
-    // a ring that only shows once you've starred the place
-    const ring = el("circle", { cx:0, cy:p.hero ? -19.5 : 0, r:p.hero ? 17.5 : 9,
-                                fill:"none", stroke:"var(--gold)", "stroke-width":2.5, opacity:0 }, b);
-
-    const lab = el("text", { class:"plabel", x:0, y:p.hero ? 16 : 18 }, g);
+    el("path", { d:"M0 0 L-7 -12 L7 -12 Z", fill:c.color }, b);
+    el("circle", { cx:0, cy:-30, r:19, fill:c.color, stroke:"var(--road)", "stroke-width":3 }, b);
+    const t = el("text", { x:0, y:-23.5, "text-anchor":"middle", "font-size":"19",
+                           style:"pointer-events:none" }, b);
+    t.textContent = c.icon;
+    const lab = el("text", { class:"plabel", x:0, y:16 }, g);
     lab.textContent = p.name;
 
     const open = () => select(p.id);
     g.addEventListener("click", e => { e.stopPropagation(); open(); });
     g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); open(); } });
 
-    pinNodes.set(p.id, { g, lab, bubble:b, ring, place:p });
+    pinNodes.set(p.id, { g, lab, bubble:b });
   });
 }
 buildPins();
@@ -1443,9 +1288,14 @@ const MIN_K = 0.7, MAX_K = 4.5;
 function applyView(){
   world.setAttribute("transform", `translate(${view.x} ${view.y}) scale(${view.k})`);
   const inv = 1 / view.k;
+  // Sixty-one bubbles at full size is a pile. Headline places hold their size;
+  // everything else is a chip until you zoom in on it.
+  const minor = view.k < 1.2 ? 0.52 : view.k < 1.6 ? 0.72 : 1;
   PLACES.forEach(p => {
     const node = pinNodes.get(p.id);
-    node.g.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${inv})`);
+    const sc = inv * (p.hero ? 1 : minor);
+    node.scale = p.hero ? 1 : minor;
+    node.g.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${sc})`);
   });
   placeLabels();
   if (me.fix){
@@ -1457,49 +1307,62 @@ function applyView(){
     document.getElementById("meAccuracy").setAttribute("r", Math.max(0, accSvg));
   }
 }
-/* Label placement, the way a cartographer would do it: walk the candidates in
-   priority order and keep a name only if its box is still clear. Everything is
-   measured in viewBox units, and labels counter-scale, so a box is a constant
-   size no matter how far you have zoomed in. */
+/* Label placement, the way a cartographer does it: rank the candidates, then
+   keep a name only if its box is still clear of the bubbles and names already
+   on the map. Measured in viewBox units — labels counter-scale, so a box is the
+   same size however far you have zoomed in. Re-solved on every pan and zoom,
+   which is why the map never turns into a pile of overlapping text. */
 function placeLabels(){
-  const boxes = [], CH = 5.7, H = 13;
+  const boxes = [], CH = 6.4, H = 15;
 
-  // Reserve the space the map itself already occupies: every visible marker,
-  // and the summit names, which are part of the base map and never move.
+  // the space the map already occupies: every visible bubble, and the summits
   for (const p of PLACES){
     const node = pinNodes.get(p.id);
     if (node.g.style.pointerEvents === "none") continue;
     const sx = view.x + p.x * view.k, sy = view.y + p.y * view.k;
-    boxes.push(p.hero ? [sx - 14, sy - 38, sx + 14, sy + 2] : [sx - 8, sy - 9, sx + 8, sy + 4]);
+    const sc = node.scale ?? 1;
+    boxes.push([sx - 17 * sc, sy - 48 * sc, sx + 17 * sc, sy + 2]);
   }
   for (const pk of PEAKS){
-    const x = px(pk.deg, pk.r) + (pk.lx || 0);
-    const y = py(pk.deg, pk.r) - (pk.needle ? 22 : 12) + (pk.ly || 0);
-    const sx = view.x + x * view.k, sy = view.y + y * view.k;
-    const w = (pk.name.length + 6) * 5.2 * Math.min(1, view.k) + 10;
-    const off = pk.anchor === "start" ? w / 2 : pk.anchor === "end" ? -w / 2 : 0;
-    boxes.push([sx + off - w/2, sy - 11, sx + off + w/2, sy + 3]);
+    const sx = view.x + px(pk.deg, pk.r) * view.k;
+    const sy = view.y + (py(pk.deg, pk.r) - pk.h - 9) * view.k;
+    const w = (pk.name.length + 5) * 6 * Math.min(1, view.k) + 8;
+    boxes.push([sx - w/2, sy - 12, sx + w/2, sy + 4]);
   }
 
+  // Four places a name can sit, tried in the order a cartographer would try them.
+  // Local pin units; the pin group's own scale converts them to screen units.
+  const SPOTS = [[0, 16, "middle"], [0, -52, "middle"], [24, -22, "start"], [-24, -22, "end"]];
+
   const ranked = [...PLACES].sort((a, b) => {
-    const s = (p) => (state.selected === p.id ? 2 : 0) + (p.hero ? 1 : 0);
-    return s(b) - s(a);
+    const rank = p => (state.selected === p.id ? 4 : 0) + (state.saved.has(p.id) ? 2 : 0) + (p.hero ? 1 : 0);
+    return rank(b) - rank(a);
   });
   for (const p of ranked){
     const node = pinNodes.get(p.id);
     const sx = view.x + p.x * view.k, sy = view.y + p.y * view.k;
-    const hidden = node.g.style.pointerEvents === "none";
-    // off-screen, filtered out, or too zoomed out for a minor place: no label
-    if (hidden || sx < -60 || sx > 1060 || sy < -40 || sy > 840 ||
-        (!p.hero && state.selected !== p.id && view.k < 1.5)){
+    const forced = state.selected === p.id;
+    const offscreen = sx < -80 || sx > 1080 || sy < -60 || sy > 860;
+    if (node.g.style.pointerEvents === "none" || offscreen || (!forced && !p.hero && view.k < 1.45)){
       node.lab.style.display = "none"; continue;
     }
-    const w = p.name.length * CH, ly = sy + (p.hero ? 16 : 18);
-    const box = [sx - w/2, ly - H, sx + w/2, ly + 3];
-    const clash = boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
-    if (clash && state.selected !== p.id){ node.lab.style.display = "none"; continue; }
-    boxes.push(box);
+    const sc = node.scale ?? 1, w = p.name.length * CH * sc, h = H * sc;
+    let placed = null;
+    for (const [lx, ly, anchor] of SPOTS){
+      const cx = sx + lx * sc, cy = sy + ly * sc;
+      const x0 = anchor === "middle" ? cx - w/2 : anchor === "start" ? cx - 2 : cx - w + 2;
+      const box = [x0, cy - h, x0 + w, cy + 4];
+      const clash = boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]));
+      if (!clash){ placed = { lx, ly, anchor, box }; break; }
+    }
+    if (!placed && forced) placed = { ...Object.fromEntries([["lx",0],["ly",16],["anchor","middle"]]),
+                                      box:[sx - w/2, sy + 16*sc - h, sx + w/2, sy + 16*sc + 4] };
+    if (!placed){ node.lab.style.display = "none"; continue; }
+    node.lab.setAttribute("x", placed.lx);
+    node.lab.setAttribute("y", placed.ly);
+    node.lab.style.textAnchor = placed.anchor;
     node.lab.style.display = "";
+    boxes.push(placed.box);
   }
 }
 
@@ -1542,24 +1405,21 @@ svg.addEventListener("pointermove", e => {
 ["pointerup","pointercancel"].forEach(ev => svg.addEventListener(ev, () => {
   drag = null; svg.classList.remove("dragging");
 }));
-// A map that eats the scroll wheel traps the page it is embedded in. Plain
-// scrolling passes straight through; zooming asks for ctrl/cmd (which is also
-// what a trackpad pinch sends), and the hint says so the first time you try.
+// A map that eats the wheel traps the page it is embedded in. Plain scrolling
+// passes straight through; zooming asks for ctrl/cmd, which is also what a
+// trackpad pinch sends, and the hint says so the first time you try.
 let hintTimer = null;
 function flashHint(){
   const h = document.getElementById("hint");
-  if (!h) return;
   h.classList.add("show");
   clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => h.classList.remove("show"), 1300);
+  hintTimer = setTimeout(() => h.classList.remove("show"), 1400);
 }
 svg.addEventListener("wheel", e => {
   if (e.ctrlKey || e.metaKey){
     e.preventDefault();
-    zoomAt(e.deltaY < 0 ? 1.14 : 1 / 1.14, e.clientX, e.clientY);
-  } else if (Math.abs(e.deltaY) > 4){
-    flashHint();
-  }
+    zoomAt(e.deltaY < 0 ? 1.16 : 1 / 1.16, e.clientX, e.clientY);
+  } else if (Math.abs(e.deltaY) > 4) flashHint();
 }, { passive:false });
 
 // pinch
@@ -1613,7 +1473,7 @@ Object.entries(CATS).forEach(([key, c]) => {
       state.cats.delete(key);
       if (!state.cats.size) state.cats = new Set(Object.keys(CATS));
     } else state.cats.add(key);
-    syncCatChips(); render();
+    syncCatChips(); render(); renderResults();
   };
   b.dataset.cat = key;
   chipRow.appendChild(b);
@@ -1632,8 +1492,60 @@ toggleChip("freeChip","freeOnly");
 toggleChip("listChip","listOnly");
 document.getElementById("listChip").addEventListener("click", () => showTab("Loop"));
 
-document.getElementById("search").addEventListener("input", e => {
-  state.q = e.target.value.trim().toLowerCase(); render();
+/* Sixty-one places is more than a person can find by squinting at pins, so the
+   search box answers with a list. It respects the category and open-now chips,
+   so "what's open near the south coast right now" is three taps. */
+const searchEl = document.getElementById("search");
+const resultsEl = document.getElementById("results");
+let cursor = -1, hits = [];
+
+function renderResults(){
+  if (!state.q){ resultsEl.hidden = true; resultsEl.innerHTML = ""; searchEl.setAttribute("aria-expanded","false"); return; }
+  const t = raroNow();
+  hits = PLACES.filter(p => matches(p, t)).sort((a, b) => {
+    // a name match beats a match buried in the description
+    const score = p => (p.name.toLowerCase().includes(state.q) ? 2 : 0) + (p.hero ? 1 : 0);
+    return score(b) - score(a);
+  }).slice(0, 9);
+  cursor = -1;
+  resultsEl.hidden = false;
+  searchEl.setAttribute("aria-expanded","true");
+  if (!hits.length){
+    resultsEl.innerHTML = `<p class="noresult">Nothing matches that, at least not with the chips
+      you have on. Try <b>snorkel</b>, <b>cheap</b>, <b>sunset</b>, <b>rainy day</b> or <b>Sunday</b>.</p>`;
+    return;
+  }
+  resultsEl.innerHTML = `<p class="reshead">${hits.length} place${hits.length === 1 ? "" : "s"}</p>` +
+    hits.map((p, i) => {
+      const tr = travelTo(p), open = isOpen(p, t);
+      return `<button class="rrow" role="option" data-i="${i}" data-id="${p.id}">
+        <span class="ric" aria-hidden="true">${CATS[p.cat].icon}</span>
+        <span><span class="rt">${p.name}</span>
+          <span class="rs">${open === true ? "Open now · " : ""}${p.district} · ${p.price}</span></span>
+        <span class="rk">${tr ? tr.main : p.dur}</span></button>`;
+    }).join("");
+  resultsEl.querySelectorAll(".rrow").forEach(b =>
+    b.onclick = () => { select(b.dataset.id); closeResults(); });
+}
+function closeResults(){ resultsEl.hidden = true; searchEl.setAttribute("aria-expanded","false"); }
+function moveCursor(d){
+  if (resultsEl.hidden || !hits.length) return;
+  cursor = (cursor + d + hits.length) % hits.length;
+  resultsEl.querySelectorAll(".rrow").forEach((b, i) => b.classList.toggle("active", i === cursor));
+  resultsEl.querySelectorAll(".rrow")[cursor].scrollIntoView({ block:"nearest" });
+}
+searchEl.addEventListener("input", e => {
+  state.q = e.target.value.trim().toLowerCase(); render(); renderResults();
+});
+searchEl.addEventListener("keydown", e => {
+  if (e.key === "ArrowDown"){ e.preventDefault(); moveCursor(1); }
+  else if (e.key === "ArrowUp"){ e.preventDefault(); moveCursor(-1); }
+  else if (e.key === "Enter" && hits.length){ e.preventDefault(); select(hits[Math.max(0, cursor)].id); closeResults(); }
+  else if (e.key === "Escape"){ searchEl.value = ""; state.q = ""; render(); closeResults(); }
+});
+searchEl.addEventListener("focus", () => { if (state.q) renderResults(); });
+document.addEventListener("pointerdown", e => {
+  if (!e.target.closest(".searchwrap")) closeResults();
 });
 document.getElementById("surpriseChip").onclick = () => {
   const pool = visible().length ? visible() : PLACES;
@@ -1664,15 +1576,16 @@ function render(){
     n.g.style.opacity = on ? 1 : .13;
     n.g.style.pointerEvents = on ? "auto" : "none";
     n.g.setAttribute("tabindex", on ? "0" : "-1");
-    n.ring.setAttribute("opacity", state.saved.has(p.id) ? 1 : 0);
+    n.bubble.querySelector("circle").setAttribute("stroke",
+      state.saved.has(p.id) ? "var(--gold)" : "var(--road)");
+    n.bubble.querySelector("circle").setAttribute("stroke-width", state.saved.has(p.id) ? 5 : 3);
     n.g.classList.toggle("sel", state.selected === p.id);
   });
-  placeLabels();                       // filtering changes which names fit
+  placeLabels();
   document.getElementById("listCount").textContent = state.saved.size;
   renderNow(t);
   if (state.tab === "Near" && me.fix) renderNear();
 }
-
 
 /* =========================================================================
    YOUR CHARACTER
