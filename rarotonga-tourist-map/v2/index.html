@@ -764,6 +764,7 @@ PLACES.forEach(p => { p.group = CAT_OF[p.cat] || "do"; });
    ========================================================================= */
 const CX = 500, CY = 400, RING_KM = 32, RING_MIN = 38;
 const UNITS_PER_KM = 56.2;
+const M_PER_UNIT = 1000 / UNITS_PER_KM;   // one world unit is 17.8 m on the ground
 const A_UNITS = 5.18 * UNITS_PER_KM, B_UNITS = 4.14 * UNITS_PER_KM;
 
 const px = (deg, r) => CX + r * Math.sin(deg * Math.PI / 180);
@@ -942,6 +943,10 @@ function compile(type, src){
   if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
   return sh;
 }
+// 16-bit indices cap a mesh at 65,536 vertices, which caps the terrain at a
+// 240 grid. Nearly every device made this decade supports 32-bit indices; where
+// it does, the island is built at nearly double the resolution.
+const UINT32 = !!gl.getExtension("OES_element_index_uint");
 const prog = gl.createProgram();
 gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
 gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
@@ -958,9 +963,12 @@ function makeMesh(pos, norm, col, idx){
     gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
   const ib = gl.createBuffer();
+  const big = UINT32 && idx.length > 0 && pos.length / 3 > 65535;
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
-  return { pos:buf(pos), norm:buf(norm), col:buf(col), idx:ib, count:idx.length };
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
+                big ? new Uint32Array(idx) : new Uint16Array(idx), gl.STATIC_DRAW);
+  return { pos:buf(pos), norm:buf(norm), col:buf(col), idx:ib, count:idx.length,
+           type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT };
 }
 // Triangle soup: no index buffer, so no 65,536-vertex ceiling. The scenery is
 // tens of thousands of independent triangles, which is exactly this case.
@@ -979,13 +987,13 @@ function drawMesh(m, alpha){
   }
   if (m.soup){ gl.drawArrays(gl.TRIANGLES, 0, m.count); return; }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idx);
-  gl.drawElements(gl.TRIANGLES, m.count, gl.UNSIGNED_SHORT, 0);
+  gl.drawElements(gl.TRIANGLES, m.count, m.type || gl.UNSIGNED_SHORT, 0);
 }
 
 /* ---------- the island ---------- */
 // 241x241 keeps the vertex count under the 65,536 that 16-bit indices allow,
 // which is what lets the ridges resolve without an extension.
-const GRID = 240, SPAN = 980;
+const GRID = (typeof UINT32 !== "undefined" && UINT32) ? 340 : 240, SPAN = 980;
 const lerp3 = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
 const rgb = h => [(h>>16&255)/255, (h>>8&255)/255, (h&255)/255];
 
@@ -1010,34 +1018,71 @@ function groundColour(m, flatness){
   return c;
 }
 const islandMesh = (() => {
+  const t0 = performance.now();
   const n = GRID + 1, pos = [], col = [], norm = [], idx = [];
   const H = new Float32Array(n * n);
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
     const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
     H[j*n+i] = heightAt(x + CX, z + CY);
   }
+  const at = (i, j) => H[Math.min(n-1, Math.max(0, j)) * n + Math.min(n-1, Math.max(0, i))];
+
+  // Ambient occlusion, read straight off the height grid: a point sitting lower
+  // than the land around it is in a valley and gets less sky. This is the single
+  // thing that makes generated terrain stop looking like moulded plastic — the
+  // gorges go dark and the ridges catch the light.
+  const AO = new Float32Array(n * n);
+  const OFF = [];                                  // ring offsets, computed once
+  for (const r of [2, 6, 14, 26]){
+    for (let a = 0; a < 8; a++){
+      const th = a / 8 * Math.PI * 2;
+      OFF.push([Math.round(Math.cos(th) * r), Math.round(Math.sin(th) * r),
+                1 / (r * (SPAN / GRID) * M_PER_UNIT)]);
+    }
+  }
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
+    const h = at(i, j);
+    let occ = 0;
+    for (let k = 0; k < OFF.length; k++){
+      const o = OFF[k], d = at(i + o[0], j + o[1]) - h;
+      if (d > 0) occ += d * o[2];
+    }
+    AO[j*n+i] = 1 / (1 + (occ / OFF.length) * 5.5);
+  }
+
   const step = SPAN / GRID;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
     const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
     const m = H[j*n+i];
     pos.push(x, m * VSCALE, z);
-    // normals straight from the height field: cheaper and smoother than
-    // accumulating them over 115,000 triangles
-    const hl = H[j*n + Math.max(0, i-1)], hr = H[j*n + Math.min(n-1, i+1)];
-    const hd = H[Math.max(0, j-1)*n + i], hu = H[Math.min(n-1, j+1)*n + i];
+
+    const hl = at(i-1, j), hr = at(i+1, j), hd = at(i, j-1), hu = at(i, j+1);
     const v = norm3([(hl - hr) * VSCALE, 2 * step, (hd - hu) * VSCALE]);
     norm.push(v[0], v[1], v[2]);
-    col.push(...groundColour(m, v[1]));
+
+    let c = groundColour(m, v[1]);
+    if (m > 2){
+      // Two scales of mottle: canopy clumps, and the broader patchwork of
+      // plantation, fern and bare ground. Flat colour is what reads as plastic.
+      const fine = vnoise(x * 0.085 + 11, z * 0.085 + 7) - 0.5;
+      const broad = vnoise(x * 0.021 + 3, z * 0.021 + 19) - 0.5;
+      const k = 1 + fine * 0.20 + broad * 0.26;
+      c = [c[0] * k, c[1] * (1 + fine * 0.15 + broad * 0.20), c[2] * k];
+      const ao = 0.42 + 0.58 * AO[j*n+i];
+      c = [c[0] * ao, c[1] * ao, c[2] * ao];
+    }
+    col.push(Math.min(1, c[0]), Math.min(1, c[1]), Math.min(1, c[2]));
   }
   for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++){
     const a = j*n+i; idx.push(a, a+n, a+1, a+1, a+n, a+n+1);
   }
+  console.info(`terrain: ${GRID}x${GRID} grid, built in ${Math.round(performance.now() - t0)} ms, ${(pos.length/3).toLocaleString()} vertices`);
   return makeMesh(pos, norm, col, idx);
 })();
 
 const abyssMesh = (() => {                    // hides the mesh's own edge
   const S = 3200, c = rgb(0x072742);
-  return makeMesh([-S,-24,-S, S,-24,-S, S,-24,S, -S,-24,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
+  return makeMesh([-S,-72,-S, S,-72,-S, S,-72,S, -S,-72,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
                   [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
 })();
 const waterMesh = (() => {
@@ -1082,7 +1127,6 @@ function rand(seed){                       // deterministic, so the island is st
 // Slope from the height field. Heights are metres and distances are world
 // units, and one unit is 17.8 m — so the two have to be reconciled before the
 // gradient means anything. Missing that put palms on cliff faces.
-const M_PER_UNIT = 1000 / UNITS_PER_KM;
 function flatnessAt(x, z){
   const d = 4;
   const gx = (heightAt(x + d, z) - heightAt(x - d, z)) / (2 * d * M_PER_UNIT);
@@ -1148,7 +1192,7 @@ function addHouse(S, x, y, z, w, d, hh, rot, rnd){
 
 const scenery = (() => {
   const S = SceneryBuilder(), rnd = rand(20260907);
-  let palms = 0, houses = 0;
+  let palms = 0, houses = 0, tufts = 0;
 
   // Palms: the coastal fringe, where they actually grow — low, flat, near water.
   for (let i = 0; i < 30000 && palms < 3200; i++){
@@ -1162,6 +1206,33 @@ const scenery = (() => {
     addPalm(S, x, m * VSCALE, z, 6.5 + rnd() * 5.5, rnd() * Math.PI * 2, rnd);
     palms++;
   }
+  // Jungle. The interior of Rarotonga is solid canopy to the ridgeline, and a
+  // bare green hillside is the thing that most gives away a generated island.
+  // These are three-triangle tufts — no detail up close, but from any distance
+  // you actually view the island from, they read as forest.
+  for (let i = 0; i < 40000 && tufts < 5200; i++){
+    const deg = rnd() * 360;
+    const r = coastR(deg) * (0.10 + rnd() * 0.82);
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const m = heightAt(x + CX, z + CY);
+    if (m < 25 || m > 430) continue;
+    const flat = flatnessAt(x + CX, z + CY);
+    if (flat < 0.18) continue;                    // even here, not on bare rock
+    const y = m * VSCALE;
+    const size = 3.0 + rnd() * 4.0;
+    const dark = 0.62 + rnd() * 0.55;
+    const g = [0.13 * dark, 0.36 * dark, 0.16 * dark];
+    // Crowns are wider than they are tall. Making them tall spikes turned the
+    // tropics into a spruce plantation.
+    for (let k = 0; k < 3; k++){
+      const a = rnd() * Math.PI * 2, sp = size * (0.9 + rnd() * 0.7);
+      S.tri([x, y + size * 0.62, z],
+            [x + Math.cos(a) * sp, y + size * 0.12, z + Math.sin(a) * sp],
+            [x + Math.cos(a + 2.4) * sp, y + size * 0.12, z + Math.sin(a + 2.4) * sp], g);
+    }
+    tufts++;
+  }
+
   // Houses: strung along the ring road, thinning inland up the valleys.
   for (let i = 0; i < 18000 && houses < 1100; i++){
     const deg = rnd() * 360;
@@ -1185,7 +1256,36 @@ const scenery = (() => {
     const P = (dx, dz) => [x + dx * c - dz * s, 0.9, z + dx * s + dz * c];
     S.tri(P(L, 0), P(-L * 0.6, W), P(-L * 0.6, -W), [0.94, 0.94, 0.92]);
   }
-  console.info(`scenery: ${palms} palms, ${houses} buildings, ${S.count()} vertices`);
+  console.info(`scenery: ${palms} palms, ${tufts} canopy tufts, ${houses} buildings, ${S.count().toLocaleString()} vertices`);
+  return S.mesh();
+})();
+
+// Cloud. On Rarotonga it sits on the ridge most mornings and burns off by ten,
+// and it is half of why the island looks the way it does in photographs. These
+// are soft horizontal sheets over the interior rather than volumetric puffs —
+// from any angle you actually orbit at, that is what cloud on a ridge looks like.
+const cloudMesh = (() => {
+  const S = SceneryBuilder(), rnd = rand(77123);
+  for (let c = 0; c < 16; c++){
+    const deg = rnd() * 360, r = coastR(deg) * (0.05 + rnd() * 0.5);
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const ground = heightAt(x + CX, z + CY);
+    if (ground < 150) continue;
+    const y = (ground + 60 + rnd() * 140) * VSCALE;
+    const R = 16 + rnd() * 26, lobes = 4 + (rnd() * 3 | 0);
+    const white = [1, 1, 1];
+    for (let l = 0; l < lobes; l++){
+      const a = (l / lobes) * Math.PI * 2 + rnd() * 0.5;
+      const cx2 = x + Math.cos(a) * R * 0.55, cz2 = z + Math.sin(a) * R * 0.55;
+      const rr = R * (0.45 + rnd() * 0.45);
+      for (let t = 0; t < 7; t++){                       // a flat fan per lobe
+        const a0 = t / 7 * Math.PI * 2, a1 = (t + 1) / 7 * Math.PI * 2;
+        S.tri([cx2, y, cz2],
+              [cx2 + Math.cos(a0) * rr, y, cz2 + Math.sin(a0) * rr],
+              [cx2 + Math.cos(a1) * rr, y, cz2 + Math.sin(a1) * rr], white);
+      }
+    }
+  }
   return S.mesh();
 })();
 
@@ -1209,6 +1309,7 @@ function drawScene(){
   drawMesh(waterMesh, 0.58);
   drawMesh(surfMesh, 0.92);
   drawMesh(foamMesh, 0.45);
+  if (cam.dist > 380) drawMesh(cloudMesh, 0.18);   // from underneath it just fogs the view
   gl.depthMask(true);
 }
 

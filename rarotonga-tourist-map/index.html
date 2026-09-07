@@ -1252,48 +1252,49 @@ function buildBaseMap(){
   el("path", { d:ringPath(d => coastR(d) + 9), fill:"var(--sand)" }, world);
   el("path", { d:ringPath(coastR), fill:"url(#landG)" }, world);
 
-  // The interior: a faceted range rather than a soft blob. Everything here is
-  // flat colour with hard edges — a cartoon map has no business being blurry,
-  // and the old soft gradients and half-opacity overlays read as smeared.
-  const jag = d => 168 + Math.sin(d * 0.07) * 26 + Math.sin(d * 0.14 + 2) * 16
-                       + Math.sin(d * 0.61 + 1.1) * 9 + Math.sin(d * 1.13) * 5;
-  el("path", { d:ringPath(jag, 96), fill:"var(--ridge)" }, world);
-  el("path", { d:ringPath(d => jag(d) - 26, 96), fill:"var(--ridge-hi)" }, world);
+  // The interior. Cartoon shapes — rounded, generous, friendly — but every edge
+  // is hard and every fill is flat. The blur before came from gradients and
+  // half-opacity overlays, not from the roundness, so the roundness stays.
+  const jag = d => 170 + Math.sin(d * 0.07) * 28 + Math.sin(d * 0.14 + 2) * 17 + Math.sin(d * 0.31 + .6) * 8;
+  el("path", { d:ringPath(jag, 160), fill:"var(--ridge)" }, world);
+  el("path", { d:ringPath(d => jag(d) - 30, 160), fill:"var(--ridge-hi)" }, world);
 
   const peaks = el("g", { "stroke-linejoin":"round" }, world);
-  // A little deterministic character per peak, so no two are the same shape but
-  // the island looks identical every time it loads.
   const seed = str => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 997; return h / 997; };
 
   PEAKS.sort((a,b) => py(a.deg,a.r) - py(b.deg,b.r)).forEach(p => {
     const x = px(p.deg, p.r), y = py(p.deg, p.r), w = p.w, h = p.h;
-    const k = seed(p.name), sway = (k - 0.5) * 0.28;      // where the summit sits
-    const sx = x + w * sway;                              // summit x
+    const k = seed(p.name), sx = x + w * (k - 0.5) * 0.22;
 
-    let outline, ridgeLine;
+    let body, shade;
     if (p.needle){
-      // Te Rua Manga is a basalt fin, so it gets a fin: two straight faces and
-      // a shoulder, not a curve.
-      outline = `M${x - w*2.0} ${y} L${x - w*0.62} ${y - h*0.46} L${x - w*0.20} ${y - h*0.99}
-                 L${x + w*0.24} ${y - h} L${x + w*0.54} ${y - h*0.44} L${x + w*2.0} ${y} Z`;
-      ridgeLine = `M${x + w*0.24} ${y - h} L${x + w*0.54} ${y - h*0.44} L${x + w*2.0} ${y} L${x - w*0.20} ${y - h*0.99} Z`;
+      // Te Rua Manga: a rounded basalt thumb sitting on a green shoulder.
+      body  = `M${x - w*1.9} ${y} Q${x - w*1.1} ${y - h*0.30} ${x - w*0.52} ${y - h*0.46}
+               Q${x - w*0.16} ${y - h*1.04} ${x + w*0.22} ${y - h}
+               Q${x + w*0.72} ${y - h*0.34} ${x + w*1.9} ${y} Z`;
+      shade = `M${x + w*0.22} ${y - h} Q${x + w*0.72} ${y - h*0.34} ${x + w*1.9} ${y}
+               L${x + w*0.9} ${y} Q${x + w*0.5} ${y - h*0.42} ${x + w*0.22} ${y - h} Z`;
     } else if (p.flat){
-      // Raemaru's top was famously carried off to Aitutaki, so it is a mesa.
-      outline = `M${x - w/2} ${y} L${x - w*0.34} ${y - h*0.92} L${x - w*0.20} ${y - h}
-                 L${x + w*0.22} ${y - h} L${x + w*0.36} ${y - h*0.90} L${x + w/2} ${y} Z`;
-      ridgeLine = `M${x + w*0.22} ${y - h} L${x + w*0.36} ${y - h*0.90} L${x + w/2} ${y} L${x + w*0.02} ${y} Z`;
+      // Raemaru is a mesa: its top really was carried off to Aitutaki.
+      body  = `M${x - w/2} ${y} Q${x - w*0.44} ${y - h*0.86} ${x - w*0.22} ${y - h}
+               L${x + w*0.24} ${y - h} Q${x + w*0.46} ${y - h*0.84} ${x + w/2} ${y} Z`;
+      shade = `M${x + w*0.24} ${y - h} Q${x + w*0.46} ${y - h*0.84} ${x + w/2} ${y} L${x + w*0.26} ${y} Z`;
     } else {
-      const s1 = 0.30 + k * 0.12, s2 = 0.62 + k * 0.10;   // the two shoulders
-      outline = `M${x - w/2} ${y} L${x - w*0.30} ${y - h*s1} L${x - w*0.17} ${y - h*s2}
-                 L${sx} ${y - h} L${x + w*0.20} ${y - h*(s2 - 0.06)} L${x + w*0.33} ${y - h*(s1 - 0.04)}
-                 L${x + w/2} ${y} Z`;
-      ridgeLine = `M${sx} ${y - h} L${x + w*0.20} ${y - h*(s2 - 0.06)} L${x + w*0.33} ${y - h*(s1 - 0.04)}
-                   L${x + w/2} ${y} L${sx} ${y} Z`;
+      // A generous rounded hump with one shoulder, seeded so no two match.
+      const sh = 0.52 + k * 0.16;
+      body  = `M${x - w/2} ${y} Q${x - w*0.34} ${y - h*sh} ${sx - w*0.06} ${y - h}
+               Q${x + w*0.22} ${y - h*0.86} ${x + w*0.30} ${y - h*(sh - 0.10)}
+               Q${x + w*0.42} ${y - h*0.26} ${x + w/2} ${y} Z`;
+      // a shadow down one flank only — enough to read as three-dimensional,
+      // not so much that the hill turns into a dark blob
+      shade = `M${sx - w*0.06} ${y - h} Q${x + w*0.22} ${y - h*0.86} ${x + w*0.30} ${y - h*(sh - 0.10)}
+               Q${x + w*0.42} ${y - h*0.26} ${x + w/2} ${y} L${x + w*0.20} ${y}
+               Q${x + w*0.14} ${y - h*0.46} ${sx - w*0.06} ${y - h} Z`;
     }
-    // sunlit face, then the shaded face as a solid colour — no transparency
-    el("path", { d:outline, fill:p.needle ? "var(--rock)" : "var(--ridge-hi)",
-                 stroke:"var(--ridge)", "stroke-width":2.5 }, peaks);
-    el("path", { d:ridgeLine, fill:p.needle ? "var(--ridge)" : "var(--ridge)" }, peaks);
+    el("path", { d:body,  fill:p.needle ? "var(--rock)" : "var(--land-hi)",
+                 stroke:"var(--ridge)", "stroke-width":3 }, peaks);
+    el("path", { d:shade, fill:"var(--ridge)", opacity:".55" }, peaks);
+
     el("text", { class:"peaklabel", x, y:y - h - 9 }, peaks)
       .textContent = `${p.name} ${p.m}m`;
   });
