@@ -109,14 +109,27 @@ button{border:0;background:none;cursor:pointer}
   padding-bottom:env(safe-area-inset-bottom);
 }
 .sheet.up{transform:translateY(0)}
-.sheet .grab{width:40px;height:4px;border-radius:99px;background:var(--panel-3);
-  margin:9px auto 0;flex:0 0 auto}
+.sheet .grab{
+  width:56px;height:16px;border-radius:99px;background:none;margin:6px auto 0;flex:0 0 auto;
+  position:relative;cursor:grab;touch-action:none;
+}
+.sheet .grab::after{content:"";position:absolute;left:50%;top:6px;transform:translateX(-50%);
+  width:40px;height:4px;border-radius:99px;background:var(--panel-3)}
+.sheet .grab:hover::after{background:var(--ink-3)}
+.sheetclose{
+  position:absolute;top:12px;right:14px;z-index:6;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;font-size:14px;line-height:1;
+  background:rgba(6,20,28,.66);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.16);
+  color:#fff;
+}
+.sheetclose:hover{background:rgba(6,20,28,.9)}
 .sheet .body{overflow-y:auto;overscroll-behavior:contain;padding:0 0 18px}
 @media (min-width:900px){
   .sheet{left:auto;right:16px;bottom:16px;top:16px;width:400px;border-radius:22px;
     border:1px solid var(--line);max-height:none;transform:translateX(calc(100% + 24px))}
   .sheet.up{transform:translateX(0)}
   .sheet .grab{display:none}
+  .sheetclose{top:14px;right:14px}
   .rail{bottom:20px;right:calc(432px + 14px)}
   .rail.narrow{right:14px}
 }
@@ -257,7 +270,8 @@ button{border:0;background:none;cursor:pointer}
 </div>
 
 <div class="sheet" id="sheet">
-  <div class="grab"></div>
+  <button class="grab" id="sheetGrab" aria-label="Close panel"></button>
+  <button class="sheetclose" id="sheetClose" aria-label="Close panel">✕</button>
   <div class="body" id="sheetBody"></div>
 </div>
 
@@ -904,9 +918,12 @@ void main(){
   vec4 clip = uMVP * vec4(aPos, 1.0);
   gl_Position = clip;
   vec3 n = normalize(aNorm);
-  float key = max(dot(n, normalize(uLight)), 0.0);
-  float sky = 0.5 + 0.5 * n.y;                 // light bouncing off the sky
-  vShade = 0.22 * sky + 0.86 * key;
+  // abs(), not max(): palm fronds, roofs and hulls are single-sided triangles
+  // whose normals may face away from the sun, and lighting only the front side
+  // turned every one of them black.
+  float key = abs(dot(n, normalize(uLight)));
+  float sky = 0.5 + 0.5 * n.y;                 // bounce off the sky and the lagoon
+  vShade = 0.30 + 0.32 * sky + 0.52 * key;
   vCol = aCol;
   vDepth = clip.w;
 }`;
@@ -945,6 +962,14 @@ function makeMesh(pos, norm, col, idx){
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
   return { pos:buf(pos), norm:buf(norm), col:buf(col), idx:ib, count:idx.length };
 }
+// Triangle soup: no index buffer, so no 65,536-vertex ceiling. The scenery is
+// tens of thousands of independent triangles, which is exactly this case.
+function makeSoup(pos, norm, col){
+  const buf = data => { const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
+  return { pos:buf(pos), norm:buf(norm), col:buf(col), soup:true, count:pos.length / 3 };
+}
 function drawMesh(m, alpha){
   gl.uniform1f(U.alpha, alpha);
   for (const [b, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
@@ -952,6 +977,7 @@ function drawMesh(m, alpha){
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
   }
+  if (m.soup){ gl.drawArrays(gl.TRIANGLES, 0, m.count); return; }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idx);
   gl.drawElements(gl.TRIANGLES, m.count, gl.UNSIGNED_SHORT, 0);
 }
@@ -1041,6 +1067,128 @@ const roadMesh = ribbon(d => coastR(d) - 15, 1.3, 2.4, rgb(0xf7eed6), false);
 const surfMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 1, 0.9, 7, rgb(0xf2fdfb), true);
 const foamMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 12, 0.7, 4, rgb(0xcdeee9), true);
 
+/* =========================================================================
+   SCENERY — what you find when you come in close.
+   Everything below is placed by rule against the terrain itself: palms where
+   the ground is low, flat and near the water; houses along the coastal strip
+   the ring road actually runs through; boats inside the reef. It is generated
+   from a fixed seed, so the island looks the same every time it loads, and it
+   is built once into two meshes so the whole lot costs two draw calls.
+   ========================================================================= */
+function rand(seed){                       // deterministic, so the island is stable
+  let s = seed >>> 0;
+  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+}
+// Slope from the height field. Heights are metres and distances are world
+// units, and one unit is 17.8 m — so the two have to be reconciled before the
+// gradient means anything. Missing that put palms on cliff faces.
+const M_PER_UNIT = 1000 / UNITS_PER_KM;
+function flatnessAt(x, z){
+  const d = 4;
+  const gx = (heightAt(x + d, z) - heightAt(x - d, z)) / (2 * d * M_PER_UNIT);
+  const gz = (heightAt(x, z + d) - heightAt(x, z - d)) / (2 * d * M_PER_UNIT);
+  return 1 / (1 + Math.hypot(gx, gz) * 3.2);   // 1 = flat, ~0.24 at 45 degrees
+}
+
+const SceneryBuilder = () => {
+  const pos = [], norm = [], col = [], idx = [];
+  let base = 0;
+  const tri = (a, b, c, colour) => {
+    const n = norm3(cross3([b[0]-a[0], b[1]-a[1], b[2]-a[2]], [c[0]-a[0], c[1]-a[1], c[2]-a[2]]));
+    for (const v of [a, b, c]){ pos.push(v[0], v[1], v[2]); norm.push(n[0], n[1], n[2]); col.push(...colour); }
+    idx.push(base, base + 1, base + 2); base += 3;
+  };
+  const quad = (a, b, c, d, colour) => { tri(a, b, c, colour); tri(a, c, d, colour); };
+  return { pos, norm, col, idx, tri, quad, count: () => base,
+           mesh: () => makeSoup(pos, norm, col) };
+};
+
+// A coconut palm: a leaning trunk and six fronds. Ten triangles, which is all
+// it needs to be at the size these are seen.
+function addPalm(S, x, y, z, h, lean, rnd){
+  const trunk = [0x6b5136, 0x7a5c3e][rnd() > 0.5 ? 1 : 0];
+  const tc = [(trunk>>16&255)/255, (trunk>>8&255)/255, (trunk&255)/255];
+  const lx = Math.cos(lean) * h * 0.16, lz = Math.sin(lean) * h * 0.16;
+  const r = h * 0.035;
+  const top = [x + lx, y + h, z + lz];
+  S.quad([x-r, y, z], [x+r, y, z], [top[0]+r*0.5, top[1], top[2]], [top[0]-r*0.5, top[1], top[2]], tc);
+  S.quad([x, y, z-r], [x, y, z+r], [top[0], top[1], top[2]+r*0.5], [top[0], top[1], top[2]-r*0.5], tc);
+  const green = rnd() > 0.5 ? [0.13, 0.42, 0.20] : [0.17, 0.50, 0.24];
+  const spread = h * 0.42, droop = h * 0.17;
+  for (let i = 0; i < 6; i++){
+    const a = (i / 6) * Math.PI * 2 + rnd() * 0.4;
+    const ex = top[0] + Math.cos(a) * spread, ez = top[2] + Math.sin(a) * spread;
+    S.tri([top[0], top[1] + h * 0.06, top[2]],
+          [ex, top[1] - droop, ez],
+          [top[0] + Math.cos(a + 0.5) * spread * 0.5, top[1] - droop * 0.4,
+           top[2] + Math.sin(a + 0.5) * spread * 0.5], green);
+  }
+}
+
+// A house: walls and a pitched roof, in the colours these actually are —
+// pale walls, and roofs in the reds, blues and greens of painted corrugate.
+const ROOFS = [[0.72,0.24,0.20],[0.20,0.36,0.58],[0.24,0.46,0.32],[0.62,0.60,0.56],[0.78,0.56,0.24]];
+function addHouse(S, x, y, z, w, d, hh, rot, rnd){
+  const wall = rnd() > 0.35 ? [0.90,0.88,0.82] : [0.80,0.78,0.72];
+  const roof = ROOFS[(rnd() * ROOFS.length) | 0];
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const P = (dx, dy, dz) => [x + dx * c - dz * s, y + dy, z + dx * s + dz * c];
+  const a = P(-w,0,-d), b = P(w,0,-d), e = P(w,0,d), f = P(-w,0,d);
+  const a2 = P(-w,hh,-d), b2 = P(w,hh,-d), e2 = P(w,hh,d), f2 = P(-w,hh,d);
+  S.quad(a, b, b2, a2, wall); S.quad(b, e, e2, b2, wall);
+  S.quad(e, f, f2, e2, wall); S.quad(f, a, a2, f2, wall);
+  const r1 = P(0, hh + hh * 0.65, -d * 1.12), r2 = P(0, hh + hh * 0.65, d * 1.12);
+  const o = 1.16;
+  const a3 = P(-w*o, hh, -d*o), b3 = P(w*o, hh, -d*o), e3 = P(w*o, hh, d*o), f3 = P(-w*o, hh, d*o);
+  S.quad(a3, b3, r1, r1, roof);            // gable ends
+  S.quad(f3, e3, r2, r2, roof);
+  S.quad(a3, r1, r2, f3, roof);            // the two pitches
+  S.quad(b3, e3, r2, r1, roof);
+}
+
+const scenery = (() => {
+  const S = SceneryBuilder(), rnd = rand(20260907);
+  let palms = 0, houses = 0;
+
+  // Palms: the coastal fringe, where they actually grow — low, flat, near water.
+  for (let i = 0; i < 30000 && palms < 3200; i++){
+    const deg = rnd() * 360;
+    const cr = coastR(deg);
+    const r = cr - Math.pow(rnd(), 1.7) * 78;        // biased hard toward the shore
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const m = heightAt(x + CX, z + CY);
+    if (m < 6 || m > 110) continue;
+    if (flatnessAt(x + CX, z + CY) < 0.45) continue;
+    addPalm(S, x, m * VSCALE, z, 6.5 + rnd() * 5.5, rnd() * Math.PI * 2, rnd);
+    palms++;
+  }
+  // Houses: strung along the ring road, thinning inland up the valleys.
+  for (let i = 0; i < 18000 && houses < 1100; i++){
+    const deg = rnd() * 360;
+    const cr = coastR(deg);
+    const r = cr - 8 - Math.pow(rnd(), 1.5) * 62;
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const m = heightAt(x + CX, z + CY);
+    if (m < 7 || m > 70) continue;
+    if (flatnessAt(x + CX, z + CY) < 0.62) continue;
+    addHouse(S, x, m * VSCALE, z, 2.4 + rnd() * 1.6, 2.0 + rnd() * 1.4,
+             2.2 + rnd() * 1.1, deg * Math.PI / 180 + (rnd() - 0.5), rnd);
+    houses++;
+  }
+  // A few boats inside the reef, because the lagoon is never empty.
+  for (let i = 0; i < 26; i++){
+    const deg = rnd() * 360, cr = coastR(deg), lw = lagoonWidth(deg);
+    if (lw < 26) continue;                            // only where there is room
+    const r = cr + 6 + rnd() * (lw - 12);
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const rot = rnd() * Math.PI * 2, c = Math.cos(rot), s = Math.sin(rot), L = 3.4, W = 0.9;
+    const P = (dx, dz) => [x + dx * c - dz * s, 0.9, z + dx * s + dz * c];
+    S.tri(P(L, 0), P(-L * 0.6, W), P(-L * 0.6, -W), [0.94, 0.94, 0.92]);
+  }
+  console.info(`scenery: ${palms} palms, ${houses} buildings, ${S.count()} vertices`);
+  return S.mesh();
+})();
+
 function drawScene(){
   gl.clearColor(0, 0, 0, 0);                    // the sky is painted in CSS behind
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1054,6 +1202,9 @@ function drawScene(){
   drawMesh(abyssMesh, 1);
   drawMesh(islandMesh, 1);
   drawMesh(roadMesh, 1);
+  // Detail earns its place only when you are near it: from orbit it is noise,
+  // and skipping it keeps the far view cheap.
+  if (cam.dist < 820) drawMesh(scenery, 1);
   gl.depthMask(false);
   drawMesh(waterMesh, 0.58);
   drawMesh(surfMesh, 0.92);
@@ -1094,11 +1245,12 @@ const stage = document.getElementById("stage");
 const ptrs = new Map();
 let pinchPrev = null, moved = false, downAt = null, spin = 0, glide = 0;
 
+let tapOnMap = false;
 stage.addEventListener("pointerdown", e => {
   if (e.target.closest(".mk")) return;
   ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
   if (ptrs.size === 1){ downAt = { x:e.clientX, y:e.clientY }; moved = false; spin = 0;
-                        cancelAnimationFrame(glide); }
+                        tapOnMap = true; cancelAnimationFrame(glide); }
   pinchPrev = null;
 });
 addEventListener("pointermove", e => {
@@ -1131,6 +1283,9 @@ function endPtr(e){
   if (ptrs.size < 2) pinchPrev = null;
   if (ptrs.size) return;
   if (moved && Math.abs(spin) > 0.002) coast();
+  // a tap on open water or bare hillside puts the panel away
+  if (!moved && tapOnMap && sheet.classList.contains("up")) closeSheet();
+  tapOnMap = false;
 }
 ["pointerup","pointercancel"].forEach(ev => addEventListener(ev, endPtr));
 function coast(){
@@ -1402,6 +1557,33 @@ function openSheet(mode, html){
   document.getElementById("rail").classList.remove("narrow");
   sheetBody.scrollTop = 0;
 }
+document.getElementById("sheetClose").onclick = closeSheet;
+
+// The grab bar closes on a tap and on a downward drag, which is what a sheet
+// with a handle is expected to do on a phone.
+(function dismissable(){
+  const grab = document.getElementById("sheetGrab");
+  let y0 = null;
+  grab.addEventListener("pointerdown", e => { y0 = e.clientY; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener("pointermove", e => {
+    if (y0 === null) return;
+    const dy = Math.max(0, e.clientY - y0);
+    sheet.style.transition = "none";
+    sheet.style.transform = `translateY(${dy}px)`;
+  });
+  const end = e => {
+    if (y0 === null) return;
+    const dy = Math.max(0, e.clientY - y0);
+    y0 = null;
+    sheet.style.transition = "";
+    sheet.style.transform = "";
+    if (dy > 48) closeSheet();
+  };
+  grab.addEventListener("pointerup", end);
+  grab.addEventListener("pointercancel", () => { y0 = null; sheet.style.transition = ""; sheet.style.transform = ""; });
+  grab.addEventListener("click", e => { if (!sheet.style.transform) closeSheet(); });
+})();
+
 function closeSheet(){
   sheet.classList.remove("up"); sheetMode = null; state.sel = null;
   document.getElementById("rail").classList.add("narrow");
