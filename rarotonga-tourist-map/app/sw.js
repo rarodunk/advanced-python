@@ -4,7 +4,7 @@
    and refresh it in the background when there is a connection. That matters
    here more than it would elsewhere — roaming data on Rarotonga is expensive
    and the valleys have no coverage at all. */
-const VERSION = "20b16fc09c";
+const VERSION = "f3199eac41";
 const SHELL = `raro-shell-${VERSION}`;
 const FONTS = "raro-fonts-v1";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest",

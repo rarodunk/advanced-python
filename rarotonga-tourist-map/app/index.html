@@ -214,7 +214,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .facts dt,.facts .k{color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.07em;font-size:11px;align-self:center}
 .facts .v{font-family:"IBM Plex Mono",monospace;font-size:12.5px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
 
-.actions{display:flex;gap:9px;padding:0 22px 20px}
+
+.actions{display:flex;gap:8px;padding:0 22px 20px;flex-wrap:wrap}
+.actions .btn{flex:1 1 128px;text-decoration:none;white-space:nowrap}
+.btn.go{background:var(--lagoon);color:#062a2e}
+.btn.go:hover{filter:brightness(1.05)}
+a.tel{color:var(--accent);text-decoration:none;font-weight:600}
+a.tel:hover{text-decoration:underline}
 .btn{
   flex:1;padding:12px;border-radius:13px;background:var(--surface-2);font-weight:700;font-size:13.5px;
   display:flex;align-items:center;justify-content:center;gap:7px;transition:background .12s ease;
@@ -585,16 +591,16 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
           <div class="tip"><div class="ic" aria-hidden="true">🐚</div><div><b>Local knowledge</b><span id="dTip"></span></div></div>
         </div>
         <ul class="facts" id="dFacts"></ul>
-        <div class="actions">
-          <button class="btn primary" id="dFly">Show me on the map</button>
-          <button class="btn" id="dStar">⭐ Save</button>
-        </div>
+        <div class="actions" id="dActions"></div>
         <p class="foot">
           Geography is <b>deliberately exaggerated</b> — the mountains are fatter and the motu bigger than life
           so everything is tappable, but your own position is projected onto it from real coordinates, so the
           blue dot really is where you are. Hours and prices on a 15,000-person island change with the weather
           and the family calendar; <b>ring ahead or ask at your accommodation</b>. Travel times assume the
-          32 km ring road at 35 km/h on a scooter and 4.5 km/h on foot.
+          32 km ring road at 35 km/h on a scooter and 4.5 km/h on foot. <b>Directions</b> hand your maps app a
+          position derived from this map's own geometry — good to a few hundred metres, which finds the right
+          stretch of road rather than the driveway. On an island with no street addresses, that is how everyone
+          navigates anyway.
         </p>
       </section>
 
@@ -654,7 +660,7 @@ const PLACES = [
   { id:"traderjacks", name:"Trader Jack's", cat:"drink", deg:2, r:268, district:"Avarua harbour",
     blurb:"The bar built out over the reef edge at the harbour mouth, flattened by Cyclone Sally in 1997 and rebuilt lower and tougher. Sit on the deck with a Matutu, watch the swell detonate on the reef three metres away, and you have understood the island's whole relationship with the sea in about ninety seconds.",
     tip:"Friday from about 5pm is when the whole island turns up. Get there before the crowd if you want a rail seat, and order the ika mata to start.",
-    price:"$$", best:"Sunset to late", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],11,23], tags:["sunset","live music","seafood"], hero:true },
+    price:"$$", best:"Sunset to late", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],11,23], tags:["sunset","live music","seafood"], phone:"+68226464", hero:true },
 
   { id:"punanganui", name:"Punanga Nui Market", cat:"culture", deg:352, r:271, district:"Avarua waterfront",
     blurb:"Saturday morning is the single fixed point in the Rarotongan week. Sixty-odd stalls of rukau, eke, pawpaw, black pearls, tivaevae quilts and ukulele players, wrapped around the waterfront from about 6am until the good stuff runs out at midday.",
@@ -669,7 +675,7 @@ const PLACES = [
   { id:"tamarind", name:"Tamarind House", cat:"eat", deg:14, r:266, district:"Between Avarua and Matavera",
     blurb:"A restored colonial house on the seaward side of the road, white timber and shutters, doing the most composed cooking on the island. Lunch under the frangipani is the best-value serious meal in Rarotonga.",
     tip:"High tea on the lawn is the sleeper booking — scones, sandwiches, the lagoon in front of you. Book a day ahead; it's small.",
-    price:"$$$", best:"Lunch or early dinner", dur:"1.5–2 hrs", hours:[[2,3,4,5,6],11,21], tags:["fine dining","booking","garden"] },
+    price:"$$$", best:"Lunch or early dinner", dur:"1.5–2 hrs", hours:[[2,3,4,5,6],11,21], tags:["fine dining","booking","garden"], phone:"+68226487", book:"https://tamarindhouserarotonga.com/contact" },
 
   { id:"palace", name:"Palace Takeaways", cat:"eat", deg:358, r:249, district:"Avarua",
     blurb:"Fried chicken, chop suey, curry and rice in a polystyrene box for a few dollars, handed over a counter that has fed islanders for decades. This is where you eat when you have realised how much resort food costs.",
@@ -694,7 +700,7 @@ const PLACES = [
   { id:"rarosafari", name:"Raro Safari 4WD Tour", cat:"adventure", deg:338, r:250, district:"Departs Avarua",
     blurb:"An open Land Rover up the unsealed inland tracks into the valleys the ring road never shows you — plantations, water intakes, the back of the mountains, and a driver whose commentary is half botany, half family history.",
     tip:"Sit on the left going up for the valley views. It's dusty and genuinely bumpy; leave the good camera in a bag.",
-    price:"$$$", best:"Morning departure", dur:"4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["4wd","interior","guided"] },
+    price:"$$$", best:"Morning departure", dur:"4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["4wd","interior","guided"], phone:"+68223629" },
 
   { id:"airport", name:"Rarotonga International", cat:"knowhow", deg:327, r:273, district:"Nikao",
     blurb:"One runway, one room, and a man named Jake Numanga who played ukulele to arriving passengers for decades. Flights arrive in the middle of the night from Auckland, which is why your first morning starts at 4am.",
@@ -710,7 +716,7 @@ const PLACES = [
   { id:"highland", name:"Highland Paradise", cat:"culture", deg:282, r:200, district:"Above Arorangi",
     blurb:"A 600-year-old village site 200 metres up the Arorangi hillside, abandoned after the missionaries moved everyone to the coast and reopened by the descendants of the people who lived there. The daytime cultural tour is the serious one; the evening show is the crowd-pleaser.",
     tip:"Take the afternoon tour and stay for the evening show — you'll understand the dances instead of just watching them. The view down over the reef at dusk is the best on the island.",
-    price:"$$$", best:"Tue/Thu/Sat evening", dur:"4–5 hrs", hours:[[2,4,6],15,22], tags:["cultural show","booking","view"], hero:true },
+    price:"$$$", best:"Tue/Thu/Sat evening", dur:"4–5 hrs", hours:[[2,4,6],15,22], tags:["cultural show","booking","view"], phone:"+68221924", book:"https://www.highlandparadise.co.ck/contact/", hero:true },
 
   { id:"waterline", name:"The Waterline", cat:"eat", deg:272, r:273, district:"Arorangi",
     blurb:"Tables on the sand on the west coast, which means every dinner here comes with the sun going down into the Pacific behind it. The kitchen leans Mediterranean-Pacific and does not fumble the fish.",
@@ -735,12 +741,12 @@ const PLACES = [
   { id:"storytellers", name:"Storytellers Eco Cycle Tour", cat:"adventure", deg:248, r:258, district:"Arorangi",
     blurb:"A slow bicycle tour along the Ara Metua — the inland coral road built roughly a thousand years ago, long before any European arrived — with stops at marae, plantations and family land, told by someone whose ancestors are in the story.",
     tip:"The flat inland road means this is genuinely easy riding. Book the morning slot: by 11am the heat stops being charming.",
-    price:"$$$", best:"Morning", dur:"3–4 hrs", hours:[[1,2,3,4,5],8,13], tags:["cycling","history","guided"] },
+    price:"$$$", best:"Morning", dur:"3–4 hrs", hours:[[1,2,3,4,5],8,13], tags:["cycling","history","guided"], phone:"+68223450", book:"https://www.storytellers.co.ck/book-now" },
 
   { id:"diveraro", name:"Dive Rarotonga", cat:"swim", deg:277, r:275, district:"Arorangi",
     blurb:"Outside the reef the wall drops fast into visibility that regularly runs past 30 metres — canyons, caves, turtles, and the wreck of the Mataora off the north coast. The west-coast operators run two-tank morning trips year round.",
     tip:"Non-divers can do a resort dive off the boat the same morning. Whale season overlaps July–October, and you occasionally hear them underwater.",
-    price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["diving","boat","certification"] },
+    price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["diving","boat","certification"], phone:"+68221873", book:"https://www.diverarotonga.com/dive_booking/index" },
 
   { id:"islandnight", name:"Island Night Buffet & Fire Dance", cat:"culture", deg:286, r:269, district:"Arorangi resorts",
     blurb:"Umukai buffet — food cooked in an earth oven — followed by drumming and dance that would win competitions anywhere in Polynesia. Cook Islands drumming is famously the fastest in the Pacific and it is startling live.",
@@ -797,7 +803,7 @@ const PLACES = [
   { id:"vaima", name:"Vaima Restaurant", cat:"eat", deg:195, r:264, district:"Titikaveka",
     blurb:"A long-running south-coast dining room where the fish arrives whole, the service is unhurried and the room fills with the same people every night of a two-week holiday.",
     tip:"Order whatever came in that day rather than off the printed menu. Book — it is small and it is popular.",
-    price:"$$$", best:"Dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["seafood","booking","classic"] },
+    price:"$$$", best:"Dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["seafood","booking","classic"], phone:"+68226123" },
 
   { id:"shipwreck", name:"Shipwreck Hut", cat:"drink", deg:180, r:267, district:"Titikaveka",
     blurb:"A driftwood shack on the sand doing cocktails at the exact point where the south-coast lagoon turns the colour of a swimming pool advertisement. Barefoot, unbothered, extremely photogenic.",
@@ -823,7 +829,7 @@ const PLACES = [
   { id:"tevaranui", name:"Te Vara Nui Over-Water Show", cat:"culture", deg:132, r:245, district:"Muri",
     blurb:"A cultural village tour and buffet followed by a drum-and-dance show performed on a stage built over a lit water garden, with the dancers arriving by torchlight. It is theatrical in a way the resort island nights are not.",
     tip:"Do the 5pm village tour before the show — the weaving and coconut demonstrations are where the actual knowledge is. Book several days ahead in season.",
-    price:"$$$", best:"Tue/Thu/Fri/Sat evening", dur:"4 hrs", hours:[[2,4,5,6],17,22], tags:["show","buffet","booking"], hero:true },
+    price:"$$$", best:"Tue/Thu/Fri/Sat evening", dur:"4 hrs", hours:[[2,4,5,6],17,22], tags:["show","buffet","booking"], phone:"+68224006", book:"https://www.tevaranui.co.ck/bookings/bookengine.aspx", hero:true },
 
   { id:"sails", name:"Sails Restaurant", cat:"eat", deg:120, r:263, district:"Muri Beach",
     blurb:"Upstairs on the Muri foreshore with the full sweep of the lagoon and the four motu in front of you. The view does a lot of work; the kitchen holds up its end, particularly at lunch.",
@@ -848,7 +854,7 @@ const PLACES = [
   { id:"lagooncruise", name:"Glass-Bottom Lagoon Cruise", cat:"swim", deg:121, r:271, district:"Departs Muri",
     blurb:"Out across the lagoon with a snorkel stop over the coral gardens, then a barbecue fish lunch on a motu, coconut husking, ukulele and a genuinely funny running commentary. It is the most-booked thing on Rarotonga and it earns it.",
     tip:"Book the morning cruise — the wind gets up in the afternoon and the lagoon chops. The fish is grilled in front of you; say yes to the second helping.",
-    price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"], hero:true },
+    price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"], phone:"+68222026", book:"https://www.captaintamas.com/", hero:true },
 
   { id:"kitesurf", name:"Muri Kitesurfing", cat:"adventure", deg:110, r:298, district:"Muri lagoon",
     blurb:"Flat, waist-deep, warm water inside a reef, with reliable south-easterly trade winds. As a place to learn kitesurfing it is close to ideal, and the local school has been teaching in that lagoon for years.",
@@ -965,7 +971,54 @@ const PLACES = [
   { id:"honesty", name:"Roadside Honesty Boxes", cat:"knowhow", deg:150, r:257, district:"All the way round",
     blurb:"Tables at the end of driveways stacked with pawpaw, bananas, limes, eggs, sometimes fish, with a jar or a tin for the money and nobody watching. They are everywhere once you start noticing them, and they tell you more about the place than any tour will.",
     tip:"Carry coins and small notes on the scooter — most boxes can't make change and you'll pass four in a day. Take what you pay for, obviously.",
-    price:"$", best:"Morning, when they're restocked", dur:"5 min", hours:[[1,2,3,4,5,6],7,18], tags:["free to look","local","cheap","produce"] }
+    price:"$", best:"Morning, when they're restocked", dur:"5 min", hours:[[1,2,3,4,5,6],7,18], tags:["free to look","local","cheap","produce"] },
+/* ---------------- ADDED IN THE THIRD PASS ---------------- */
+  { id:"otb", name:"On The Beach", cat:"eat", deg:276, r:271, district:"Manuia, Arorangi",
+    blurb:"White tablecloths a few metres off the sand on the sunset coast, and the most serious kitchen on the west side. The kind of place you book for the last night rather than the first.",
+    tip:"Ask for a table on the sand rather than the deck, and time the booking for twenty minutes before sunset.",
+    price:"$$$$", best:"Sunset dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["fine dining","sunset","booking"],
+    book:"https://www.otbrarotonga.com/" },
+
+  { id:"koka", name:"Koka Lagoon Cruises", cat:"swim", deg:126, r:266, district:"Departs Muri",
+    blurb:"The other long-running Muri lagoon cruise: glass-bottom boat out to the coral gardens, snorkelling, a barbecue fish lunch on a motu, and coconut husking done by someone who has been doing it since childhood.",
+    tip:"Between this and Captain Tama's, take whichever has space — they run the same stretch of lagoon. Morning departures beat afternoon ones because the wind gets up.",
+    price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"],
+    book:"https://kokalagooncruises.com/" },
+
+  { id:"airraro", name:"Air Rarotonga", cat:"knowhow", deg:332, r:250, district:"Airport, Nikao",
+    blurb:"The national airline, and the only way to the outer islands. Aitutaki several times a day, Atiu and the rest of the southern group less often, plus scenic flights over the reef when the schedule allows.",
+    tip:"Book outer-island legs before you arrive in high season — the aircraft are small and they do fill. The baggage allowance is tighter than your international flight, so check it.",
+    price:"$$$$", best:"Weekday mornings", dur:"—", hours:[[1,2,3,4,5,6],7,17], tags:["flights","aitutaki","booking"],
+    phone:"+68222888", book:"https://airraro.com/" },
+
+  { id:"pastrek", name:"Pa's Cross-Island Trek", cat:"adventure", deg:2, r:120, district:"Across the middle",
+    blurb:"The guided version of the Cross-Island Track, led by the island's best-known bushman. Same route past the Needle, but with a running commentary on medicinal plants, and someone who has walked it thousands of times deciding when the clay is too wet.",
+    tip:"Book a day or two ahead through your accommodation. Wear shoes you are willing to ruin, and take twice the water you think you need.",
+    price:"$$", best:"Dry mornings", dur:"4 hrs", hours:[[1,2,3,4,5,6],7,14], tags:["hike","guided","signature"],
+    bring:"Closed shoes with grip, 2 litres of water, and a dry bag for your phone." },
+
+  { id:"progressive", name:"Progressive Dinner", cat:"eat", deg:16, r:238, district:"Three island homes",
+    blurb:"Three courses in three different family houses on the same evening, with the hosts cooking and eating alongside you. It is the single best way to end up in a Rarotongan home rather than a restaurant, and the conversation is the point.",
+    tip:"Runs on set nights and books out in season. Come hungry and do not skip the taro — refusing food in someone's house is the one manners mistake visitors make.",
+    price:"$$$", best:"Evening, booked ahead", dur:"4 hrs", hours:[[2,4],17,22], tags:["local","food","booking","unique"], hero:true },
+
+  { id:"gamefish", name:"Game Fishing Charter", cat:"adventure", deg:150, r:340, district:"Outside the reef",
+    blurb:"The bottom drops to a thousand metres within sight of the beach, so the boats are on the fish inside fifteen minutes. Mahi mahi, wahoo, yellowfin and marlin, on half-day charters out of Avatiu and Avarua.",
+    tip:"Most crews will let you keep a fillet and take the rest — ask before you book if that matters to you. Take seasickness tablets an hour before, not on the boat.",
+    price:"$$$$", best:"Early morning, calm days", dur:"4–8 hrs", hours:[[1,2,3,4,5,6],6,15], tags:["fishing","boat","charter"],
+    bring:"Hat, long sleeves, and something for seasickness." },
+
+  { id:"adventuredive", name:"Adventure Cook Islands", cat:"swim", deg:270, r:266, district:"Arorangi",
+    blurb:"The other side of the island's diving: wall dives, caves and the wrecks, plus courses from first breath to divemaster. Small groups, and they will take snorkellers on the same boat.",
+    tip:"If you have never dived, the try-dive off the boat is the cheapest way to find out whether you like it. Book the day before rather than the morning of.",
+    price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,16], tags:["diving","courses","boat"],
+    book:"https://www.adventurecookislands.com/contact/" },
+
+  { id:"hospital", name:"Hospital & Emergencies", cat:"knowhow", deg:322, r:244, district:"Rarotonga Hospital, Nikao",
+    blurb:"Rarotonga Hospital in Nikao runs 24 hours, with an outpatient clinic at Tupapa. Care for anything serious is good, but complex cases are flown to Auckland — which is the argument for travel insurance that covers medical evacuation.",
+    tip:"Emergency numbers on the island: 999 police, 998 ambulance, 996 fire. Coral cuts go septic fast in this water; clean them properly the same day rather than the next.",
+    price:"—", best:"Hopefully never", dur:"—", hours:[ALL,0,24], tags:["safety","practical","health"],
+    phone:"+68222664", hero:true }
 ];
 
 /* ---------- derived helpers ---------- */
@@ -1041,6 +1094,25 @@ function ringLeg(fromDeg, toDeg){
            walk: Math.round(km / WALK_KMH * 60) };
 }
 const fmtKm = km => km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+
+// Cook Islands numbers are five digits behind +682, and locals quote them as
+// "26 464" — so that is how they are shown, and dialled in full.
+function fmtPhone(tel){
+  const d = tel.replace(/[^0-9]/g, "");
+  return d.startsWith("682") && d.length === 8
+    ? `+682 ${d.slice(3,5)} ${d.slice(5)}` : tel;
+}
+const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+// Real coordinates, so this opens the phone's own maps app on the actual spot
+// rather than a search for a name it may not know.
+function directionsURL(pl){
+  const { lat, lon } = placeLatLon(pl);
+  const q = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+  return isApple ? `https://maps.apple.com/?daddr=${q}&dirflg=d`
+                 : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+}
+const lookupURL = pl =>
+  `https://duckduckgo.com/?q=${encodeURIComponent(pl.name + " Rarotonga Cook Islands phone")}`;
 
 // Where you can tell the app you're staying, when the browser won't share a fix.
 const ANCHORS = [
@@ -1178,10 +1250,15 @@ function buildBaseMap(){
   }
   el("circle", { cx:60, cy:60, r:5, fill:"var(--gold)", opacity:".08" }, pat);
 
-  const world = el("g", { id:"world" }, svg);
+  // The ocean and its tiare texture sit OUTSIDE the transformed group. A tiled
+  // pattern over a 2200x2000 rect has to be re-rasterised every time its
+  // transform changes, and on a phone that single layer cost more per frame
+  // than the whole island. Nobody can tell that open water does not slide.
+  const backdrop = el("g", { id:"backdrop" }, svg);
+  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#oceanG)" }, backdrop);
+  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#tiare)" }, backdrop);
 
-  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#oceanG)" }, world);
-  el("rect", { x:-600, y:-600, width:2200, height:2000, fill:"url(#tiare)" }, world);
+  const world = el("g", { id:"world" }, svg);
 
   // open-ocean swell lines, drawn only outside the reef
   const swell = el("g", { stroke:"var(--foam)", "stroke-width":2, fill:"none", opacity:".16",
@@ -1337,7 +1414,11 @@ function applyView(force){
   // The pins counter-scale, and that depends only on k. So a pure pan costs one
   // attribute write instead of sixty-three — which is the difference between a
   // map that tracks your finger and one that lags a frame behind it.
-  if (force || view.k !== lastK){
+  // Mid-pinch the pins are left to scale with the map and are re-fitted when
+  // your fingers lift. Rewriting 63 transforms on every frame of a pinch is the
+  // one thing that makes zooming stutter, and nobody notices the difference.
+  const midPinch = gesturing && pointers.size >= 2;
+  if ((force || view.k !== lastK) && !midPinch){
     const inv = 1 / view.k;
     const minor = view.k < 1.2 ? 0.52 : view.k < 1.6 ? 0.72 : 1;
     for (const pl of PLACES){
@@ -1435,14 +1516,26 @@ function placeLabels(){
    ========================================================================= */
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
-function toUser(clientX, clientY){
+// getScreenCTM() forces the browser to flush layout. Calling it twice per
+// pointermove — 120 times a second on a phone — was stalling the very frames it
+// was feeding. The matrix only changes when the element is resized, so it is
+// cached and refreshed then, plus once at the start of each gesture.
+let ctmInv = null;
+function refreshCTM(){
   const m = svg.getScreenCTM();
-  if (!m) return { x:clientX, y:clientY };
-  const i = m.inverse();
+  ctmInv = m ? m.inverse() : null;
+}
+function toUser(clientX, clientY){
+  if (!ctmInv) refreshCTM();
+  if (!ctmInv) return { x:clientX, y:clientY };
+  const i = ctmInv;
   return { x: i.a * clientX + i.c * clientY + i.e,
            y: i.b * clientX + i.d * clientY + i.f };
 }
+addEventListener("resize", refreshCTM);
+addEventListener("orientationchange", () => setTimeout(refreshCTM, 250));
 function viewCentre(){
+  refreshCTM();
   const r = svg.getBoundingClientRect();
   return toUser(r.left + r.width / 2, r.top + r.height / 2);
 }
@@ -1453,11 +1546,14 @@ function clampView(){
   view.y = clamp(view.y, EDGE - VB_H * view.k, VB_H - EDGE);
 }
 // Scale about a fixed point: whatever is under the cursor stays under the cursor.
-function zoomAround(ux, uy, k){
+function setZoomAround(ux, uy, k){          // mutate only; the frame does the drawing
   const wx = (ux - view.x) / view.k, wy = (uy - view.y) / view.k;
   view.k = clamp(k, MIN_K, MAX_K);
   view.x = ux - wx * view.k;
   view.y = uy - wy * view.k;
+}
+function zoomAround(ux, uy, k){
+  setZoomAround(ux, uy, k);
   clampView(); applyView();
 }
 
@@ -1505,15 +1601,33 @@ let vx = 0, vy = 0, lastMoveTime = 0;
 svg.addEventListener("pointerdown", e => {
   if (e.pointerType === "mouse" && e.button !== 0) return;
   stopAnim();
+  refreshCTM();
   pointers.set(e.pointerId, toUser(e.clientX, e.clientY));
   if (pointers.size === 1){
     downAt = { cx:e.clientX, cy:e.clientY };
     moved = false; vx = vy = 0; lastMoveTime = performance.now();
     gesturing = true;
     svg.classList.add("dragging");
+    world.style.willChange = "transform";
   }
   if (pointers.size === 2) pinchPrev = null;      // recomputed on the next move
 });
+
+// A phone samples touch at 120Hz and can paint at 60. Handling every sample
+// synchronously meant two full re-renders per frame, each one blocking the next
+// sample — which is exactly why short movements felt like they caught. Samples
+// now accumulate and one frame draws once.
+let framePending = false;
+function drawFrame(){
+  framePending = false;
+  clampView();
+  applyView();
+}
+function invalidate(){
+  if (framePending) return;
+  framePending = true;
+  requestAnimationFrame(drawFrame);
+}
 
 window.addEventListener("pointermove", e => {
   if (!pointers.has(e.pointerId)) return;
@@ -1527,23 +1641,26 @@ window.addEventListener("pointermove", e => {
     if (pinchPrev){
       view.x += mid.x - pinchPrev.mid.x;          // pinches drag as well as scale
       view.y += mid.y - pinchPrev.mid.y;
-      zoomAround(mid.x, mid.y, view.k * (dist / pinchPrev.dist));
+      setZoomAround(mid.x, mid.y, view.k * (dist / pinchPrev.dist));
     }
     pinchPrev = { mid, dist };
     moved = true;
+    invalidate();
     return;
   }
 
-  if (!moved && downAt && Math.hypot(e.clientX - downAt.cx, e.clientY - downAt.cy) < 5) return;
-  moved = true;
+  // The map follows from the first pixel. The threshold below only decides
+  // whether this gesture counts as a tap; dropping the first few pixels of
+  // movement is what made small drags feel like they stuck before letting go.
   const dx = cur.x - prev.x, dy = cur.y - prev.y;
+  if (!moved && downAt && Math.hypot(e.clientX - downAt.cx, e.clientY - downAt.cy) >= 4) moved = true;
   const now = performance.now(), dt = Math.max(1, now - lastMoveTime);
   lastMoveTime = now;
   // exponential smoothing, so one jittery sample cannot fling the map
   vx = vx * 0.7 + (dx / dt * 16) * 0.3;
   vy = vy * 0.7 + (dy / dt * 16) * 0.3;
   view.x += dx; view.y += dy;
-  clampView(); applyView();
+  invalidate();
 });
 
 function endPointer(e){
@@ -1551,7 +1668,9 @@ function endPointer(e){
   if (pointers.size < 2) pinchPrev = null;
   if (pointers.size) return;
   gesturing = false;
+  applyView(true);                       // re-fit the pins after a pinch
   svg.classList.remove("dragging");
+  setTimeout(() => { if (!gesturing && !anim) world.style.willChange = ""; }, 400);
   if (moved){
     swallowClick = true;                      // a drag must not open a place
     setTimeout(() => swallowClick = false, 0);
@@ -1589,7 +1708,8 @@ svg.addEventListener("wheel", e => {
   const p = toUser(e.clientX, e.clientY);
   // ctrl+wheel is what a trackpad pinch sends; it is coarser, so it gets a
   // smaller coefficient to land at the same feel as a mouse notch
-  zoomAround(p.x, p.y, view.k * Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.009 : 0.0026)));
+  setZoomAround(p.x, p.y, view.k * Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.009 : 0.0026)));
+  invalidate();
 }, { passive:false });
 
 svg.addEventListener("dblclick", e => {
@@ -2162,7 +2282,9 @@ const BRIEF = {
     ["Scooters need a local licence", "From the Avarua police station. Helmets are compulsory, the limit is 50 open road and 30 through villages, and there are dogs."],
     ["Cash and the triangle coin", "New Zealand dollars, with locally minted coins including a triangular $3. ATMs are effectively Avarua-only, so draw before you head round."],
     ["Water and power", "Tank and stream-fed water — ask your host whether to drink it. Power is 240V on New Zealand plugs."],
-    ["Phone", "Local SIMs are sold in Avarua. Coverage is good round the coast, patchy in the valleys, and absent on the Cross-Island Track."]
+    ["Phone", "Local SIMs are sold in Avarua. Coverage is good round the coast, patchy in the valleys, and absent on the Cross-Island Track."],
+    ["Booking a table", "OpenTable, Resy and the rest do not operate in the Cook Islands — there is no online reservation network here at all. You ring, or you message the restaurant's Facebook page, and for the popular kitchens you do it a day ahead. Where this map has a number, the Call button dials it."],
+    ["Numbers on this map", "Taken from the venues' own public listings. Small businesses here change numbers, so if one fails, the Find contact button searches for a current one rather than leaving you stuck."]
   ]
 };
 
@@ -2247,16 +2369,28 @@ function select(id, fly = true){
   const rows = [["Hours", hoursText(p)], ["Best time", p.best]];
   if (tr) rows.push(["From you", `${tr.main} — ${tr.sub}`]);
   rows.push(["From Avarua", p.offshore ? p.offshore.note : drive.text]);
+  if (p.phone) rows.push(["Phone", `<a class="tel" href="tel:${p.phone}">${fmtPhone(p.phone)}</a>`]);
   if (p.bring) rows.push(["Bring", p.bring]);
   rows.push(["Tags", p.tags.join(" · ")]);
   document.getElementById("dFacts").innerHTML =
     rows.map(([k,v]) => `<li><span class="k">${k}</span><span class="v">${v}</span></li>`).join("");
 
-  const star = document.getElementById("dStar");
-  const on = state.saved.has(p.id);
-  star.textContent = on ? "⭐ Saved" : "⭐ Save";
-  star.classList.toggle("on", on);
-  star.onclick = () => {
+  // Booking here is a phone call. OpenTable and the rest do not operate in the
+  // Cook Islands at all, so the useful thing an app can do is dial the number,
+  // open the venue's own booking page, or hand the coordinates to Maps.
+  const saved = state.saved.has(p.id);
+  const acts = document.getElementById("dActions");
+  acts.innerHTML = [
+    p.phone ? `<a class="btn primary" href="tel:${p.phone}">📞 ${fmtPhone(p.phone)}</a>` : "",
+    p.book  ? `<a class="btn go" href="${p.book}" target="_blank" rel="noopener">Book online ↗</a>` : "",
+    !p.phone && !p.book && p.price !== "Free" && p.price !== "—"
+      ? `<a class="btn" href="${lookupURL(p)}" target="_blank" rel="noopener">Find contact ↗</a>` : "",
+    p.offshore ? "" : `<a class="btn" href="${directionsURL(p)}" target="_blank" rel="noopener">Directions ↗</a>`,
+    `<button class="btn${saved ? " on" : ""}" id="dStar">${saved ? "⭐ Saved" : "⭐ Save"}</button>`,
+    `<button class="btn" id="dFly">Find on map</button>`
+  ].filter(Boolean).join("");
+
+  document.getElementById("dStar").onclick = () => {
     state.saved.has(p.id) ? state.saved.delete(p.id) : state.saved.add(p.id);
     persistSaved(); select(p.id, false); render(); renderLoop();
   };
