@@ -1,0 +1,1618 @@
+<title>Rarotonga Island Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* A deliberately single-theme page: the island at dusk. Every colour is painted
+   explicitly so it holds on any host background. */
+:root{
+  --sea-deep:#04121f; --sea:#0b2f4a; --ink:#eaf4f5; --ink-2:#9fb8c2; --ink-3:#6b8896;
+  --panel:#0c1c26; --panel-2:#132a36; --panel-3:#1c3a48; --line:#1f3f4f;
+  --gold:#ffc25c; --good:#3ddc97; --shadow:0 18px 50px rgba(0,0,0,.55);
+  --stay:#8b5cf6; --eat:#ff6b3d; --drink:#ff4d8d; --do:#22a7f0; --see:#22c58b;
+  --shop:#f0447a; --around:#ffb020; --accent:#22a7f0;
+  --r:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--sea-deep);color:var(--ink);overflow:hidden;
+  font-family:Outfit,system-ui,-apple-system,Segoe UI,sans-serif;
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+
+/* ---------- stage ---------- */
+#stage{position:fixed;inset:0;touch-action:none}
+#gl{display:block;width:100%;height:100%}
+#markers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+.mk{
+  position:absolute;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;will-change:transform;
+}
+.mk .dot{
+  width:34px;height:34px;border-radius:50% 50% 50% 4px;transform:rotate(45deg);
+  display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.45);
+  border:2px solid rgba(255,255,255,.92);transition:transform .16s cubic-bezier(.3,1.6,.5,1);
+}
+.mk .dot span{transform:rotate(-45deg);font-size:15px;line-height:1}
+.mk:hover .dot,.mk.sel .dot{transform:rotate(45deg) scale(1.18)}
+.mk .cap{
+  font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;
+  background:rgba(6,20,28,.82);padding:3px 8px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(6px);
+}
+.mk.small .dot{width:22px;height:22px;border-width:1.5px}
+.mk.small .dot span{font-size:10px}
+.mk.small .cap{display:none}
+.mk.dim{opacity:.28}
+
+/* ---------- top chrome ---------- */
+.top{position:fixed;top:0;left:0;right:0;padding:14px 14px 0;z-index:20;pointer-events:none}
+.top > *{pointer-events:auto}
+.bar{display:flex;gap:10px;align-items:center;max-width:1100px;margin:0 auto}
+.logo{
+  display:flex;align-items:center;gap:9px;padding:9px 15px 9px 11px;border-radius:999px;
+  background:rgba(12,28,38,.82);backdrop-filter:blur(14px);border:1px solid var(--line);
+  flex:0 0 auto;
+}
+.logo b{font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1}
+.logo small{display:block;font-size:9.5px;letter-spacing:.19em;color:var(--ink-3);
+  text-transform:uppercase;margin-top:3px}
+.logo .mark{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;
+  background:linear-gradient(150deg,#2ee6c5,#0b6f8f);font-size:14px}
+.searchbox{position:relative;flex:1;min-width:0}
+.searchbox input{
+  width:100%;padding:13px 15px 13px 42px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(12,28,38,.82);backdrop-filter:blur(14px);font-size:14.5px;
+}
+.searchbox input::placeholder{color:var(--ink-3)}
+.searchbox input:focus{outline:none;border-color:var(--accent)}
+.searchbox svg{position:absolute;left:15px;top:14px;width:16px;height:16px;
+  fill:none;stroke:var(--ink-3);stroke-width:2}
+.iconbtn{
+  width:46px;height:46px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;
+  background:rgba(12,28,38,.82);backdrop-filter:blur(14px);border:1px solid var(--line);
+  font-size:17px;
+}
+.iconbtn.on{background:var(--accent);border-color:var(--accent);color:#04121f}
+
+.cats{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 4px;max-width:1100px;margin:0 auto;
+  scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{
+  flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:8px 14px 8px 8px;border-radius:999px;
+  background:rgba(12,28,38,.82);backdrop-filter:blur(14px);border:1px solid var(--line);
+  font-size:13px;font-weight:500;
+}
+.cat i{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+  font-style:normal;font-size:12px}
+.cat.on{background:#fff;color:#08202c;border-color:#fff;font-weight:600}
+.cat .n{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.6}
+
+/* ---------- right rail ---------- */
+.rail{position:fixed;right:14px;bottom:calc(20px + env(safe-area-inset-bottom));z-index:20;
+  display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.rail .iconbtn{width:44px;height:44px;font-size:15px}
+.rail .lbl{font-size:10px;font-weight:700;letter-spacing:.06em}
+
+/* ---------- sheet ---------- */
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);
+  border-top:1px solid var(--line);border-radius:24px 24px 0 0;box-shadow:var(--shadow);
+  transform:translateY(102%);transition:transform .34s cubic-bezier(.2,.9,.25,1);
+  max-height:88vh;display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet.up{transform:translateY(0)}
+.sheet .grab{width:40px;height:4px;border-radius:99px;background:var(--panel-3);
+  margin:9px auto 0;flex:0 0 auto}
+.sheet .body{overflow-y:auto;overscroll-behavior:contain;padding:0 0 18px}
+@media (min-width:900px){
+  .sheet{left:auto;right:16px;bottom:16px;top:16px;width:400px;border-radius:22px;
+    border:1px solid var(--line);max-height:none;transform:translateX(calc(100% + 24px))}
+  .sheet.up{transform:translateX(0)}
+  .sheet .grab{display:none}
+  .rail{bottom:20px;right:calc(432px + 14px)}
+  .rail.narrow{right:14px}
+}
+
+.hero{position:relative;padding:20px 20px 16px}
+.hero .band{height:110px;border-radius:16px;margin-bottom:15px;position:relative;overflow:hidden;
+  display:grid;place-items:center;font-size:40px}
+.hero .band .ph{position:absolute;inset:0;opacity:.9}
+.kicker{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.hero h2{margin:9px 0 0;font-size:25px;line-height:1.12;font-weight:600;letter-spacing:-.02em}
+.hero .sub{margin:6px 0 0;font-size:13.5px;color:var(--ink-2)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.chip{padding:5px 11px;border-radius:999px;background:var(--panel-2);font-size:12px;font-weight:600;
+  color:var(--ink-2)}
+.chip.open{background:rgba(61,220,151,.16);color:var(--good)}
+.chip.shut{color:var(--ink-3)}
+.chip.rating{background:rgba(255,194,92,.14);color:var(--gold)}
+
+.acts{display:flex;gap:8px;padding:0 20px 16px;flex-wrap:wrap}
+.act{
+  flex:1 1 96px;padding:11px 10px;border-radius:14px;background:var(--panel-2);
+  display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  text-decoration:none;color:var(--ink);border:1px solid transparent;
+}
+.act:hover{background:var(--panel-3)}
+.act em{font-style:normal;font-size:16px}
+.act.primary{background:var(--accent);color:#04121f}
+.act.gold{background:var(--gold);color:#2a1a05}
+
+.sec{padding:0 20px 18px}
+.sec h3{margin:0 0 9px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700}
+.sec p{margin:0 0 12px;font-size:14px;line-height:1.62;color:var(--ink-2)}
+.note{padding:13px 15px;border-radius:14px;background:var(--panel-2);font-size:13.5px;
+  line-height:1.55;color:var(--ink-2);border-left:3px solid var(--gold)}
+.rows{display:grid;gap:1px;background:var(--line);border-radius:14px;overflow:hidden}
+.rows div{display:flex;justify-content:space-between;gap:14px;background:var(--panel);
+  padding:11px 14px;font-size:13px}
+.rows .k{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.08em;
+  font-weight:700;align-self:center}
+.rows .v{font-family:"IBM Plex Mono",monospace;font-size:12.5px;text-align:right}
+.rows .v a{color:var(--accent);text-decoration:none}
+
+/* ---------- generic list rows ---------- */
+.list{display:flex;flex-direction:column;gap:2px;padding:4px 12px 16px}
+.item{
+  display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;text-align:left;
+  padding:10px;border-radius:14px;width:100%;
+}
+.item:hover{background:var(--panel-2)}
+.item .th{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:18px}
+.item .t{font-size:14px;font-weight:600;line-height:1.25}
+.item .s{font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.item .r{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);text-align:right}
+.item .r small{display:block;font-family:Outfit,sans-serif;font-size:10.5px;color:var(--ink-3)}
+
+/* ---------- modal ---------- */
+.modal{position:fixed;inset:0;z-index:60;display:none;place-items:center;padding:18px;
+  background:rgba(2,10,16,.72);backdrop-filter:blur(6px)}
+.modal.on{display:grid}
+.card{
+  width:min(520px,100%);max-height:86vh;overflow-y:auto;background:var(--panel);
+  border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+}
+.card header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:20px 20px 0}
+.card h3{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.card .lede{margin:6px 0 0;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.card .content{padding:18px 20px 20px}
+.qs{display:flex;flex-direction:column;gap:16px}
+.q > span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;margin-bottom:8px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{padding:10px 14px;border-radius:12px;background:var(--panel-2);font-size:13px;font-weight:500}
+.opt[aria-pressed="true"]{background:#fff;color:#08202c;font-weight:600}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+.field label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:700}
+.field input,.field textarea,.field select{
+  padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);
+  font-size:14px;width:100%;
+}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{min-height:92px;resize:vertical;line-height:1.5;font-family:inherit}
+.field .hint{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+.btnrow{display:flex;gap:9px;margin-top:6px}
+.btn{padding:12px 16px;border-radius:13px;background:var(--panel-2);font-weight:600;font-size:13.5px;
+  flex:1;text-align:center;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);color:#04121f}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.stars{display:flex;gap:4px}
+.stars button{font-size:22px;line-height:1;color:var(--panel-3)}
+.stars button.on{color:var(--gold)}
+.rev{padding:12px 0;border-bottom:1px solid var(--line)}
+.rev:last-child{border-bottom:0}
+.rev .who{font-size:12px;color:var(--ink-3);margin-bottom:4px}
+.rev .txt{font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.empty{font-size:13px;color:var(--ink-3);line-height:1.6;padding:6px 0 2px}
+
+.loading{position:fixed;inset:0;display:grid;place-items:center;z-index:80;background:var(--sea-deep);
+  transition:opacity .5s ease}
+.loading.gone{opacity:0;pointer-events:none}
+.loading div{text-align:center}
+.loading b{display:block;font-size:19px;font-weight:600;letter-spacing:.03em}
+.loading small{display:block;margin-top:7px;font-size:12px;color:var(--ink-3);letter-spacing:.12em;
+  text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <div id="markers"></div>
+</div>
+
+<div class="loading" id="loading"><div>
+  <b>Rarotonga</b><small>Building the island</small>
+</div></div>
+
+<div class="top">
+  <div class="bar">
+    <div class="logo"><span class="mark">🌺</span><div><b>Rarotonga</b><small>Island Guide</small></div></div>
+    <div class="searchbox">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search places, food, things to do…" autocomplete="off">
+    </div>
+    <button class="iconbtn" id="favBtn" title="Saved places">♡</button>
+  </div>
+  <div class="cats" id="cats"></div>
+</div>
+
+<div class="rail" id="rail">
+  <button class="iconbtn" id="decideBtn" title="Help me decide">✨</button>
+  <button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>
+  <button class="iconbtn" id="zin" title="Zoom in">+</button>
+  <button class="iconbtn" id="zout" title="Zoom out">−</button>
+  <button class="iconbtn" id="reset" title="Reset view">⟳</button>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div class="body" id="sheetBody"></div>
+</div>
+
+<div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
+
+<script>
+/* =========================================================================
+   RAROTONGA ISLAND GUIDE — a real 3D island, not a picture of one.
+
+   The terrain is generated at load from the same model that positioned every
+   pin in the 2D version: a polar coastline function plus named peaks. Nothing
+   is a texture or a render — you are orbiting an actual mesh, which is why the
+   markers stay glued to the ground when you rotate and tilt.
+   ========================================================================= */
+
+const ALL = [0,1,2,3,4,5,6];
+const PLACES = [
+  /* ---------------- AVARUA + THE NORTH COAST ---------------- */
+  { id:"traderjacks", name:"Trader Jack's", cat:"drink", deg:2, r:268, district:"Avarua harbour",
+    blurb:"The bar built out over the reef edge at the harbour mouth, flattened by Cyclone Sally in 1997 and rebuilt lower and tougher. Sit on the deck with a Matutu, watch the swell detonate on the reef three metres away, and you have understood the island's whole relationship with the sea in about ninety seconds.",
+    tip:"Friday from about 5pm is when the whole island turns up. Get there before the crowd if you want a rail seat, and order the ika mata to start.",
+    price:"$$", best:"Sunset to late", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],11,23], tags:["sunset","live music","seafood"], phone:"+68226464", hero:true },
+
+  { id:"punanganui", name:"Punanga Nui Market", cat:"culture", deg:352, r:271, district:"Avarua waterfront",
+    blurb:"Saturday morning is the single fixed point in the Rarotongan week. Sixty-odd stalls of rukau, eke, pawpaw, black pearls, tivaevae quilts and ukulele players, wrapped around the waterfront from about 6am until the good stuff runs out at midday.",
+    tip:"Go at 7am, not 10am. Bring cash, eat a coconut-cream doughnut from the Mama's stall, and buy your pearls here rather than in the duty-free shops.",
+    price:"$", best:"Saturday 7–11am", dur:"1–2 hrs", hours:[[6],6,12], tags:["market","free entry","souvenirs"], hero:true },
+
+  { id:"cicc", name:"Avarua CICC Sunday Himene", cat:"culture", deg:356, r:250, district:"Avarua",
+    blurb:"The white 1853 coral-limestone church on the main road, and the reason Sunday morning on this island sounds the way it does. Himene is unaccompanied four-part Cook Islands harmony sung at a volume that rearranges your ribcage.",
+    tip:"Visitors are genuinely welcome at the 10am service. Cover your shoulders and knees, sit at the back, don't photograph during worship, and stay for the tea afterwards — that's where you actually meet people.",
+    price:"Free", best:"Sunday 10am", dur:"1.5 hrs", hours:[[0],9,12], tags:["free","sunday","music"], hero:true },
+
+  { id:"tamarind", name:"Tamarind House", cat:"eat", deg:14, r:266, district:"Between Avarua and Matavera",
+    blurb:"A restored colonial house on the seaward side of the road, white timber and shutters, doing the most composed cooking on the island. Lunch under the frangipani is the best-value serious meal in Rarotonga.",
+    tip:"High tea on the lawn is the sleeper booking — scones, sandwiches, the lagoon in front of you. Book a day ahead; it's small.",
+    price:"$$$", best:"Lunch or early dinner", dur:"1.5–2 hrs", hours:[[2,3,4,5,6],11,21], tags:["fine dining","booking","garden"], phone:"+68226487", book:"https://tamarindhouserarotonga.com/contact" },
+
+  { id:"palace", name:"Palace Takeaways", cat:"eat", deg:358, r:249, district:"Avarua",
+    blurb:"Fried chicken, chop suey, curry and rice in a polystyrene box for a few dollars, handed over a counter that has fed islanders for decades. This is where you eat when you have realised how much resort food costs.",
+    tip:"Portions are enormous — one box genuinely feeds two. Cash, and the queue moves faster than it looks.",
+    price:"$", best:"Any hungry moment", dur:"20 min", hours:[[1,2,3,4,5,6],10,20], tags:["cheap eats","takeaway","local"] },
+
+  { id:"museum", name:"Cook Islands Library & Museum", cat:"culture", deg:346, r:248, district:"Avarua",
+    blurb:"A single wooden room of adzes, shell trumpets, missionary-era printing and colonial-era photographs, run by volunteers. Twenty minutes here reframes everything you'll see for the rest of the trip.",
+    tip:"Ask about the vaka — the ocean-going canoes. The staff will point you to Avana passage and explain why it matters to New Zealand Māori.",
+    price:"$", best:"Weekday mornings", dur:"45 min", hours:[[1,2,3,4,5],9,14], tags:["history","rainy day","cheap"] },
+
+  { id:"licence", name:"Scooter Licence at the Police Station", cat:"knowhow", deg:6, r:243, district:"Avarua",
+    blurb:"A rite of passage: turn up at the Avarua police station with your home licence, pay the fee, and walk out with a Cook Islands driver's licence — a laminated souvenir that also happens to be legally required if you want to ride a scooter here.",
+    tip:"Helmets are compulsory now, whatever your host tells you. If your home licence doesn't cover motorbikes you'll do a short practical loop around the block — genuinely fun, and the officers are patient.",
+    price:"$", best:"Weekday morning", dur:"30–60 min", hours:[[1,2,3,4,5],8,15], tags:["practical","souvenir","scooter"] },
+
+  { id:"bus", name:"The Clockwise Bus", cat:"knowhow", deg:344, r:240, district:"Circles the whole island",
+    blurb:"Two buses, one going clockwise and one anticlockwise, endlessly around a 32 km road. There is no route map to learn and no stop you can miss, because eventually everything comes back around. It is the best-value ride in the Pacific.",
+    tip:"Flag it anywhere with a wave — you don't need a stop. Pay the driver, keep the day pass if you're hopping. Clockwise gets you to Muri fastest from town; anticlockwise to Arorangi.",
+    price:"$", best:"Daytime, plus a Friday–Saturday night run", dur:"Whole loop ≈50 min", hours:[[1,2,3,4,5,6],7,17], tags:["transport","cheap","no car needed"] },
+
+  { id:"rarosafari", name:"Raro Safari 4WD Tour", cat:"adventure", deg:338, r:250, district:"Departs Avarua",
+    blurb:"An open Land Rover up the unsealed inland tracks into the valleys the ring road never shows you — plantations, water intakes, the back of the mountains, and a driver whose commentary is half botany, half family history.",
+    tip:"Sit on the left going up for the valley views. It's dusty and genuinely bumpy; leave the good camera in a bag.",
+    price:"$$$", best:"Morning departure", dur:"4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["4wd","interior","guided"], phone:"+68223629" },
+
+  { id:"airport", name:"Rarotonga International", cat:"knowhow", deg:327, r:273, district:"Nikao",
+    blurb:"One runway, one room, and a man named Jake Numanga who played ukulele to arriving passengers for decades. Flights arrive in the middle of the night from Auckland, which is why your first morning starts at 4am.",
+    tip:"The whole island can hear the Auckland flight leave. If you're near the runway at departure time, the wave-off is a genuine local event.",
+    price:"—", best:"Red-eye arrivals", dur:"—", hours:null, tags:["arrival","practical"] },
+
+  { id:"blackrock", name:"Black Rock (Tuoro)", cat:"swim", deg:316, r:277, district:"Nikao / Tuoro",
+    blurb:"A volcanic outcrop standing off a pale beach on the north-west corner. In Cook Islands belief this is where the spirits of the dead depart for Avaiki, the homeland. It's also the island's best jumping rock and its most reliable sunset.",
+    tip:"Snorkel out to the left of the rock for the drop-off; jump from the seaward side only, and check the water depth first. Sunset here is free and beats any paid tour.",
+    price:"Free", best:"Late afternoon", dur:"1–2 hrs", hours:[ALL,6,19], tags:["free","sunset","snorkel","sacred"], hero:true },
+
+  /* ---------------- ARORANGI + THE WEST ---------------- */
+  { id:"highland", name:"Highland Paradise", cat:"culture", deg:282, r:200, district:"Above Arorangi",
+    blurb:"A 600-year-old village site 200 metres up the Arorangi hillside, abandoned after the missionaries moved everyone to the coast and reopened by the descendants of the people who lived there. The daytime cultural tour is the serious one; the evening show is the crowd-pleaser.",
+    tip:"Take the afternoon tour and stay for the evening show — you'll understand the dances instead of just watching them. The view down over the reef at dusk is the best on the island.",
+    price:"$$$", best:"Tue/Thu/Sat evening", dur:"4–5 hrs", hours:[[2,4,6],15,22], tags:["cultural show","booking","view"], phone:"+68221924", book:"https://www.highlandparadise.co.ck/contact/", hero:true },
+
+  { id:"waterline", name:"The Waterline", cat:"eat", deg:272, r:273, district:"Arorangi",
+    blurb:"Tables on the sand on the west coast, which means every dinner here comes with the sun going down into the Pacific behind it. The kitchen leans Mediterranean-Pacific and does not fumble the fish.",
+    tip:"Book the 5:30 sitting in winter and the 6:15 in summer to land the sunset exactly. Ask for a table at the water end, not the road end.",
+    price:"$$$", best:"Sunset dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],11,21], tags:["sunset","beachfront","booking"] },
+
+  { id:"rickshaw", name:"Rickshaw", cat:"eat", deg:265, r:270, district:"Arorangi",
+    blurb:"Pan-Asian street food done properly — laksa, bao, chilli-salt squid — in an island where most kitchens default to grilled fish and chips. It is consistently the food locals recommend when they're bored of resort menus.",
+    tip:"Small room, big reputation: book. Takeaway containers travel well back to a self-catering unit.",
+    price:"$$", best:"Dinner", dur:"1.5 hrs", hours:[[2,3,4,5,6],17,21], tags:["asian","booking","local favourite"] },
+
+  { id:"kikau", name:"Kikau Hut", cat:"eat", deg:258, r:269, district:"Arorangi",
+    blurb:"A thatched roadside institution running on garlic butter, curries and a menu that hasn't needed reinventing in twenty years. Unfashionable, warm, and busy every night with the same reliable pleasure.",
+    tip:"The garlic prawns are the order. It fills with repeat visitors by 7pm — call ahead in high season.",
+    price:"$$", best:"Dinner", dur:"1.5 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["classic","family","curry"] },
+
+  { id:"albertos", name:"Alberto's Steakhouse", cat:"eat", deg:252, r:266, district:"Arorangi",
+    blurb:"Steak, on an island where beef comes off a ship. It works because they take the sourcing seriously, and because after five days of reef fish your body starts asking questions.",
+    tip:"The eye fillet and a bottle from the short list is the move. Sit outside; the inside room is small.",
+    price:"$$$", best:"Dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["steak","booking"] },
+
+  { id:"storytellers", name:"Storytellers Eco Cycle Tour", cat:"adventure", deg:248, r:258, district:"Arorangi",
+    blurb:"A slow bicycle tour along the Ara Metua — the inland coral road built roughly a thousand years ago, long before any European arrived — with stops at marae, plantations and family land, told by someone whose ancestors are in the story.",
+    tip:"The flat inland road means this is genuinely easy riding. Book the morning slot: by 11am the heat stops being charming.",
+    price:"$$$", best:"Morning", dur:"3–4 hrs", hours:[[1,2,3,4,5],8,13], tags:["cycling","history","guided"], phone:"+68223450", book:"https://www.storytellers.co.ck/book-now" },
+
+  { id:"diveraro", name:"Dive Rarotonga", cat:"swim", deg:277, r:275, district:"Arorangi",
+    blurb:"Outside the reef the wall drops fast into visibility that regularly runs past 30 metres — canyons, caves, turtles, and the wreck of the Mataora off the north coast. The west-coast operators run two-tank morning trips year round.",
+    tip:"Non-divers can do a resort dive off the boat the same morning. Whale season overlaps July–October, and you occasionally hear them underwater.",
+    price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,15], tags:["diving","boat","certification"], phone:"+68221873", book:"https://www.diverarotonga.com/dive_booking/index" },
+
+  { id:"islandnight", name:"Island Night Buffet & Fire Dance", cat:"culture", deg:286, r:269, district:"Arorangi resorts",
+    blurb:"Umukai buffet — food cooked in an earth oven — followed by drumming and dance that would win competitions anywhere in Polynesia. Cook Islands drumming is famously the fastest in the Pacific and it is startling live.",
+    tip:"Different resorts host different nights, so there's one on most evenings; ask which one has the drummers rather than which has the biggest buffet. Front-row seats get pulled up to dance.",
+    price:"$$$", best:"Evening", dur:"3 hrs", hours:[[0,2,4,5,6],18,22], tags:["dance","buffet","booking"] },
+
+  { id:"raemaru", name:"Raemaru Summit", cat:"adventure", deg:270, r:140, district:"Behind Arorangi",
+    blurb:"The flat-topped mountain over Arorangi, 350 metres up a steep clay track with a rope section near the top. Legend says warriors from Aitutaki sliced the top off and carried it home, which is why Raemaru is blunt and Aitutaki has a hill.",
+    tip:"Do not attempt it after rain — the clay turns to grease. Two to three hours return, and you want proper shoes, not jandals.",
+    price:"Free", best:"Early morning, dry days", dur:"2–3 hrs", hours:[ALL,6,17], tags:["free","hike","steep","view"] },
+
+  /* ---------------- THE SOUTH-WEST ---------------- */
+  { id:"aroa", name:"Aroa Marine Reserve", cat:"swim", deg:238, r:271, district:"Aroa / Rutaki",
+    blurb:"A protected stretch of lagoon on the south-west where fishing has been off-limits long enough that the fish have forgotten to be afraid. Waist-deep, sheltered, and thick with parrotfish and convict tang.",
+    tip:"Snorkel at high tide when there's more water over the coral heads. This is the gentlest snorkel on the island — the right first one for nervous swimmers or kids.",
+    price:"Free", best:"High tide, morning light", dur:"1–2 hrs", hours:[ALL,7,18], tags:["free","snorkel","reserve","kids"] },
+
+  { id:"wilsons", name:"Wilson's Beach Bar", cat:"drink", deg:234, r:268, district:"Aroa",
+    blurb:"Bare feet, plastic chairs on the sand, a cold bottle, and the entire west-facing horizon to yourself. There is no design concept here and it is significantly better for it.",
+    tip:"Come for sunset, stay for the fact nobody will rush you. It's cash-friendly and the walk along the beach from Rutaki is 10 minutes.",
+    price:"$$", best:"Sunset", dur:"2 hrs", hours:[[1,2,3,4,5,6],14,21], tags:["sunset","beach bar","relaxed"] },
+
+  { id:"whales", name:"Humpback Whale Watching", cat:"adventure", deg:175, r:342, district:"Outside the reef",
+    blurb:"Humpbacks come north from Antarctica to calve in Cook Islands water between July and October, and they come close — often inside a few hundred metres of the reef. Rarotonga is one of the few places where research-led swim encounters are permitted under strict rules.",
+    tip:"You can often spot blows from Black Rock or the south coast for free with binoculars. If you go out, choose the operator working with the whale research centre, not the fastest boat.",
+    price:"$$$", best:"July–October", dur:"3 hrs", hours:[[1,2,3,4,5,6],7,15], tags:["seasonal","wildlife","boat"], hero:true },
+
+  { id:"wigmores", name:"Wigmore's Waterfall (Papua)", cat:"adventure", deg:205, r:172, district:"Inland from Vaimaanga",
+    blurb:"A short walk inland from the south coast to a fern-hung pool under a fall that runs hard after rain and thins to a trickle in a dry spell. Cool fresh water, which after three days of salt is a genuine physical relief.",
+    tip:"Free, and five minutes off the ring road — you can ride there on a scooter. Best in the hour after rain. The eels in the pool are harmless and unbothered by you.",
+    price:"Free", best:"After rain", dur:"1 hr", hours:[ALL,7,18], tags:["free","waterfall","swim","easy"] },
+
+  { id:"crossisland", name:"Cross-Island Track & The Needle", cat:"adventure", deg:8, r:112, district:"Straight through the middle",
+    blurb:"The island's signature walk: up from Avatiu valley to Te Rua Manga, the 413-metre basalt spire locals call the Needle, then down the far side through the jungle to Wigmore's Waterfall and out at the south coast. Three to four hours, one ridge, one rope, one very good view.",
+    tip:"Do it north to south so the steep part is uphill and the slippery part is downhill. Go with Pa, the trekking guide who has done it thousands of times, or at minimum tell someone your plan. Never in the rain.",
+    price:"Free (or $$ guided)", best:"Dry morning", dur:"3–4 hrs", hours:[ALL,7,15], tags:["hike","free","signature","guided option"], hero:true },
+
+  /* ---------------- TITIKAVEKA + THE SOUTH ---------------- */
+  { id:"mairenui", name:"Maire Nui Botanical Gardens", cat:"culture", deg:198, r:252, district:"Titikaveka",
+    blurb:"Four acres of heliconia, ginger and lily ponds on the south coast, with a café doing the best cake on the island under a shade tree. Quiet in a way the beach never quite is.",
+    tip:"Café first, garden second — the lemon meringue goes early. Entry to the garden is a small donation that funds the planting.",
+    price:"$", best:"Morning", dur:"1–1.5 hrs", hours:[[1,2,3,4,5,6],9,16], tags:["garden","cake","quiet"] },
+
+  { id:"charlies", name:"Charlie's Café", cat:"eat", deg:186, r:267, district:"Titikaveka",
+    blurb:"Beachfront café and kayak hire on the south coast, positioned on the best stretch of Titikaveka's lagoon. Breakfast, a paddle out to the coral gardens, and back for a coffee is a completely defensible way to spend a morning.",
+    tip:"Hire the clear-bottom kayak here and paddle east — turtles feed along this stretch most mornings.",
+    price:"$$", best:"Breakfast to mid-afternoon", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],8,16], tags:["breakfast","kayak","turtles"] },
+
+  { id:"fruits", name:"Fruits of Rarotonga Snorkel", cat:"swim", deg:170, r:269, district:"Titikaveka / Ngatangiia",
+    blurb:"The best shore snorkel on Rarotonga, straight off a small beach beside the jam shop the spot is named after. Deep coral bommies, big schools, and a decent chance of a green turtle without getting in a boat.",
+    tip:"Enter at the sandy channel and swim left along the coral heads. Avoid it on an outgoing tide with a big swell — the passage current runs. Buy the mango chutney on the way out.",
+    price:"Free", best:"Morning, high tide", dur:"1–2 hrs", hours:[ALL,7,18], tags:["free","snorkel","turtles","best"], hero:true },
+
+  { id:"vaima", name:"Vaima Restaurant", cat:"eat", deg:195, r:264, district:"Titikaveka",
+    blurb:"A long-running south-coast dining room where the fish arrives whole, the service is unhurried and the room fills with the same people every night of a two-week holiday.",
+    tip:"Order whatever came in that day rather than off the printed menu. Book — it is small and it is popular.",
+    price:"$$$", best:"Dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["seafood","booking","classic"], phone:"+68226123" },
+
+  { id:"shipwreck", name:"Shipwreck Hut", cat:"drink", deg:180, r:267, district:"Titikaveka",
+    blurb:"A driftwood shack on the sand doing cocktails at the exact point where the south-coast lagoon turns the colour of a swimming pool advertisement. Barefoot, unbothered, extremely photogenic.",
+    tip:"It's small and it fills. Come mid-afternoon rather than at sunset if you want a table on the sand.",
+    price:"$$", best:"Afternoon", dur:"1–2 hrs", hours:[[1,2,3,4,5,6],11,19], tags:["cocktails","beach bar","photo"] },
+
+  { id:"matutu", name:"Matutu Brewery Taproom", cat:"drink", deg:190, r:251, district:"Titikaveka",
+    blurb:"The island's own brewery, tucked inland off the south coast, opening the shed to the public on Friday afternoons. Kiva Pale Ale is the one you'll see behind every bar on the island; here it's fresh and the brewers are pouring.",
+    tip:"Friday afternoon only, and it's a genuine local scene rather than a tourist stop. Take the bus or share a taxi — don't ride a scooter home from here.",
+    price:"$$", best:"Friday afternoon", dur:"2 hrs", hours:[[5],15,19], tags:["beer","friday","local scene"] },
+
+  { id:"nustall", name:"Roadside Nu Stall", cat:"eat", deg:160, r:263, district:"South coast roadside",
+    blurb:"An honesty box, a chilly bin and a machete. Drinking nu — a green drinking coconut, opened in front of you — is a couple of dollars and the single most refreshing thing available on this island.",
+    tip:"Hand the empty back and ask them to split it: the soft flesh inside is the second half of the transaction and most visitors miss it entirely.",
+    price:"$", best:"Any hot afternoon", dur:"10 min", hours:[ALL,8,17], tags:["cheap","coconut","roadside"] },
+
+  /* ---------------- MURI + THE EAST ---------------- */
+  { id:"murimarket", name:"Muri Night Market", cat:"eat", deg:124, r:259, district:"Muri Beach",
+    blurb:"A dozen family food stalls on the Muri foreshore most nights of the week — curries, barbecue, ika mata, doughnuts — eaten at long shared tables with the lagoon going dark behind you. The best-value dinner on the island by a distance.",
+    tip:"Arrive at 6pm sharp; popular stalls sell out by 7. Bring cash and small notes. Rotates by night, so check which stalls are on before setting your heart on the Thai one.",
+    price:"$", best:"From 6pm", dur:"1–1.5 hrs", hours:[[0,1,2,3,4,5,6],17,21], tags:["cheap","street food","lagoon"], hero:true },
+
+  { id:"tevaranui", name:"Te Vara Nui Over-Water Show", cat:"culture", deg:132, r:245, district:"Muri",
+    blurb:"A cultural village tour and buffet followed by a drum-and-dance show performed on a stage built over a lit water garden, with the dancers arriving by torchlight. It is theatrical in a way the resort island nights are not.",
+    tip:"Do the 5pm village tour before the show — the weaving and coconut demonstrations are where the actual knowledge is. Book several days ahead in season.",
+    price:"$$$", best:"Tue/Thu/Fri/Sat evening", dur:"4 hrs", hours:[[2,4,5,6],17,22], tags:["show","buffet","booking"], phone:"+68224006", book:"https://www.tevaranui.co.ck/bookings/bookengine.aspx", hero:true },
+
+  { id:"sails", name:"Sails Restaurant", cat:"eat", deg:120, r:263, district:"Muri Beach",
+    blurb:"Upstairs on the Muri foreshore with the full sweep of the lagoon and the four motu in front of you. The view does a lot of work; the kitchen holds up its end, particularly at lunch.",
+    tip:"Lunch beats dinner here purely because you can see the lagoon colours. Ask for a rail table when you book.",
+    price:"$$$", best:"Lunch", dur:"1.5–2 hrs", hours:[[1,2,3,4,5,6],11,21], tags:["view","lagoon","booking"] },
+
+  { id:"lbv", name:"LBV Bakery", cat:"eat", deg:117, r:243, district:"Muri",
+    blurb:"A French bakery on a Polynesian island, which sounds implausible until you're eating the croissant. Proper laminated pastry, decent coffee, and a queue of expats by 7:30am.",
+    tip:"Pastries sell out well before lunch. Get the ham and cheese croissant and take it 200 metres to the beach.",
+    price:"$", best:"Early morning", dur:"30 min", hours:[[1,2,3,4,5,6],6,14], tags:["breakfast","coffee","pastry"] },
+
+  { id:"tapabar", name:"Nautilus Tapa Bar", cat:"drink", deg:113, r:259, district:"Muri",
+    blurb:"The most considered cocktail list on the island, in an open pavilion at the quiet end of Muri. Where you go when you want the drink to be as good as the view.",
+    tip:"Sunday afternoon is unusually alive here when the rest of the island has closed. Non-guests are welcome — plenty of people assume otherwise and stay away.",
+    price:"$$$", best:"Late afternoon", dur:"1–2 hrs", hours:[ALL,11,22], tags:["cocktails","sunday","upscale"] },
+
+  { id:"murilagoon", name:"Muri Lagoon & the Four Motu", cat:"swim", deg:118, r:302, district:"Muri Beach",
+    blurb:"The postcard: a wide turquoise lagoon with four small islands — Taakoka, Koromiri, Oneroa and Motutapu — sitting in it. Shallow enough to wade a long way out, calm enough to paddleboard, and it changes colour hourly with the light.",
+    tip:"Kayak to Koromiri at high tide and walk the sandbar back. Wear reef shoes: there's more dead coral rubble underfoot than the photographs suggest. Water shoes, not jandals.",
+    price:"Free", best:"High tide, mid-morning", dur:"Half a day", hours:[ALL,6,19], tags:["free","kayak","paddleboard","iconic"], hero:true },
+
+  { id:"lagooncruise", name:"Glass-Bottom Lagoon Cruise", cat:"swim", deg:121, r:271, district:"Departs Muri",
+    blurb:"Out across the lagoon with a snorkel stop over the coral gardens, then a barbecue fish lunch on a motu, coconut husking, ukulele and a genuinely funny running commentary. It is the most-booked thing on Rarotonga and it earns it.",
+    tip:"Book the morning cruise — the wind gets up in the afternoon and the lagoon chops. The fish is grilled in front of you; say yes to the second helping.",
+    price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"], phone:"+68222026", book:"https://www.captaintamas.com/", hero:true },
+
+  { id:"kitesurf", name:"Muri Kitesurfing", cat:"adventure", deg:110, r:298, district:"Muri lagoon",
+    blurb:"Flat, waist-deep, warm water inside a reef, with reliable south-easterly trade winds. As a place to learn kitesurfing it is close to ideal, and the local school has been teaching in that lagoon for years.",
+    tip:"May to October is the windy season. If you already fly, bring your own bar and lines; gear hire is limited.",
+    price:"$$$", best:"May–Oct, afternoon breeze", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],9,17], tags:["watersport","lessons","seasonal"] },
+
+  { id:"avana", name:"Avana Passage & the Vaka Departure", cat:"culture", deg:103, r:267, district:"Ngatangiia",
+    blurb:"The harbour where, by tradition, seven great vaka left for Aotearoa around the 14th century, carrying the ancestors of New Zealand Māori. A circle of stones on the foreshore names them. Standing there and reading them is the most affecting five minutes on the island.",
+    tip:"Free, always open, and almost never busy. Go at sunrise — this is the east coast, so it's the one place on Rarotonga where the sun comes up out of the water.",
+    price:"Free", best:"Sunrise", dur:"30 min", hours:[ALL,5,19], tags:["free","history","sunrise","sacred"], hero:true },
+
+  { id:"mooring", name:"The Mooring Fish Café", cat:"eat", deg:100, r:271, district:"Avana, Ngatangiia",
+    blurb:"A shipping container beside the passage serving one thing better than anywhere else: a grilled fish sandwich made from tuna landed a few hours earlier, wrapped in paper, eaten on a picnic table by the water.",
+    tip:"It closes early afternoon and sells out on good fishing days. The sashimi bowl is the connoisseur's order. Cash.",
+    price:"$", best:"Lunch, before 2pm", dur:"45 min", hours:[[1,2,3,4,5,6],8,14], tags:["fish","cheap","legendary"], hero:true },
+
+  { id:"maraearai", name:"Marae Arai-te-Tonga", cat:"culture", deg:40, r:246, district:"Tupapa / Matavera",
+    blurb:"The most important surviving koutu on Rarotonga — the ceremonial ground where chiefs were invested, with the standing investiture pillar still in place. It sits quietly beside the inland road with almost no signage.",
+    tip:"This is tapu, not a photo backdrop: stay on the roadside, don't climb on the stones, don't move anything. Combine it with a ride along the Ara Metua, which passes right by.",
+    price:"Free", best:"Any daylight hour", dur:"20 min", hours:[ALL,6,18], tags:["free","sacred","history"] },
+
+  { id:"matavera", name:"Matavera Coral Church", cat:"culture", deg:68, r:267, district:"Matavera",
+    blurb:"A small white CICC church on the east coast, coral-lime walls, painted timber, and a congregation whose singing carries out over the road on a Sunday morning.",
+    tip:"Quieter and less visited than the Avarua church — if the town service feels too busy, come here instead. Same dress standards apply.",
+    price:"Free", best:"Sunday 10am", dur:"1 hr", hours:[[0],9,12], tags:["free","sunday","architecture"] },
+
+  { id:"temanga", name:"Te Manga Summit", cat:"adventure", deg:40, r:132, district:"Interior, north-east",
+    blurb:"At 653 metres, the highest point in the Cook Islands, reached by a steep, rope-assisted scramble that is a serious step up from the Cross-Island Track. On a clear day the whole island lies below you inside its ring of white reef.",
+    tip:"Guide strongly recommended — the route is unmarked in places and the ridge is exposed. Five to six hours return, and you must start early.",
+    price:"Free (guide $$)", best:"Clear dry mornings", dur:"5–6 hrs", hours:[ALL,6,14], tags:["hard hike","summit","guide"] },
+
+  { id:"arametua", name:"Ara Metua Ride", cat:"adventure", deg:330, r:198, district:"Inland ring road",
+    blurb:"The inland road, laid with coral around a thousand years ago and still in use — probably the oldest road in Polynesia. Flat, shaded, lined with taro patches and family graves, and almost empty of traffic.",
+    tip:"Rent a bike rather than a scooter for this one. It doesn't run unbroken all the way round; drop back onto the coast road where it fades and pick it up again.",
+    price:"Free", best:"Late afternoon", dur:"2–3 hrs", hours:[ALL,6,18], tags:["free","cycling","history"],
+    bring:"Bike from any hire shop, water, and a phone — some sections have no houses for a while." },
+
+  /* ---------------- ADDED IN THE SECOND PASS ---------------- */
+  { id:"sheraton", name:"The Sheraton Ruins", cat:"adventure", deg:210, r:238, district:"Vaimaanga",
+    blurb:"A five-star resort that was never finished. Construction stopped in the early 1990s, the money vanished into an offshore scandal that nearly bankrupted the country, and the concrete shell has been sitting in the jungle ever since, slowly going green.",
+    tip:"It's on private land and genuinely derelict — rebar, holes, no lighting. People do walk in from the road; if you do, go in daylight, wear real shoes, and don't go alone. Ask locally first, and accept a no.",
+    price:"Free", best:"Daylight only", dur:"45 min", hours:[ALL,8,17], tags:["free","ruins","offbeat","photography"],
+    bring:"Closed shoes, and someone who knows you're there." },
+
+  { id:"aitutaki", name:"Aitutaki Day Trip", cat:"adventure", deg:26, r:352, district:"45 minutes north by air",
+    blurb:"The lagoon everyone means when they say Cook Islands: a 45-minute flight to a triangular reef enclosing water so pale it looks retouched, One Foot Island, and a sandbar you can stand on in the middle of the Pacific. Doable as a very long day trip, better as two nights.",
+    tip:"The day trip leaves early and gets back after dark, and includes a lagoon cruise. If you can spare a night, do — the island empties of day-trippers at 4pm and becomes a completely different place.",
+    price:"$$$$", best:"Book weeks ahead in high season", dur:"Full day", hours:[[1,2,3,4,5,6],6,19], tags:["flight","lagoon","splurge","bucket list"], hero:true,
+    offshore:{ km:260, note:"260 km north — 45 minutes in a turboprop" },
+    bring:"Passport not needed — it's a domestic hop. Reef shoes, and a hat you can't lose overboard." },
+
+  { id:"fishingclub", name:"Game Fishing Club", cat:"drink", deg:5, r:257, district:"Avarua waterfront",
+    blurb:"A members' club on the harbour that welcomes visitors, sells the cheapest cold beer in Rarotonga, and has a deck facing directly into the sunset. Weigh-ins happen on the concrete outside when the boats come in.",
+    tip:"Sign the visitors' book at the door and you're in. Friday afternoon is when the fishing crews arrive and the stories get taller.",
+    price:"$", best:"Late afternoon", dur:"1–2 hrs", hours:[[1,2,3,4,5,6],15,22], tags:["cheap","local","harbour","sunset"] },
+
+  { id:"avatiu", name:"Avatiu Harbour", cat:"knowhow", deg:346, r:263, district:"West of Avarua",
+    blurb:"The island's working port: the container ship from Auckland, the inter-island barge, the fishing fleet, and the trailhead for the Cross-Island Track a couple of kilometres up the valley behind it. Everything Rarotonga cannot grow arrives here.",
+    tip:"Ship day visibly changes what's on the supermarket shelves. If the shops look thin, ask when the boat is due — that's the real supply chain, and everyone on the island tracks it.",
+    price:"Free", best:"Morning", dur:"20 min", hours:[ALL,6,18], tags:["free","harbour","practical"] },
+
+  { id:"golf", name:"Rarotonga Golf Club", cat:"adventure", deg:322, r:230, district:"Nikao",
+    blurb:"Nine holes laid out between the airport's radio masts, where the local rule for a ball hitting a mast is genuinely written down. Green fees are a fraction of anywhere comparable and clubs hire for pocket money.",
+    tip:"Visitors are welcome most days but not always Saturday, which is club competition. Ring first, and play early before the heat.",
+    price:"$$", best:"Weekday morning", dur:"2–3 hrs", hours:[[1,2,3,4,5],8,15], tags:["golf","cheap","quirky"],
+    bring:"Sunscreen and your own hat; clubs and a cart are available there." },
+
+  { id:"whalecentre", name:"Whale & Wildlife Centre", cat:"culture", deg:280, r:262, district:"Arorangi",
+    blurb:"A small research and education centre on the west coast run by the marine biologist who has spent decades identifying individual humpbacks in Cook Islands water. Talks are informal and the science is real.",
+    tip:"Ask about the whale that pushed her away from a tiger shark — it's a famous piece of footage and the story is better in person. Opening hours revolve around fieldwork, so call ahead.",
+    price:"$", best:"July–October", dur:"1 hr", hours:[[1,2,3,4,5],10,15], tags:["whales","science","rainy day"] },
+
+  { id:"fridaynight", name:"Avarua Friday Night", cat:"drink", deg:0, r:235, district:"Avarua town",
+    blurb:"Friday is the island's night out. Trader Jack's fills, the town bars fill after it, and by midnight a few hundred people are dancing to a mix of island reggae and whatever the DJ has. It is friendly and unpretentious and it goes late.",
+    tip:"Everything shuts hard at midnight on Saturday because Sunday is Sunday — the law and the culture agree on this. Do not drink and ride a scooter; there are shared taxis and everyone uses them.",
+    price:"$$", best:"Friday from 9pm", dur:"Late", hours:[[5,6],20,24], tags:["nightlife","dancing","local"] },
+
+  { id:"selfcater", name:"Supermarkets & Self-Catering", cat:"knowhow", deg:344, r:232, district:"Avarua, plus Wigmore's in the south",
+    blurb:"Almost everything in the supermarket arrived by ship and is priced accordingly, but the roadside stalls and the Saturday market are cheap. Cooking three nights out of seven is what makes a fortnight here affordable.",
+    tip:"Buy fish from the roadside coolers, fruit and rukau at Punanga Nui, and only the boxed goods from the supermarket. Wigmore's in Vaimaanga saves the trip to town if you're staying south.",
+    price:"$$", best:"Avoid Sunday — most close", dur:"45 min", hours:[[1,2,3,4,5,6],7,20], tags:["practical","budget","groceries"] },
+
+  { id:"money", name:"Money & the Triangle Coin", cat:"knowhow", deg:352, r:230, district:"Avarua banks",
+    blurb:"The currency is the New Zealand dollar, but the Cook Islands mints its own coins — including a genuinely triangular three-dollar piece with Ina and the shark on it. It's legal tender here and worthless anywhere else, which is exactly why you want one.",
+    tip:"ATMs are essentially confined to Avarua and one or two resorts — draw cash before you head round the island. Many small places are cash-only, and tipping is not a local custom.",
+    price:"—", best:"Weekday banking hours", dur:"20 min", hours:[[1,2,3,4,5],9,15], tags:["practical","cash","souvenir"] },
+
+  { id:"reefkit", name:"Reef Shoes & What Not to Wear", cat:"knowhow", deg:176, r:244, district:"Everywhere with water",
+    blurb:"The lagoon floor is coral rubble and stonefish are present but rare, so reef shoes are worn by locals and ignored by tourists, which is why the medical centre sees the injuries it does. Oxybenzone sunscreen is the other one: it bleaches the coral you came to look at.",
+    tip:"Buy reef shoes at any hire shop for the price of two cocktails. Reef-safe zinc is sold on-island. Shoulders and knees covered away from the beach, and never in a shop in just togs — it reads as rude here.",
+    price:"$", best:"Day one", dur:"15 min", hours:[[1,2,3,4,5,6],8,17], tags:["practical","safety","etiquette"] },
+
+  { id:"takitumu", name:"Takitumu Conservation Area", cat:"adventure", deg:148, r:172, district:"South-east valleys",
+    blurb:"A private reserve in the inland valleys run by the three landowning families, and the reason the kākerōri — the Rarotonga flycatcher — still exists. In 1989 there were 29 birds left. Sustained rat control has taken the population into the hundreds, and it is one of the Pacific's genuine conservation successes.",
+    tip:"Guided walks only, by booking, and the guides are the landowners. Go in the morning when the birds are calling. The orange-and-grey plumage difference is age, not sex — young birds are orange.",
+    price:"$$$", best:"Morning, dry weather", dur:"3 hrs", hours:[[1,2,3,4,5],8,13], tags:["birds","conservation","guided","rainforest"],
+    bring:"Insect repellent, closed shoes, and binoculars if you have them." },
+
+  { id:"titikavekacicc", name:"Titikaveka Coral Church", cat:"culture", deg:188, r:253, district:"Titikaveka",
+    blurb:"Built in 1841 from coral blocks cut out of the reef and burnt for lime, with walls a metre thick and a graveyard of family plots running down toward the lagoon. One of the oldest buildings in the country and still the parish church.",
+    tip:"The coral blocks were hauled by hand from the reef in front of it — stand at the seaward wall and you can see where. Sunday 10am service, same dress standards as anywhere.",
+    price:"Free", best:"Sunday, or any quiet weekday", dur:"30 min", hours:[ALL,7,18], tags:["free","history","architecture","sunday"] },
+
+  { id:"nikaobeach", name:"Nikao Beach & the Runway Sunset", cat:"swim", deg:330, r:269, district:"Nikao",
+    blurb:"A long shallow beach at the airport end of the north-west coast where locals park up in the evening. The sun goes down over the water and, if the timing is right, the Auckland flight lifts off directly over your head.",
+    tip:"Free, no facilities, and the swimming is better at high tide. Check the departure board in town if you want the plane in the shot — it's the same time most nights.",
+    price:"Free", best:"An hour before sunset", dur:"1–2 hrs", hours:[ALL,6,20], tags:["free","sunset","local","photo"] },
+
+  { id:"saturdaysport", name:"Saturday Rugby & Netball", cat:"culture", deg:342, r:224, district:"Avarua fields",
+    blurb:"Rugby league is close to a national religion and Saturday is when the island plays it, on the fields behind town, with netball on the courts alongside and half the village watching from the boot of a car.",
+    tip:"Turn up, stand at the fence, and nobody will mind. Season runs roughly through the middle of the year. This is the most local thing on this map and it costs nothing.",
+    price:"Free", best:"Saturday afternoon", dur:"2 hrs", hours:[[6],12,18], tags:["free","sport","local","community"] },
+
+  { id:"honesty", name:"Roadside Honesty Boxes", cat:"knowhow", deg:150, r:257, district:"All the way round",
+    blurb:"Tables at the end of driveways stacked with pawpaw, bananas, limes, eggs, sometimes fish, with a jar or a tin for the money and nobody watching. They are everywhere once you start noticing them, and they tell you more about the place than any tour will.",
+    tip:"Carry coins and small notes on the scooter — most boxes can't make change and you'll pass four in a day. Take what you pay for, obviously.",
+    price:"$", best:"Morning, when they're restocked", dur:"5 min", hours:[[1,2,3,4,5,6],7,18], tags:["free to look","local","cheap","produce"] },
+/* ---------------- ADDED IN THE THIRD PASS ---------------- */
+  { id:"otb", name:"On The Beach", cat:"eat", deg:276, r:271, district:"Manuia, Arorangi",
+    blurb:"White tablecloths a few metres off the sand on the sunset coast, and the most serious kitchen on the west side. The kind of place you book for the last night rather than the first.",
+    tip:"Ask for a table on the sand rather than the deck, and time the booking for twenty minutes before sunset.",
+    price:"$$$$", best:"Sunset dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["fine dining","sunset","booking"],
+    book:"https://www.otbrarotonga.com/" },
+
+  { id:"koka", name:"Koka Lagoon Cruises", cat:"swim", deg:126, r:266, district:"Departs Muri",
+    blurb:"The other long-running Muri lagoon cruise: glass-bottom boat out to the coral gardens, snorkelling, a barbecue fish lunch on a motu, and coconut husking done by someone who has been doing it since childhood.",
+    tip:"Between this and Captain Tama's, take whichever has space — they run the same stretch of lagoon. Morning departures beat afternoon ones because the wind gets up.",
+    price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"],
+    book:"https://kokalagooncruises.com/" },
+
+  { id:"airraro", name:"Air Rarotonga", cat:"knowhow", deg:332, r:250, district:"Airport, Nikao",
+    blurb:"The national airline, and the only way to the outer islands. Aitutaki several times a day, Atiu and the rest of the southern group less often, plus scenic flights over the reef when the schedule allows.",
+    tip:"Book outer-island legs before you arrive in high season — the aircraft are small and they do fill. The baggage allowance is tighter than your international flight, so check it.",
+    price:"$$$$", best:"Weekday mornings", dur:"—", hours:[[1,2,3,4,5,6],7,17], tags:["flights","aitutaki","booking"],
+    phone:"+68222888", book:"https://airraro.com/" },
+
+  { id:"pastrek", name:"Pa's Cross-Island Trek", cat:"adventure", deg:2, r:120, district:"Across the middle",
+    blurb:"The guided version of the Cross-Island Track, led by the island's best-known bushman. Same route past the Needle, but with a running commentary on medicinal plants, and someone who has walked it thousands of times deciding when the clay is too wet.",
+    tip:"Book a day or two ahead through your accommodation. Wear shoes you are willing to ruin, and take twice the water you think you need.",
+    price:"$$", best:"Dry mornings", dur:"4 hrs", hours:[[1,2,3,4,5,6],7,14], tags:["hike","guided","signature"],
+    bring:"Closed shoes with grip, 2 litres of water, and a dry bag for your phone." },
+
+  { id:"progressive", name:"Progressive Dinner", cat:"eat", deg:16, r:238, district:"Three island homes",
+    blurb:"Three courses in three different family houses on the same evening, with the hosts cooking and eating alongside you. It is the single best way to end up in a Rarotongan home rather than a restaurant, and the conversation is the point.",
+    tip:"Runs on set nights and books out in season. Come hungry and do not skip the taro — refusing food in someone's house is the one manners mistake visitors make.",
+    price:"$$$", best:"Evening, booked ahead", dur:"4 hrs", hours:[[2,4],17,22], tags:["local","food","booking","unique"], hero:true },
+
+  { id:"gamefish", name:"Game Fishing Charter", cat:"adventure", deg:150, r:340, district:"Outside the reef",
+    blurb:"The bottom drops to a thousand metres within sight of the beach, so the boats are on the fish inside fifteen minutes. Mahi mahi, wahoo, yellowfin and marlin, on half-day charters out of Avatiu and Avarua.",
+    tip:"Most crews will let you keep a fillet and take the rest — ask before you book if that matters to you. Take seasickness tablets an hour before, not on the boat.",
+    price:"$$$$", best:"Early morning, calm days", dur:"4–8 hrs", hours:[[1,2,3,4,5,6],6,15], tags:["fishing","boat","charter"],
+    bring:"Hat, long sleeves, and something for seasickness." },
+
+  { id:"adventuredive", name:"Adventure Cook Islands", cat:"swim", deg:270, r:266, district:"Arorangi",
+    blurb:"The other side of the island's diving: wall dives, caves and the wrecks, plus courses from first breath to divemaster. Small groups, and they will take snorkellers on the same boat.",
+    tip:"If you have never dived, the try-dive off the boat is the cheapest way to find out whether you like it. Book the day before rather than the morning of.",
+    price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,16], tags:["diving","courses","boat"],
+    book:"https://www.adventurecookislands.com/contact/" },
+
+  { id:"hospital", name:"Hospital & Emergencies", cat:"knowhow", deg:322, r:244, district:"Rarotonga Hospital, Nikao",
+    blurb:"Rarotonga Hospital in Nikao runs 24 hours, with an outpatient clinic at Tupapa. Care for anything serious is good, but complex cases are flown to Auckland — which is the argument for travel insurance that covers medical evacuation.",
+    tip:"Emergency numbers on the island: 999 police, 998 ambulance, 996 fire. Coral cuts go septic fast in this water; clean them properly the same day rather than the next.",
+    price:"—", best:"Hopefully never", dur:"—", hours:[ALL,0,24], tags:["safety","practical","health"],
+    phone:"+68222664", hero:true }
+];
+
+const BRIEF = {
+  phrases: [
+    ["Kia orana", "kee-ah oh-RAH-nah", "Hello — literally “may you live on”. Say it to everyone you pass, including strangers on the road. Not saying it is the one thing visitors get wrong."],
+    ["Meitaki", "may-TAH-kee", "Thank you. Meitaki ma‘ata is thank you very much."],
+    ["Pē‘ea koe?", "PAY-ay-ah kway", "How are you? Answer: meitaki au — I’m well."],
+    ["‘Aere rā / Ka kite", "EYE-reh rah", "Goodbye to the person leaving / see you later."],
+    ["Āe · Kāre", "eye · KAH-reh", "Yes · no."],
+    ["Papa‘ā", "pah-pah-AH", "A European or foreigner. Descriptive, not an insult — you are one."],
+    ["Mama · Papa", "", "How you address an older woman or man you respect. Use it."],
+    ["Ariki", "ah-REE-kee", "Paramount chief. Not a historical term — the ariki titles are live, and land is held under them."],
+    ["Tapu", "TAH-poo", "Sacred, restricted. If somewhere is tapu, you don’t climb on it, take from it, or picnic there."],
+    ["Ei · ei katu", "ay · ay KAH-too", "A flower garland · a flower crown. You’ll be given one within an hour of landing."]
+  ],
+  eat: [
+    ["Ika mata", "The national dish and the thing to order first: raw tuna cured in lime, then folded through coconut cream with cucumber and onion. Every family makes it slightly differently and every family’s is the best."],
+    ["Rukau", "Taro leaves slow-cooked in coconut cream. Creamed spinach with far more going on."],
+    ["Poke", "Nothing to do with Hawaiian poke — a set pudding of banana or pawpaw with arrowroot and coconut cream, eaten cold."],
+    ["Umukai", "A feast cooked in the umu, an earth oven of hot stones and banana leaves. Pork, chicken, taro, kuru, fish, all steamed underground for hours."],
+    ["Kuru", "Breadfruit, roasted whole until the skin is black. Eats like a dense roast potato."],
+    ["Eke · maroro", "Octopus, usually in coconut cream · flying fish, netted at night under lights. Seasonal and worth chasing."],
+    ["Curry and rice", "The island’s default takeaway. Cheap, enormous, and better than it has any need to be."],
+    ["Nu", "A green drinking coconut, opened with a machete for a couple of dollars. Ask them to split it afterwards for the flesh."]
+  ],
+  seasons: [
+    ["May–Oct", "Dry season. 24–26°C, low humidity, steady trade winds. The best months to be here, and the reason prices climb.", false],
+    ["Nov–Apr", "Wet and warm — 28–30°C, humid, heavy afternoon rain. Officially cyclone season, and the lagoon can turn milky after a downpour.", false],
+    ["Jul–Oct", "Humpbacks calving in Cook Islands water, often visible from shore.", false],
+    ["Late Jul–Aug", "Te Maeva Nui: the constitution celebrations, a week of island-by-island dance and drumming competitions. The single best week of the year to be here.", true],
+    ["September", "Round Rarotonga Road Race — 31 km of the ring road, and half the island turns out to watch.", false],
+    ["November", "Vaka Eiva: the outrigger canoe festival. The lagoon fills with paddlers from across the Pacific.", false],
+    ["May & Sep", "The shoulder: dry weather, thin crowds, softer prices. If you can choose, choose these.", true]
+  ],
+  numbers: [
+    ["15", "islands, holding 240 km² of land — scattered across 2.2 million km² of ocean. The exclusive economic zone is roughly the size of Western Europe."],
+    ["~15k", "people live in the Cook Islands. Around 80,000 Cook Islanders live in New Zealand: most of the nation is abroad, and almost everyone here has family in Auckland."],
+    ["1965", "self-governing in free association with New Zealand. Cook Islanders hold New Zealand citizenship, which is why the connection runs so deep in both directions."],
+    ["32 km", "around Rarotonga on the coast road, over 67 km² of island, rising to 653 m at Te Manga."],
+    ["~1,000", "years since the Ara Metua, the inland coral road, was laid. It still carries traffic."],
+    ["~170k", "visitors a year against 15,000 residents. Tourism is the economy, which is worth remembering when you're deciding how to behave."]
+  ],
+  manners: [
+    ["Greet everyone", "Kia orana to people you pass on foot, a raised hand to every driver. The island runs on acknowledgement and the absence of it is noticed."],
+    ["Sunday is real", "Observance is both law and habit. Shops shut, noise near a church is rude, and the beach is fine — just quietly."],
+    ["Cover up off the beach", "Shoulders and knees away from the sand, and never swimwear into a shop. This one genuinely irritates people."],
+    ["Shoes off at the door", "Entering a home, always. Church: dress up rather than down; a hat for women is traditional but not expected of visitors."],
+    ["Marae are not backdrops", "Ancient sites are tapu. Stay on the road side, take nothing, move nothing, and don't pose on the stones."],
+    ["Ask before photographing", "People, children, and anything during worship. A no is a no."],
+    ["No tipping, no haggling", "Neither is customary and both land awkwardly. Pay the price and say meitaki."],
+    ["That fence is somebody's", "Land is family land under Cook Islands Māori title and effectively never sold. An empty-looking beach path usually crosses someone's."]
+  ],
+  practical: [
+    ["There are no addresses", "Directions are given by landmark and by which way round the island: “past the Muri shop, clockwise side”. Ask for the landmark, not the street."],
+    ["Two buses, one road", "Clockwise and anticlockwise, flagged down anywhere with a wave. Cash to the driver."],
+    ["Scooters need a local licence", "From the Avarua police station. Helmets are compulsory, the limit is 50 open road and 30 through villages, and there are dogs."],
+    ["Cash and the triangle coin", "New Zealand dollars, with locally minted coins including a triangular $3. ATMs are effectively Avarua-only, so draw before you head round."],
+    ["Water and power", "Tank and stream-fed water — ask your host whether to drink it. Power is 240V on New Zealand plugs."],
+    ["Phone", "Local SIMs are sold in Avarua. Coverage is good round the coast, patchy in the valleys, and absent on the Cross-Island Track."],
+    ["Booking a table", "OpenTable, Resy and the rest do not operate in the Cook Islands — there is no online reservation network here at all. You ring, or you message the restaurant's Facebook page, and for the popular kitchens you do it a day ahead. Where this map has a number, the Call button dials it."],
+    ["Numbers on this map", "Taken from the venues' own public listings. Small businesses here change numbers, so if one fails, the Find contact button searches for a current one rather than leaving you stuck."]
+  ]
+};
+
+
+/* ---------------- accommodation, which the 2D guide never covered ---------------- */
+PLACES.push(
+  { id:"stay-muri",    name:"Muri Beach", cat:"stay", deg:120, r:250, district:"Muri",
+    blurb:"The busiest and easiest base: the lagoon out front, the night market walking distance, kayaks and paddleboards everywhere, and more places to eat within 500 m than the rest of the island combined.",
+    tip:"Best for a first visit and for families. The trade-off is that it is the one part of Rarotonga that feels busy, and the lagoon here is shallow at low tide.",
+    price:"$$–$$$$", best:"Any time", dur:"Base yourself", hours:null, tags:["accommodation","lagoon","family","walkable"], hero:true },
+  { id:"stay-arorangi", name:"Arorangi & the West", cat:"stay", deg:268, r:250, district:"Arorangi",
+    blurb:"The sunset coast, and where most of the larger resorts sit. Deeper water off the beach, the best evening light on the island, and a short ride into town.",
+    tip:"Choose west if sunsets matter more than snorkelling. Swimming is better at high tide along most of this shore.",
+    price:"$$–$$$$", best:"Any time", dur:"Base yourself", hours:null, tags:["accommodation","sunset","resorts"] },
+  { id:"stay-titikaveka", name:"Titikaveka & the South", cat:"stay", deg:186, r:252, district:"Titikaveka",
+    blurb:"The quiet side, and the best swimming water on Rarotonga. Fewer restaurants, more self-catering, and the coral gardens a few metres off the sand.",
+    tip:"Pick south if you came to be in the water. You will want a scooter or a car — the walk to anything is longer than it looks on a map.",
+    price:"$$–$$$", best:"Any time", dur:"Base yourself", hours:null, tags:["accommodation","snorkelling","quiet"] },
+  { id:"stay-avarua",  name:"Avarua & the North", cat:"stay", deg:352, r:246, district:"Avarua",
+    blurb:"Staying in town means the market, the banks, the bars and the bus both ways at your door. The beach is the weakest part of the island here, which is the trade.",
+    tip:"Good for a short stop or a first and last night. Ask about road noise: the ring road runs right through it.",
+    price:"$–$$$", best:"Short stays", dur:"Base yourself", hours:null, tags:["accommodation","town","convenient"] }
+);
+
+/* ---------------- categories, in the language a visitor uses ---------------- */
+const CATS = {
+  stay:   { label:"Stay",       icon:"🛏", color:"var(--stay)",   raw:["stay"] },
+  eat:    { label:"Eat",        icon:"🍽", color:"var(--eat)",    raw:["eat"] },
+  drink:  { label:"Drink",      icon:"🍹", color:"var(--drink)",  raw:["drink"] },
+  do:     { label:"Do",         icon:"🤿", color:"var(--do)",     raw:["swim","adventure"] },
+  see:    { label:"See",        icon:"🪘", color:"var(--see)",    raw:["culture"] },
+  around: { label:"Get around", icon:"🛵", color:"var(--around)", raw:["knowhow"] }
+};
+const CAT_OF = {};
+for (const [k, c] of Object.entries(CATS)) for (const r of c.raw) CAT_OF[r] = k;
+PLACES.forEach(p => { p.group = CAT_OF[p.cat] || "do"; });
+
+/* =========================================================================
+   THE ISLAND'S SHAPE — one model, used for the mesh, the pins and the maths
+   ========================================================================= */
+const CX = 500, CY = 400, RING_KM = 32, RING_MIN = 38;
+const px = (deg, r) => CX + r * Math.sin(deg * Math.PI / 180);
+const py = (deg, r) => CY - r * Math.cos(deg * Math.PI / 180);
+const bump = (deg, c, w, a) => { let d = ((deg - c + 540) % 360) - 180; return a * Math.exp(-(d*d)/(2*w*w)); };
+
+function coastR(deg){
+  return 262
+    + bump(deg, 316,  9,  16)   // Black Rock headland
+    - bump(deg, 103, 11,  22)   // Avana passage
+    - bump(deg, 128, 15,  10)   // land recedes behind Muri lagoon
+    + bump(deg, 232, 22,  10)   // Aroa foreland
+    - bump(deg, 356, 26,   8)   // Avarua's flatter shore
+    + Math.sin(deg * 0.122) * 5 + Math.sin(deg * 0.213 + 1.4) * 3.5;
+}
+function lagoonWidth(deg){
+  return 12 + bump(deg,120,26,46) + bump(deg,182,34,30) + bump(deg,236,24,16) + bump(deg,60,20,8);
+}
+const PEAKS = [
+  { name:"Te Manga",     m:653, deg:45,  r:138, spread:64 },
+  { name:"Te Kou",       m:588, deg:215, r:118, spread:60 },
+  { name:"Ikurangi",     m:485, deg:18,  r:120, spread:44 },
+  { name:"Te Rua Manga", m:413, deg:335, r:95,  spread:24 },
+  { name:"Raemaru",      m:350, deg:268, r:145, spread:46 },
+  { name:"Maungatea",    m:509, deg:350, r:150, spread:44 }
+];
+// The valleys are what make Rarotonga read as Rarotonga from the air: deep
+// radial clefts running from the ridge to the coast, each with a road up it.
+const VALLEYS = [345, 358, 85, 105, 205, 240, 285, 60];
+
+const SEA = 0, VSCALE = 0.20;   // world units per metre — about 3x life, which is
+                                // enough for the ridges to read without turning the
+                                // island into a spire
+function elevation(deg, rad){
+  const cr = coastR(deg);
+  if (rad >= cr) return 0;
+  const t = 1 - rad / cr;
+  let h = 150 * Math.pow(t, 1.45);
+  const X = px(deg, rad), Y = py(deg, rad);
+  for (const pk of PEAKS){
+    const d = Math.hypot(X - px(pk.deg, pk.r), Y - py(pk.deg, pk.r));
+    h += pk.m * 0.95 * Math.exp(-(d*d) / (2 * pk.spread * pk.spread));
+  }
+  let cut = 0;
+  for (const v of VALLEYS){ const dd = ((deg - v + 540) % 360) - 180; cut += Math.exp(-(dd*dd)/(2*7.5*7.5)); }
+  h *= 1 - 0.44 * Math.min(1, cut) * (1 - Math.pow(t, 2.4));
+  return h;
+}
+// Below the waterline: a shallow lagoon shelf, then the reef crest, then the
+// wall — which really does fall away to a thousand metres within sight of shore.
+function seabed(deg, rad){
+  const cr = coastR(deg), lw = lagoonWidth(deg), reef = cr + lw;
+  if (rad < cr) return 0;
+  if (rad < reef){ const u = (rad - cr) / lw; return -(2 + 26 * Math.pow(u, 1.6)); }
+  const u = (rad - reef) / 120;
+  return -(6 + 300 * Math.pow(Math.min(1, u), 1.5));
+}
+function heightAt(x, z){                       // world x/z -> metres
+  const dx = x - CX, dz = z - CY;
+  const rad = Math.hypot(dx, dz);
+  let deg = Math.atan2(dx, -dz) * 180 / Math.PI; if (deg < 0) deg += 360;
+  return rad < coastR(deg) ? elevation(deg, rad) : seabed(deg, rad);
+}
+
+/* =========================================================================
+   THE RENDERER — raw WebGL, no library.
+   A 3D library would be ~600 KB for one lit mesh, and this app has to work
+   with no signal, so the whole renderer is here: two shaders, one terrain
+   mesh, a water sheet, and the road as a ribbon laid on the ground.
+   ========================================================================= */
+const canvas = document.getElementById("gl");
+const gl = canvas.getContext("webgl", { antialias:true, alpha:false })
+        || canvas.getContext("experimental-webgl");
+
+/* ---------- 4x4 matrix maths, only the three operations needed ---------- */
+function mPerspective(fovy, aspect, near, far){
+  const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+  return [f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0];
+}
+function mLookAt(eye, at, up){
+  const z = norm3([eye[0]-at[0], eye[1]-at[1], eye[2]-at[2]]);
+  const x = norm3(cross3(up, z)), y = cross3(z, x);
+  return [x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
+          -dot3(x,eye), -dot3(y,eye), -dot3(z,eye), 1];
+}
+function mMul(a, b){
+  const o = new Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++){
+    let v = 0; for (let k = 0; k < 4; k++) v += a[k*4+r] * b[c*4+k];
+    o[c*4+r] = v;
+  }
+  return o;
+}
+const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
+
+/* ---------- shaders ---------- */
+const VS = `
+attribute vec3 aPos; attribute vec3 aNorm; attribute vec3 aCol;
+uniform mat4 uMVP; uniform vec3 uLight;
+varying vec3 vCol; varying float vShade; varying float vDepth;
+void main(){
+  vec4 clip = uMVP * vec4(aPos, 1.0);
+  gl_Position = clip;
+  float d = max(dot(normalize(aNorm), normalize(uLight)), 0.0);
+  vShade = 0.34 + 0.72 * d;          // ambient floor, then the sun
+  vCol = aCol;
+  vDepth = clip.w;
+}`;
+const FS = `
+precision mediump float;
+varying vec3 vCol; varying float vShade; varying float vDepth;
+uniform float uAlpha; uniform vec3 uFog;
+void main(){
+  float fog = clamp((vDepth - 900.0) / 1400.0, 0.0, 0.72);
+  vec3 c = mix(vCol * vShade, uFog, fog);
+  gl_FragColor = vec4(c, uAlpha);
+}`;
+function compile(type, src){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src); gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+const A = { pos:gl.getAttribLocation(prog,"aPos"), norm:gl.getAttribLocation(prog,"aNorm"),
+            col:gl.getAttribLocation(prog,"aCol") };
+const U = { mvp:gl.getUniformLocation(prog,"uMVP"), light:gl.getUniformLocation(prog,"uLight"),
+            alpha:gl.getUniformLocation(prog,"uAlpha"), fog:gl.getUniformLocation(prog,"uFog") };
+
+function makeMesh(pos, norm, col, idx){
+  const mk = (data, n) => { const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    return b; };
+  const ib = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+  return { pos:mk(pos), norm:mk(norm), col:mk(col), idx:ib, count:idx.length };
+}
+function drawMesh(m, alpha){
+  gl.uniform1f(U.alpha, alpha);
+  for (const [buf, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idx);
+  gl.drawElements(gl.TRIANGLES, m.count, gl.UNSIGNED_SHORT, 0);
+}
+
+/* ---------- the island itself ---------- */
+const GRID = 168, SPAN = 1240, VSCALE_Y = VSCALE;
+const lerp3 = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const rgb = h => [(h>>16&255)/255, (h>>8&255)/255, (h&255)/255];
+// Colour by what the ground is at that height, not by an arbitrary ramp: reef
+// and lagoon turquoise, a thin bright beach, planted lowland, forest, bare ridge.
+function groundColour(m){
+  if (m <= -40)      return rgb(0x06263c);
+  if (m <= -12)      return lerp3(rgb(0x0a3f5e), rgb(0x11809b), (m + 40) / 28);
+  if (m < 0)         return lerp3(rgb(0x19a5b4), rgb(0x63e0d6), (m + 12) / 12);
+  if (m < 4)         return rgb(0xf2e3bd);
+  if (m < 60)        return lerp3(rgb(0x67bb6d), rgb(0x3f8f52), m / 56);
+  if (m < 250)       return lerp3(rgb(0x3f8f52), rgb(0x22633e), (m - 60) / 190);
+  if (m < 430)       return lerp3(rgb(0x22633e), rgb(0x2f5f3d), (m - 250) / 180);
+  return lerp3(rgb(0x2f5f3d), rgb(0x8a8172), Math.min(1, (m - 430) / 220));
+}
+const islandMesh = (() => {
+  const n = GRID + 1, pos = [], col = [], norm = new Array(n * n * 3).fill(0), idx = [];
+  const H = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
+    const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
+    const m = heightAt(x + CX, z + CY);
+    H[j*n+i] = m;
+    pos.push(x, m * VSCALE_Y, z);
+    col.push(...groundColour(m));
+  }
+  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++){
+    const a = j*n+i, b = a+1, c = a+n, d = c+1;
+    idx.push(a, c, b, b, c, d);
+  }
+  // Per-vertex normals from the height field directly — cheaper and smoother
+  // than accumulating face normals over 56,000 triangles.
+  const step = SPAN / GRID;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
+    const hl = H[j*n + Math.max(0, i-1)], hr = H[j*n + Math.min(n-1, i+1)];
+    const hd = H[Math.max(0, j-1)*n + i], hu = H[Math.min(n-1, j+1)*n + i];
+    const nx = (hl - hr) * VSCALE_Y, nz = (hd - hu) * VSCALE_Y;
+    const v = norm3([nx, 2 * step, nz]);
+    const o = (j*n+i)*3; norm[o] = v[0]; norm[o+1] = v[1]; norm[o+2] = v[2];
+  }
+  return makeMesh(pos, norm, col, idx);
+})();
+
+// One translucent sheet at sea level: everything under it reads as underwater,
+// which is what makes the lagoon look like water rather than paint.
+const waterMesh = (() => {
+  const S = 1900, c = rgb(0x1592b4);
+  return makeMesh([-S,0.4,-S, S,0.4,-S, S,0.4,S, -S,0.4,S],
+                  [0,1,0, 0,1,0, 0,1,0, 0,1,0],
+                  [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
+})();
+
+// Ara Tapu as a ribbon that follows the actual ground it sits on, and the reef
+// crest as a band of foam where the swell breaks.
+function ribbon(radiusFn, yLift, halfWidth, colour){
+  const pos = [], col = [], norm = [], idx = [], N = 400;
+  for (let i = 0; i <= N; i++){
+    const deg = i / N * 360, r = radiusFn(deg);
+    const x = px(deg, r) - CX, z = py(deg, r) - CY;
+    const tx = Math.cos(deg * Math.PI/180), tz = Math.sin(deg * Math.PI/180);
+    const y = Math.max(0, heightAt(x + CX, z + CY)) * VSCALE_Y + yLift;
+    pos.push(x - tx*halfWidth, y, z - tz*halfWidth, x + tx*halfWidth, y, z + tz*halfWidth);
+    norm.push(0,1,0, 0,1,0); col.push(...colour, ...colour);
+    if (i < N){ const a = i*2; idx.push(a, a+1, a+2, a+1, a+3, a+2); }
+  }
+  return makeMesh(pos, norm, col, idx);
+}
+const roadMesh = ribbon(d => coastR(d) - 16, 1.1, 2.6, rgb(0xf7eed6));
+const reefMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 2, 1.0, 4.5, rgb(0xe8fbf7));
+
+/* =========================================================================
+   CAMERA — orbit, tilt, dolly, written here so touch and mouse behave alike
+   ========================================================================= */
+const cam = { az:-0.55, el:0.50, dist:880, tx:0, tz:-10 };
+const CAM_HOME = { ...cam };
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+let camDirty = true, viewProj = null;
+
+function placeCamera(){
+  cam.el = clamp(cam.el, 0.14, 1.5);
+  cam.dist = clamp(cam.dist, 240, 1600);
+  const r = cam.dist * Math.cos(cam.el);
+  const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
+  const proj = mPerspective(46 * Math.PI/180, canvas.width / canvas.height || 1, 4, 5200);
+  viewProj = mMul(proj, mLookAt(eye, [cam.tx, 0, cam.tz], [0,1,0]));
+  camDirty = true;
+}
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  canvas.style.width = innerWidth + "px";
+  canvas.style.height = innerHeight + "px";
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  placeCamera();
+}
+addEventListener("resize", resize);
+
+function drawScene(){
+  gl.clearColor(0.016, 0.071, 0.122, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.uniformMatrix4fv(U.mvp, false, new Float32Array(viewProj));
+  gl.uniform3f(U.light, -0.52, 0.66, 0.42);
+  gl.uniform3f(U.fog, 0.016, 0.071, 0.122);
+  gl.disable(gl.BLEND);
+  gl.depthMask(true);
+  drawMesh(islandMesh, 1);
+  drawMesh(roadMesh, 1);
+  drawMesh(reefMesh, 1);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);                       // water tints what is under it
+  drawMesh(waterMesh, 0.62);
+  gl.depthMask(true);
+}
+
+/* ---------- gestures ---------- */
+const stage = document.getElementById("stage");
+const ptrs = new Map();
+let pinchPrev = null, moved = false, downAt = null, spin = 0, glide = 0;
+
+stage.addEventListener("pointerdown", e => {
+  if (e.target.closest(".mk")) return;
+  ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if (ptrs.size === 1){ downAt = { x:e.clientX, y:e.clientY }; moved = false; spin = 0;
+                        cancelAnimationFrame(glide); }
+  pinchPrev = null;
+});
+addEventListener("pointermove", e => {
+  const prev = ptrs.get(e.pointerId); if (!prev) return;
+  const cur = { x:e.clientX, y:e.clientY };
+  ptrs.set(e.pointerId, cur);
+  if (ptrs.size >= 2){
+    const [a, b] = [...ptrs.values()];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const mid = { x:(a.x + b.x)/2, y:(a.y + b.y)/2 };
+    if (pinchPrev){
+      cam.dist *= pinchPrev.dist / dist;
+      cam.az -= (mid.x - pinchPrev.mid.x) * 0.004;
+      cam.el += (mid.y - pinchPrev.mid.y) * 0.003;
+      placeCamera();
+    }
+    pinchPrev = { dist, mid };
+    moved = true;
+    return;
+  }
+  const dx = cur.x - prev.x, dy = cur.y - prev.y;
+  if (!moved && downAt && Math.hypot(cur.x - downAt.x, cur.y - downAt.y) >= 4) moved = true;
+  cam.az -= dx * 0.005;
+  cam.el += dy * 0.004;
+  spin = spin * 0.6 + (-dx * 0.005) * 0.4;
+  placeCamera();
+});
+function endPtr(e){
+  if (!ptrs.delete(e.pointerId)) return;
+  if (ptrs.size < 2) pinchPrev = null;
+  if (ptrs.size) return;
+  if (moved && Math.abs(spin) > 0.002) coast();
+}
+["pointerup","pointercancel"].forEach(ev => addEventListener(ev, endPtr));
+function coast(){
+  cancelAnimationFrame(glide);
+  const step = () => {
+    spin *= 0.93; cam.az += spin; placeCamera();
+    if (Math.abs(spin) > 0.0004) glide = requestAnimationFrame(step);
+  };
+  glide = requestAnimationFrame(step);
+}
+stage.addEventListener("wheel", e => {
+  e.preventDefault();
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  cam.dist *= Math.exp(e.deltaY * unit * (e.ctrlKey ? 0.008 : 0.0022));
+  placeCamera();
+}, { passive:false });
+
+function animateCam(to, dur = 620){
+  cancelAnimationFrame(glide);
+  const from = { ...cam }, t0 = performance.now();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches){ Object.assign(cam, to); placeCamera(); return; }
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
+    for (const k in to) cam[k] = from[k] + (to[k] - from[k]) * e;
+    placeCamera();
+    if (t < 1) glide = requestAnimationFrame(step);
+  };
+  glide = requestAnimationFrame(step);
+}
+document.getElementById("zin").onclick   = () => animateCam({ dist: cam.dist / 1.5 }, 280);
+document.getElementById("zout").onclick  = () => animateCam({ dist: cam.dist * 1.5 }, 280);
+document.getElementById("reset").onclick = () => animateCam({ ...CAM_HOME });
+let flat = false;
+document.getElementById("tiltBtn").onclick = () => {
+  flat = !flat;
+  document.querySelector("#tiltBtn .lbl").textContent = flat ? "3D" : "2D";
+  animateCam(flat ? { el:1.47, az:0, dist:980, tx:0, tz:0 } : { el:0.50, dist:880, tx:0, tz:-10 });
+};
+
+/* =========================================================================
+   MARKERS — HTML pins projected onto the mesh every frame the camera moves.
+   Kept as DOM rather than sprites so they stay crisp, tappable and legible.
+   ========================================================================= */
+// Real coordinates, so Directions opens the phone's maps app on the actual spot.
+const ISLAND = { lat:-21.2330, lon:-159.7820, aKm:4.87, bKm:3.54 };
+const KM_LAT = 110.57, kmLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
+function latLonOf(p){
+  const t = p.deg * Math.PI / 180, a = ISLAND.aKm, b = ISLAND.bKm;
+  const realR = (a * b) / Math.hypot(b * Math.sin(t), a * Math.cos(t));
+  const km = (p.r / coastR(p.deg)) * realR;
+  return { lat: ISLAND.lat + (km * Math.cos(t)) / KM_LAT,
+           lon: ISLAND.lon + (km * Math.sin(t)) / kmLon(ISLAND.lat) };
+}
+
+PLACES.forEach(p => {
+  const x = px(p.deg, p.r) - CX, z = py(p.deg, p.r) - CY;
+  p.world = [x, Math.max(0, heightAt(x + CX, z + CY)) * VSCALE + 5, z];
+  p.latlon = latLonOf(p);
+});
+
+
+const layer = document.getElementById("markers");
+const nodes = new Map();
+PLACES.forEach(p => {
+  const el = document.createElement("button");
+  el.className = "mk";
+  el.innerHTML = `<span class="dot" style="background:${CATS[p.group].color}">
+      <span>${CATS[p.group].icon}</span></span><span class="cap">${p.name}</span>`;
+  el.onclick = ev => { ev.stopPropagation(); openPlace(p.id); };
+  layer.appendChild(el);
+  nodes.set(p.id, el);
+});
+
+function project(p){                     // world -> clip -> screen
+  const m = viewProj, x = p[0], y = p[1], z = p[2];
+  const cx = m[0]*x + m[4]*y + m[8]*z  + m[12];
+  const cy = m[1]*x + m[5]*y + m[9]*z  + m[13];
+  const cw = m[3]*x + m[7]*y + m[11]*z + m[15];
+  return { x:cx / cw, y:cy / cw, w:cw };
+}
+function drawMarkers(){
+  const w = innerWidth, h = innerHeight, order = [];
+  const shown = visibleSet();
+  // Nearer things get a full pin with its name; the rest stay as dots, so a
+  // 73-place island reads at a glance instead of arriving as a wall of labels.
+  const near = cam.dist < 620, mid = cam.dist < 1300;
+  for (const p of PLACES){
+    const el = nodes.get(p.id);
+    const v = project(p.world);
+    if (v.w <= 0){ el.style.display = "none"; continue; }
+    const sx = (v.x * 0.5 + 0.5) * w, sy = (-v.y * 0.5 + 0.5) * h;
+    if (sx < -80 || sx > w + 80 || sy < -60 || sy > h + 60){ el.style.display = "none"; continue; }
+    el.style.display = "";
+    el.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%)`;
+    el.style.zIndex = String(4000 - Math.round(v.w));
+    const big = p.hero ? mid : near;
+    el.classList.toggle("dim", !shown.has(p.id));
+    el.classList.toggle("sel", state.sel === p.id);
+    order.push({ el, p, sx, sy, w:v.w, big });
+  }
+  const boxes = order.map(o => [o.sx - 15, o.sy - 34, o.sx + 15, o.sy + 2]);
+  order.sort((a, b) => a.w - b.w);                 // nearest first wins its name
+  for (const o of order){
+    let named = o.big && (shown.has(o.p.id) || state.sel === o.p.id);
+    if (named){
+      const wpx = o.p.name.length * 6.4 + 16;
+      const box = [o.sx - wpx/2, o.sy - 4, o.sx + wpx/2, o.sy + 20];
+      if (boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3])))
+        named = false;
+      else boxes.push(box);
+    }
+    o.el.classList.toggle("small", !named);
+  }
+}
+
+function render(){
+  if (camDirty){ drawScene(); drawMarkers(); camDirty = false; }
+  requestAnimationFrame(render);
+}
+
+/* =========================================================================
+   TIME, TRAVEL, FILTERS
+   ========================================================================= */
+function raroNow(){ const n = new Date(); return new Date(n.getTime() + (n.getTimezoneOffset() - 600) * 60000); }
+function isOpen(p, t){
+  if (!p.hours) return null;
+  const [days, from, to] = p.hours;
+  if (!days.includes(t.getDay())) return false;
+  const h = t.getHours() + t.getMinutes() / 60;
+  return h >= from && h < to;
+}
+const DAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DSH = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const fmtHour = h => { const hh = Math.floor(h) % 24, ap = hh >= 12 ? "pm" : "am";
+  return `${hh % 12 === 0 ? 12 : hh % 12}${ap}`; };
+function hoursText(p){
+  if (!p.hours) return "—";
+  const [d, f, t] = p.hours;
+  const dd = d.length === 7 ? "Daily" : d.length === 6 && !d.includes(0) ? "Mon–Sat" : d.map(i => DSH[i]).join(" ");
+  return `${dd} ${fmtHour(f)}–${fmtHour(t)}`;
+}
+function ringFromTown(p){
+  if (p.r < 230) return "inland";
+  const cw = (p.deg / 360) * RING_MIN, acw = ((360 - p.deg) / 360) * RING_MIN;
+  const useCw = cw <= acw;
+  return `${Math.max(1, Math.round(useCw ? cw : acw))} min ${useCw ? "cw" : "acw"}`;
+}
+function fmtPhone(tel){
+  const d = (tel || "").replace(/[^0-9]/g, "");
+  return d.startsWith("682") && d.length === 8 ? `+682 ${d.slice(3,5)} ${d.slice(5)}` : tel;
+}
+const isApple = /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+function directionsURL(p){
+  const q = `${p.latlon.lat.toFixed(5)},${p.latlon.lon.toFixed(5)}`;
+  return isApple ? `https://maps.apple.com/?daddr=${q}&dirflg=d`
+                 : `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+}
+
+const state = { cats:new Set(Object.keys(CATS)), q:"", sel:null, favOnly:false,
+                favs:load("raro2.favs", []), biz:{}, ratings:{} };
+function load(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+function matches(p){
+  if (!state.cats.has(p.group)) return false;
+  if (state.favOnly && !state.favs.includes(p.id)) return false;
+  if (state.q){
+    const b = state.biz[p.id] || {};
+    const hay = (p.name + " " + p.district + " " + p.blurb + " " + p.tags.join(" ") + " " +
+                 (b.tagline || "") + " " + (b.description || "")).toLowerCase();
+    if (!hay.includes(state.q)) return false;
+  }
+  return true;
+}
+const visibleSet = () => new Set(PLACES.filter(matches).map(p => p.id));
+
+/* ---------- category chips ---------- */
+const catsEl = document.getElementById("cats");
+Object.entries(CATS).forEach(([k, c]) => {
+  const n = PLACES.filter(p => p.group === k).length;
+  const b = document.createElement("button");
+  b.className = "cat on"; b.dataset.k = k;
+  b.innerHTML = `<i style="background:${c.color}">${c.icon}</i>${c.label} <span class="n">${n}</span>`;
+  b.onclick = () => {
+    const all = state.cats.size === Object.keys(CATS).length;
+    if (all) state.cats = new Set([k]);
+    else if (state.cats.has(k)){ state.cats.delete(k); if (!state.cats.size) state.cats = new Set(Object.keys(CATS)); }
+    else state.cats.add(k);
+    syncCats(); camDirty = true;
+  };
+  catsEl.appendChild(b);
+});
+function syncCats(){
+  catsEl.querySelectorAll(".cat").forEach(b => b.classList.toggle("on", state.cats.has(b.dataset.k)));
+}
+document.getElementById("q").addEventListener("input", e => {
+  state.q = e.target.value.trim().toLowerCase();
+  camDirty = true;
+  if (state.q) openSearch(); else if (sheetMode === "search") closeSheet();
+});
+document.getElementById("favBtn").onclick = () => {
+  state.favOnly = !state.favOnly;
+  document.getElementById("favBtn").classList.toggle("on", state.favOnly);
+  document.getElementById("favBtn").textContent = state.favOnly ? "♥" : "♡";
+  camDirty = true;
+  if (state.favOnly) openFavs(); else closeSheet();
+};
+
+/* =========================================================================
+   BUSINESS PROFILES
+   Every listing on this map can be claimed and edited by the business itself.
+   What they write is stored in the artifact's shared database, so the next
+   visitor to open the page sees their words, their hours and their booking
+   link — not mine. Ratings are real too: they come from people who tapped the
+   stars here, and a place with none says so rather than showing an invented
+   score.
+   ========================================================================= */
+let db = null;
+(async () => {
+  // window.claude exists only inside the artifact viewer; anywhere else the
+  // page simply runs without shared listings.
+  db = window.claude && claude.use ? await claude.use("db") : null;
+  if (!db) return;
+  db.collection("businesses").onSnapshot(snap => {
+    state.biz = {};
+    snap.docs.forEach(d => { state.biz[d.id] = d.data(); });
+    if (state.sel) openPlace(state.sel, false);
+    camDirty = true;
+  }, () => {});
+  db.collection("ratings").onSnapshot(snap => {
+    state.ratings = {};
+    snap.docs.forEach(d => { state.ratings[d.id] = d.data(); });
+    if (state.sel) openPlace(state.sel, false);
+  }, () => {});
+})();
+
+function ratingOf(id){
+  const r = state.ratings[id];
+  if (!r || !r.count) return null;
+  return { avg: r.sum / r.count, count: r.count };
+}
+async function submitRating(id, stars, text){
+  if (!db) return;
+  const cur = state.ratings[id] || { sum:0, count:0 };
+  await db.doc(`ratings/${id}`).set({ sum: cur.sum + stars, count: cur.count + 1 });
+  if (text) await db.collection(`reviews/${id}/entries`).add({ stars, text, at: Date.now() });
+}
+
+/* =========================================================================
+   THE SHEET
+   ========================================================================= */
+const sheet = document.getElementById("sheet");
+const sheetBody = document.getElementById("sheetBody");
+let sheetMode = null;
+function openSheet(mode, html){
+  sheetMode = mode;
+  sheetBody.innerHTML = html;
+  sheet.classList.add("up");
+  document.getElementById("rail").classList.remove("narrow");
+  sheetBody.scrollTop = 0;
+}
+function closeSheet(){
+  sheet.classList.remove("up"); sheetMode = null; state.sel = null;
+  document.getElementById("rail").classList.add("narrow");
+  camDirty = true;
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+function openPlace(id, fly = true){
+  const p = PLACES.find(x => x.id === id); if (!p) return;
+  state.sel = id;
+  const b = state.biz[id] || {};
+  const t = raroNow(), open = isOpen(p, t), c = CATS[p.group];
+  const rating = ratingOf(id);
+  const phone = b.phone || p.phone, book = b.book || p.book, site = b.website;
+  const fav = state.favs.includes(id);
+
+  openSheet("place", `
+    <div class="hero">
+      <div class="band" style="background:linear-gradient(140deg,${c.color},#0b2f4a)">${c.icon}</div>
+      <div class="kicker"><span>${c.label}</span>${b.updatedAt ? "<span>· listed by the business</span>" : ""}</div>
+      <h2>${esc(p.name)}</h2>
+      <p class="sub">${esc(b.tagline || p.district)}</p>
+      <div class="chips">
+        ${open === true ? '<span class="chip open">● Open now</span>' : open === false ? '<span class="chip shut">Closed now</span>' : ""}
+        <span class="chip">${esc(b.price || p.price)}</span>
+        <span class="chip">${esc(p.dur)}</span>
+        ${rating ? `<span class="chip rating">★ ${rating.avg.toFixed(1)} · ${rating.count}</span>`
+                 : '<span class="chip">No ratings yet</span>'}
+      </div>
+    </div>
+    <div class="acts">
+      ${phone ? `<a class="act primary" href="tel:${esc(phone)}"><em>📞</em>Call</a>` : ""}
+      ${book ? `<a class="act gold" href="${esc(book)}" target="_blank" rel="noopener"><em>📅</em>Book</a>` : ""}
+      ${site ? `<a class="act" href="${esc(site)}" target="_blank" rel="noopener"><em>🌐</em>Website</a>` : ""}
+      ${p.offshore ? "" : `<a class="act" href="${directionsURL(p)}" target="_blank" rel="noopener"><em>🧭</em>Directions</a>`}
+      <button class="act" id="favAct"><em>${fav ? "♥" : "♡"}</em>${fav ? "Saved" : "Save"}</button>
+    </div>
+    <div class="sec">
+      <p>${esc(b.description || p.blurb)}</p>
+      <div class="note"><b>Local knowledge.</b> ${esc(p.tip)}</div>
+    </div>
+    <div class="sec">
+      <h3>Details</h3>
+      <div class="rows">
+        <div><span class="k">Hours</span><span class="v">${esc(b.hours || hoursText(p))}</span></div>
+        <div><span class="k">Best time</span><span class="v">${esc(p.best)}</span></div>
+        <div><span class="k">From Avarua</span><span class="v">${p.offshore ? "by air" : ringFromTown(p)}</span></div>
+        ${phone ? `<div><span class="k">Phone</span><span class="v"><a href="tel:${esc(phone)}">${fmtPhone(phone)}</a></span></div>` : ""}
+        ${p.bring ? `<div><span class="k">Bring</span><span class="v" style="font-family:Outfit,sans-serif;text-align:right">${esc(p.bring)}</span></div>` : ""}
+      </div>
+    </div>
+    <div class="sec">
+      <h3>Ratings from visitors</h3>
+      <div id="revs"></div>
+      <div class="btnrow">
+        <button class="btn ghost" id="rateBtn">Rate this place</button>
+        <button class="btn ghost" id="claimBtn">${b.updatedAt ? "Edit listing" : "I own this — add details"}</button>
+      </div>
+    </div>`);
+
+  document.getElementById("favAct").onclick = () => {
+    const i = state.favs.indexOf(id);
+    i < 0 ? state.favs.push(id) : state.favs.splice(i, 1);
+    save("raro2.favs", state.favs); openPlace(id, false); camDirty = true;
+  };
+  document.getElementById("rateBtn").onclick = () => rateDialog(p);
+  document.getElementById("claimBtn").onclick = () => claimDialog(p);
+  loadReviews(id);
+
+  if (fly){
+    const target = { az: Math.atan2(p.world[0], p.world[2]) - 0.3, dist: 520, el: 0.55,
+                     tx: p.world[0] * 0.55, tz: p.world[2] * 0.55 };
+    animateCam(target, 700);
+  }
+  camDirty = true;
+}
+
+async function loadReviews(id){
+  const box = document.getElementById("revs"); if (!box) return;
+  if (!db){ box.innerHTML = `<p class="empty">Ratings need the shared database, which this view cannot reach.</p>`; return; }
+  try {
+    const snap = await db.collection(`reviews/${id}/entries`).orderBy("at", "desc").limit(6).get();
+    box.innerHTML = snap.docs.length
+      ? snap.docs.map(d => { const r = d.data();
+          return `<div class="rev"><div class="who">${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)} · ${new Date(r.at).toLocaleDateString()}</div>
+                  <div class="txt">${esc(r.text)}</div></div>`; }).join("")
+      : `<p class="empty">Nobody has rated this yet. Ratings here come from people who actually tapped the stars — there are no imported scores and no invented ones.</p>`;
+  } catch { box.innerHTML = `<p class="empty">Could not load ratings just now.</p>`; }
+}
+
+/* ---------- modals ---------- */
+const modal = document.getElementById("modal"), modalCard = document.getElementById("modalCard");
+function openModal(html){ modalCard.innerHTML = html; modal.classList.add("on"); }
+function closeModal(){ modal.classList.remove("on"); }
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+
+function rateDialog(p){
+  let stars = 0;
+  openModal(`<header><div><h3>Rate ${esc(p.name)}</h3>
+      <p class="lede">Your rating is stored with the map and shown to everyone who opens it.</p></div>
+      <button class="btn ghost" style="flex:0 0 auto" id="x">✕</button></header>
+    <div class="content">
+      <div class="field"><label>Stars</label><div class="stars" id="st">
+        ${[1,2,3,4,5].map(i => `<button data-i="${i}">★</button>`).join("")}</div></div>
+      <div class="field"><label>A sentence, if you like</label>
+        <textarea id="rt" maxlength="400" placeholder="What should the next person know?"></textarea></div>
+      <div class="btnrow"><button class="btn ghost" id="c">Cancel</button>
+        <button class="btn primary" id="s">Post rating</button></div>
+    </div>`);
+  const paint = () => modalCard.querySelectorAll("#st button")
+    .forEach(b => b.classList.toggle("on", +b.dataset.i <= stars));
+  modalCard.querySelectorAll("#st button").forEach(b =>
+    b.onclick = () => { stars = +b.dataset.i; paint(); });
+  modalCard.querySelector("#x").onclick = closeModal;
+  modalCard.querySelector("#c").onclick = closeModal;
+  modalCard.querySelector("#s").onclick = async () => {
+    if (!stars) return;
+    await submitRating(p.id, stars, modalCard.querySelector("#rt").value.trim());
+    closeModal(); openPlace(p.id, false);
+  };
+}
+
+function claimDialog(p){
+  const b = state.biz[p.id] || {};
+  openModal(`<header><div><h3>${esc(p.name)}</h3>
+      <p class="lede">If this is your business, fill this in and it becomes the listing every visitor sees.
+      Leave a field blank to keep what the guide already says.</p></div>
+      <button class="btn ghost" style="flex:0 0 auto" id="x">✕</button></header>
+    <div class="content">
+      <div class="field"><label>One line</label>
+        <input id="f_tagline" maxlength="90" value="${esc(b.tagline || "")}" placeholder="${esc(p.district)}"></div>
+      <div class="field"><label>About</label>
+        <textarea id="f_description" maxlength="700" placeholder="${esc(p.blurb.slice(0, 110))}…">${esc(b.description || "")}</textarea></div>
+      <div class="field"><label>Phone</label>
+        <input id="f_phone" value="${esc(b.phone || p.phone || "")}" placeholder="+682 24 006"></div>
+      <div class="field"><label>Website</label>
+        <input id="f_website" value="${esc(b.website || "")}" placeholder="https://"></div>
+      <div class="field"><label>Booking link</label>
+        <input id="f_book" value="${esc(b.book || p.book || "")}" placeholder="https://">
+        <span class="hint">There is no OpenTable in the Cook Islands, so this is your own booking page,
+        or leave it empty and take calls.</span></div>
+      <div class="field"><label>Hours</label>
+        <input id="f_hours" maxlength="60" value="${esc(b.hours || "")}" placeholder="${esc(hoursText(p))}"></div>
+      <div class="field"><label>Price</label>
+        <input id="f_price" maxlength="12" value="${esc(b.price || "")}" placeholder="${esc(p.price)}"></div>
+      <div class="btnrow"><button class="btn ghost" id="c">Cancel</button>
+        <button class="btn primary" id="s">Publish listing</button></div>
+      <p class="hint" style="margin-top:12px">Anyone who can open this map can edit a listing, so this is a
+      community board rather than a verified register. Edits are visible immediately and attributed by time.</p>
+    </div>`);
+  modalCard.querySelector("#x").onclick = closeModal;
+  modalCard.querySelector("#c").onclick = closeModal;
+  modalCard.querySelector("#s").onclick = async () => {
+    if (!db){ alert("The shared database is not available in this view, so listings cannot be saved."); return; }
+    const out = { updatedAt: Date.now() };
+    for (const k of ["tagline","description","phone","website","book","hours","price"]){
+      const val = modalCard.querySelector("#f_" + k).value.trim();
+      if (val) out[k] = val;
+    }
+    try { await db.doc("businesses/" + p.id).set(out); closeModal(); openPlace(p.id, false); }
+    catch { alert("That did not save. Try again in a moment."); }
+  };
+}
+
+/* =========================================================================
+   DECIDING WHAT TO DO — three taps, then a real answer
+   Scored from the data rather than a shuffle: what is open at this hour, what
+   fits the time you have, what suits the weather you are in, and what it costs.
+   ========================================================================= */
+const MOODS = {
+  chill:   { label:"Take it easy", groups:["do","drink"],
+             tags:["beach","snorkel","free","garden","quiet","lagoon","cocktails","sunset","relaxed"] },
+  active:  { label:"Get moving", groups:["do"],
+             tags:["hike","snorkel","diving","cycling","watersport","boat","summit","kayak","fishing"] },
+  culture: { label:"Learn something", groups:["see"],
+             tags:["history","cultural show","sacred","music","dance","conservation","market","architecture"] },
+  eat:     { label:"Eat well", groups:["eat","drink"],
+             tags:["seafood","street food","fine dining","cheap eats","local","fish","pastry","curry","beer"] },
+  rain:    { label:"It's raining", groups:["see","eat","drink"],
+             tags:["rainy day","history","cake","cocktails","curry","show","brewery","museum"] }
+};
+
+// "45 min" is not 45 hours. Durations are written the way a person would say
+// them, so they get read that way before anything is compared to them.
+function durHours(txt){
+  if (!txt) return 2;
+  if (/half a day|half-day/i.test(txt)) return 4;
+  if (/full day|all day|base yourself/i.test(txt)) return 8;
+  const m = /(\d+(?:\.\d+)?)/.exec(txt);
+  if (!m) return 2;
+  const n = parseFloat(m[1]);
+  return /min/i.test(txt) ? n / 60 : n;
+}
+function decideDialog(){
+  let time = "half", mood = "chill", money = "any";
+  const opts = (id, list, cur) => list.map(([k, l]) =>
+    `<button class="opt" data-g="${id}" data-v="${k}" aria-pressed="${k === cur}">${l}</button>`).join("");
+  openModal(`<header><div><h3>What should I do?</h3>
+      <p class="lede">Three taps. The answer uses the actual hour in Rarotonga, so nothing shut gets suggested.</p></div>
+      <button class="btn ghost" style="flex:0 0 auto" id="x">✕</button></header>
+    <div class="content"><div class="qs">
+      <div class="q"><span>How long have you got?</span><div class="opts">
+        ${opts("time", [["hour","An hour"],["half","Half a day"],["full","All day"]], time)}</div></div>
+      <div class="q"><span>What kind of day?</span><div class="opts">
+        ${opts("mood", Object.entries(MOODS).map(([k, m]) => [k, m.label]), mood)}</div></div>
+      <div class="q"><span>Spending?</span><div class="opts">
+        ${opts("money", [["free","Free"],["cheap","Cheap"],["any","Whatever it costs"]], money)}</div></div>
+      <div class="btnrow"><button class="btn primary" id="go">Show me</button></div>
+    </div></div>`);
+  modalCard.querySelector("#x").onclick = closeModal;
+  modalCard.querySelectorAll(".opt").forEach(b => b.onclick = () => {
+    const g = b.dataset.g;
+    modalCard.querySelectorAll(`[data-g="${g}"]`).forEach(o => o.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    if (g === "time") time = b.dataset.v; if (g === "mood") mood = b.dataset.v; if (g === "money") money = b.dataset.v;
+  });
+  modalCard.querySelector("#go").onclick = () => { closeModal(); showSuggestions(time, mood, money); };
+}
+
+function showSuggestions(time, mood, money){
+  const t = raroNow(), want = MOODS[mood].tags;
+  const hours = { hour:1, half:4, full:9 }[time];
+  const scored = PLACES.filter(p => p.group !== "stay" && p.group !== "around").map(p => {
+    let s = 0;
+    const why = [];
+    const hit = p.tags.filter(x => want.includes(x)).length;
+    s += hit * 3;
+    if (MOODS[mood].groups.includes(p.group)) s += 6;
+    if (hit) why.push("suits the mood you picked");
+    const open = isOpen(p, t);
+    if (open === true){ s += 4; why.push("open right now"); }
+    else if (open === false) s -= 6;
+    const need = durHours(p.dur);
+    if (need <= hours) s += 3;
+    else if (need <= hours * 1.6) s -= 1;
+    else { s -= 6; why.push("longer than the time you have"); }
+    const free = /free/i.test(p.price);
+    if (money === "free"){ if (free) { s += 5; why.push("costs nothing"); } else s -= 8; }
+    else if (money === "cheap"){ if (free || p.price === "$") { s += 3; why.push("cheap"); } else if (p.price.length > 2) s -= 3; }
+    if (p.hero) s += 2;
+    const r = ratingOf(p.id); if (r && r.count >= 2) s += Math.min(3, (r.avg - 3) * 1.5);
+    return { p, s, why: why.slice(0, 2) };
+  }).sort((a, b) => b.s - a.s).slice(0, 6);
+
+  openSheet("suggest", `
+    <div class="hero" style="padding-bottom:8px">
+      <div class="kicker">Right now · ${DAY[t.getDay()]} ${fmtHour(t.getHours() + t.getMinutes()/60)}</div>
+      <h2>Here's what I'd do</h2>
+      <p class="sub">${MOODS[mood].label.toLowerCase()} · ${time === "hour" ? "an hour" : time === "half" ? "half a day" : "all day"}
+        · ${money === "any" ? "any budget" : money}</p>
+    </div>
+    <div class="list">${scored.map(({ p, why }) => `
+      <button class="item" data-id="${p.id}">
+        <span class="th" style="background:${CATS[p.group].color}22;color:${CATS[p.group].color}">${CATS[p.group].icon}</span>
+        <span><span class="t">${esc(p.name)}</span>
+          <span class="s">${esc(why.join(" · ") || p.district)}</span></span>
+        <span class="r">${p.offshore ? "by air" : ringFromTown(p)}<small>${esc(p.price)}</small></span>
+      </button>`).join("")}</div>
+    <div class="sec"><button class="btn ghost" id="again">Ask me differently</button></div>`);
+  sheetBody.querySelectorAll(".item").forEach(b => b.onclick = () => openPlace(b.dataset.id));
+  sheetBody.querySelector("#again").onclick = decideDialog;
+}
+document.getElementById("decideBtn").onclick = decideDialog;
+
+/* ---------- search + saved lists ---------- */
+function listSheet(title, sub, items, emptyMsg){
+  openSheet("search", `
+    <div class="hero" style="padding-bottom:6px"><div class="kicker">${esc(sub)}</div><h2>${esc(title)}</h2></div>
+    ${items.length ? `<div class="list">${items.map(p => {
+      const r = ratingOf(p.id), open = isOpen(p, raroNow());
+      return `<button class="item" data-id="${p.id}">
+        <span class="th" style="background:${CATS[p.group].color}22;color:${CATS[p.group].color}">${CATS[p.group].icon}</span>
+        <span><span class="t">${esc(p.name)}</span><span class="s">${open === true ? "Open · " : ""}${esc(p.district)}${r ? " · ★ " + r.avg.toFixed(1) : ""}</span></span>
+        <span class="r">${p.offshore ? "air" : ringFromTown(p)}<small>${esc(p.price)}</small></span></button>`;
+    }).join("")}</div>` : `<div class="sec"><p class="empty">${esc(emptyMsg)}</p></div>`}`);
+  sheetBody.querySelectorAll(".item").forEach(b => b.onclick = () => openPlace(b.dataset.id));
+}
+function openSearch(){
+  const hits = PLACES.filter(matches).slice(0, 30);
+  listSheet(`${hits.length} match${hits.length === 1 ? "" : "es"}`, "Search", hits,
+            "Nothing matches that. Try snorkel, cheap, sunset, market or Sunday.");
+}
+function openFavs(){
+  listSheet("Saved", "Your list", PLACES.filter(p => state.favs.includes(p.id)),
+            "Nothing saved yet. Tap the heart on any place and it lands here.");
+}
+
+/* ---------- boot ---------- */
+resize();
+placeCamera();
+requestAnimationFrame(render);
+addEventListener("keydown", e => {
+  if (e.key === "Escape"){ closeModal(); closeSheet(); }
+});
+setTimeout(() => document.getElementById("loading").classList.add("gone"), 420);
+
+// Open on something worth seeing, so the island never appears as an empty shell.
+setTimeout(() => {
+  const t = raroNow();
+  const heroes = PLACES.filter(p => p.hero && isOpen(p, t) === true);
+  openPlace((heroes.length ? heroes[Math.floor(Math.random() * heroes.length)] : PLACES.find(p => p.id === "murilagoon")).id, false);
+}, 700);
+</script>
