@@ -33,12 +33,31 @@ The app installs to the iOS or Android home screen and works with no signal,
 which is the point — roaming data on Rarotonga is expensive and the valleys have
 no coverage at all.
 
-1. Host `app/` over HTTPS. GitHub Pages is enough: repository **Settings →
-   Pages → Source: GitHub Actions**, then push. The included workflow publishes
-   `app/` on every change to this directory.
-2. Open the resulting URL in **Safari** on the iPhone (Chrome on iOS cannot
-   install a home-screen app).
-3. **Share → Add to Home Screen.**
+It has to be served over HTTPS. Opening `index.html` from the Files app will
+not work: service workers — the thing that makes it run offline — are only
+allowed on `https://` or `localhost`, so a local file gets you a web page and
+nothing installable.
+
+**Route A — drag and drop, about a minute, no repository needed.**
+
+1. Download `app/` as a folder (or the zip of it).
+2. Go to <https://app.netlify.com/drop> on a computer and drag the folder onto
+   the page. Cloudflare Pages' direct upload does the same thing. You get an
+   HTTPS URL immediately; no account is needed to start.
+3. Open that URL in **Safari** on the iPhone. Chrome on iOS cannot install a
+   home-screen app; only Safari can.
+4. **Share → Add to Home Screen.**
+
+**Route B — GitHub Pages, permanent, updates itself on every push.**
+
+1. Repository **Settings → Pages → Source: GitHub Actions**.
+2. Push. The included workflow rebuilds `app/`, fails if it is stale relative to
+   `index.html`, and publishes. The URL is
+   `https://<user>.github.io/<repo>/`.
+3. Safari → **Share → Add to Home Screen**, as above.
+
+Pages is free on public repositories. On a private one it needs a paid GitHub
+plan, which is the one thing worth checking before choosing this route.
 
 It then launches full screen with no browser chrome, keeps working offline from
 the second launch onward, and — because it is now a first-party page rather than

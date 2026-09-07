@@ -2,7 +2,7 @@ name: Deploy Raro Live Map
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, claude/roartanga-island-tourist-map-86dv6n]
     paths: ['rarotonga-tourist-map/**']
   workflow_dispatch:
 
