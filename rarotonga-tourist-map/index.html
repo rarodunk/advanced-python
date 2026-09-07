@@ -217,8 +217,107 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .nowcard .m{font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;margin-top:4px;display:block}
 .empty{font-size:13px;color:var(--ink-3);line-height:1.5;margin:0}
 
-.foot{padding:0 22px 18px;font-size:11.5px;line-height:1.55;color:var(--ink-3)}
+.foot{padding:0 22px 20px;font-size:11.5px;line-height:1.55;color:var(--ink-3)}
 .foot b{color:var(--ink-2)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:2px;padding:10px 12px 0;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.tab{
+  flex:1;padding:10px 6px;border-radius:11px 11px 0 0;font-size:12.5px;font-weight:700;color:var(--ink-3);
+  border-bottom:3px solid transparent;transition:color .12s ease,border-color .12s ease;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);background:var(--surface)}
+.tab .count{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:500;padding:1px 6px;border-radius:999px;
+  background:var(--surface-3);color:var(--ink-2);font-variant-numeric:tabular-nums;
+}
+.pane{display:block}
+[hidden]{display:none !important}
+
+/* ---------- location card ---------- */
+.loccard{padding:20px 22px;border-bottom:1px solid var(--line)}
+.loccard h3{margin:0 0 6px;font-family:Fredoka,sans-serif;font-weight:600;font-size:19px;letter-spacing:-.01em}
+.loccard p{margin:0 0 14px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.loccard p.small{font-size:12px;color:var(--ink-3);margin:12px 0 0}
+.fix{
+  display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:14px;background:var(--surface-2);
+  margin-bottom:14px;
+}
+.fix .avatar{
+  width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;flex:0 0 auto;
+  background:linear-gradient(150deg,var(--lagoon),var(--ocean-near));border:2px solid var(--road);
+}
+.fix .who{font-weight:700;font-size:13.5px;line-height:1.3}
+.fix .acc{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3);margin-top:2px}
+.picker{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.picker button{
+  padding:7px 12px;border-radius:999px;background:var(--surface-2);font-size:12.5px;font-weight:600;
+  color:var(--ink-2);
+}
+.picker button:hover{background:var(--surface-3)}
+.picker button[aria-pressed="true"]{background:var(--lagoon);color:#052a2e}
+
+/* ---------- near-me + loop rows ---------- */
+.nearlist{padding:8px 14px 18px;display:flex;flex-direction:column;gap:1px}
+.row{
+  width:100%;display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;text-align:left;
+  padding:11px 10px;border-radius:12px;transition:background .12s ease;
+}
+.row:hover{background:var(--surface-2)}
+.row .ic{
+  width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:16px;
+  background:var(--surface-2);
+}
+.row .t{font-weight:700;font-size:13.5px;line-height:1.25}
+.row .s{font-size:11.5px;color:var(--ink-3);margin-top:3px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.row .s .live-dot{width:6px;height:6px;border-radius:50%;background:var(--good);display:inline-block}
+.row .d{
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;text-align:right;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.3;
+}
+.row .d small{display:block;font-size:10.5px;color:var(--ink-3);font-family:"Nunito Sans",sans-serif}
+
+.legs{padding:6px 18px 4px;display:flex;flex-direction:column}
+.leg{
+  display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:start;padding:2px 0;
+}
+.leg .track{position:relative;display:flex;justify-content:center;height:100%}
+.leg .track::before{content:"";position:absolute;top:14px;bottom:-8px;width:2px;background:var(--line)}
+.leg:last-child .track::before{display:none}
+.leg .node{
+  width:20px;height:20px;border-radius:50%;background:var(--surface-3);display:grid;place-items:center;
+  font-size:10px;font-weight:700;z-index:1;font-family:"IBM Plex Mono",monospace;color:var(--ink-2);
+}
+.leg.start .node{background:var(--accent);color:var(--accent-ink)}
+.leg .name{font-weight:700;font-size:13.5px;padding-bottom:14px;line-height:1.3}
+.leg .name small{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.leg .hop{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);white-space:nowrap;
+  font-variant-numeric:tabular-nums;padding-top:2px;
+}
+.summary{
+  margin:12px 22px 18px;padding:14px 16px;border-radius:14px;background:var(--surface-2);
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+}
+.summary .big{font-family:Fredoka,sans-serif;font-weight:600;font-size:24px;letter-spacing:-.02em}
+.summary .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:700}
+.blank{padding:34px 24px;text-align:center;color:var(--ink-3);font-size:13.5px;line-height:1.6}
+.blank .big{font-size:30px;display:block;margin-bottom:10px}
+
+.zbtn.accent{background:var(--accent);color:var(--accent-ink)}
+.zbtn.accent.on{background:var(--lagoon);color:#052a2e}
+.zbtn.accent.busy{animation:spin 1.1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* the blue dot */
+#me .ring{fill:var(--lagoon);opacity:.22}
+#me .puck{fill:#2C9BFF;stroke:#fff;stroke-width:3}
+#me .halo{fill:none;stroke:#2C9BFF;stroke-width:3;opacity:.6}
+@media (prefers-reduced-motion:no-preference){
+  #me .halo{animation:ping 2.6s cubic-bezier(0,0,.2,1) infinite}
+}
+@keyframes ping{0%{r:14;opacity:.6}80%,100%{r:34;opacity:0}}
 
 /* ---------- map pieces ---------- */
 .pin{cursor:pointer}
@@ -315,6 +414,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     </div>
 
     <div class="hud zoomstack">
+      <button class="zbtn accent" id="locateBtn" aria-label="Find my location on the island">📍</button>
       <button class="zbtn" id="zoomIn" aria-label="Zoom in">+</button>
       <button class="zbtn" id="zoomOut" aria-label="Zoom out">−</button>
       <button class="zbtn small" id="zoomReset" aria-label="Reset the map view">ALL</button>
@@ -323,34 +423,53 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 
   <aside class="panel" id="panel" aria-live="polite">
     <button class="panel-close" id="panelClose" aria-label="Close details">✕</button>
-    <div class="panel-scroll">
-      <div class="hero">
-        <div class="cat" id="dCat"></div>
-        <h2 id="dName"></h2>
-        <p class="where" id="dWhere"></p>
-        <div class="statusrow" id="dStatus"></div>
-      </div>
-      <div class="body">
-        <p id="dBlurb"></p>
-        <div class="tip"><div class="ic" aria-hidden="true">🐚</div><div><b>Local knowledge</b><span id="dTip"></span></div></div>
-      </div>
-      <ul class="facts" id="dFacts"></ul>
-      <div class="actions">
-        <button class="btn primary" id="dFly">Show me on the map</button>
-        <button class="btn" id="dStar">⭐ Save</button>
-      </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" data-pane="Place" role="tab" aria-selected="true">This place</button>
+      <button class="tab" data-pane="Near"  role="tab" aria-selected="false">Near me</button>
+      <button class="tab" data-pane="Loop"  role="tab" aria-selected="false">My loop <span class="count" id="loopCount">0</span></button>
     </div>
+
+    <div class="panel-scroll">
+      <section class="pane" id="panePlace" role="tabpanel">
+        <div class="hero">
+          <div class="cat" id="dCat"></div>
+          <h2 id="dName"></h2>
+          <p class="where" id="dWhere"></p>
+          <div class="statusrow" id="dStatus"></div>
+        </div>
+        <div class="body">
+          <p id="dBlurb"></p>
+          <div class="tip"><div class="ic" aria-hidden="true">🐚</div><div><b>Local knowledge</b><span id="dTip"></span></div></div>
+        </div>
+        <ul class="facts" id="dFacts"></ul>
+        <div class="actions">
+          <button class="btn primary" id="dFly">Show me on the map</button>
+          <button class="btn" id="dStar">⭐ Save</button>
+        </div>
+        <p class="foot">
+          Geography is <b>deliberately exaggerated</b> — the mountains are fatter and the motu bigger than life
+          so everything is tappable, but your own position is projected onto it from real coordinates, so the
+          blue dot really is where you are. Hours and prices on a 15,000-person island change with the weather
+          and the family calendar; <b>ring ahead or ask at your accommodation</b>. Travel times assume the
+          32 km ring road at 35 km/h on a scooter and 4.5 km/h on foot.
+        </p>
+      </section>
+
+      <section class="pane" id="paneNear" role="tabpanel" hidden>
+        <div id="locSetup"></div>
+        <div id="nearList" class="nearlist"></div>
+      </section>
+
+      <section class="pane" id="paneLoop" role="tabpanel" hidden>
+        <div id="loopBody"></div>
+      </section>
+    </div>
+
     <div class="nowbar">
       <h3><span class="live" aria-hidden="true"></span><span id="nowTitle">Open right now</span></h3>
       <div class="nowlist" id="nowList"></div>
       <p class="empty" id="nowEmpty" hidden></p>
     </div>
-    <p class="foot">
-      Geography is <b>deliberately exaggerated</b> — the mountains are fatter and the motu bigger than life so
-      everything is tappable. Hours and prices on a 15,000-person island change with the weather and the
-      family calendar; <b>ring ahead or ask at your accommodation</b>. Drive times are derived from each pin's
-      bearing on the 32 km ring road at a steady 50 km/h — the real limit is 50, and 30 through the villages.
-    </p>
   </aside>
 </div>
 
@@ -615,7 +734,63 @@ const PLACES = [
   { id:"arametua", name:"Ara Metua Ride", cat:"adventure", deg:330, r:198, district:"Inland ring road",
     blurb:"The inland road, laid with coral around a thousand years ago and still in use — probably the oldest road in Polynesia. Flat, shaded, lined with taro patches and family graves, and almost empty of traffic.",
     tip:"Rent a bike rather than a scooter for this one. It doesn't run unbroken all the way round; drop back onto the coast road where it fades and pick it up again.",
-    price:"Free", best:"Late afternoon", dur:"2–3 hrs", hours:[ALL,6,18], tags:["free","cycling","history"] }
+    price:"Free", best:"Late afternoon", dur:"2–3 hrs", hours:[ALL,6,18], tags:["free","cycling","history"],
+    bring:"Bike from any hire shop, water, and a phone — some sections have no houses for a while." },
+
+  /* ---------------- ADDED IN THE SECOND PASS ---------------- */
+  { id:"sheraton", name:"The Sheraton Ruins", cat:"adventure", deg:210, r:238, district:"Vaimaanga",
+    blurb:"A five-star resort that was never finished. Construction stopped in the early 1990s, the money vanished into an offshore scandal that nearly bankrupted the country, and the concrete shell has been sitting in the jungle ever since, slowly going green.",
+    tip:"It's on private land and genuinely derelict — rebar, holes, no lighting. People do walk in from the road; if you do, go in daylight, wear real shoes, and don't go alone. Ask locally first, and accept a no.",
+    price:"Free", best:"Daylight only", dur:"45 min", hours:[ALL,8,17], tags:["free","ruins","offbeat","photography"],
+    bring:"Closed shoes, and someone who knows you're there." },
+
+  { id:"aitutaki", name:"Aitutaki Day Trip", cat:"adventure", deg:26, r:352, district:"45 minutes north by air",
+    blurb:"The lagoon everyone means when they say Cook Islands: a 45-minute flight to a triangular reef enclosing water so pale it looks retouched, One Foot Island, and a sandbar you can stand on in the middle of the Pacific. Doable as a very long day trip, better as two nights.",
+    tip:"The day trip leaves early and gets back after dark, and includes a lagoon cruise. If you can spare a night, do — the island empties of day-trippers at 4pm and becomes a completely different place.",
+    price:"$$$$", best:"Book weeks ahead in high season", dur:"Full day", hours:[[1,2,3,4,5,6],6,19], tags:["flight","lagoon","splurge","bucket list"], hero:true,
+    offshore:{ km:260, note:"260 km north — 45 minutes in a turboprop" },
+    bring:"Passport not needed — it's a domestic hop. Reef shoes, and a hat you can't lose overboard." },
+
+  { id:"fishingclub", name:"Game Fishing Club", cat:"drink", deg:5, r:257, district:"Avarua waterfront",
+    blurb:"A members' club on the harbour that welcomes visitors, sells the cheapest cold beer in Rarotonga, and has a deck facing directly into the sunset. Weigh-ins happen on the concrete outside when the boats come in.",
+    tip:"Sign the visitors' book at the door and you're in. Friday afternoon is when the fishing crews arrive and the stories get taller.",
+    price:"$", best:"Late afternoon", dur:"1–2 hrs", hours:[[1,2,3,4,5,6],15,22], tags:["cheap","local","harbour","sunset"] },
+
+  { id:"avatiu", name:"Avatiu Harbour", cat:"knowhow", deg:346, r:263, district:"West of Avarua",
+    blurb:"The island's working port: the container ship from Auckland, the inter-island barge, the fishing fleet, and the trailhead for the Cross-Island Track a couple of kilometres up the valley behind it. Everything Rarotonga cannot grow arrives here.",
+    tip:"Ship day visibly changes what's on the supermarket shelves. If the shops look thin, ask when the boat is due — that's the real supply chain, and everyone on the island tracks it.",
+    price:"Free", best:"Morning", dur:"20 min", hours:[ALL,6,18], tags:["free","harbour","practical"] },
+
+  { id:"golf", name:"Rarotonga Golf Club", cat:"adventure", deg:322, r:230, district:"Nikao",
+    blurb:"Nine holes laid out between the airport's radio masts, where the local rule for a ball hitting a mast is genuinely written down. Green fees are a fraction of anywhere comparable and clubs hire for pocket money.",
+    tip:"Visitors are welcome most days but not always Saturday, which is club competition. Ring first, and play early before the heat.",
+    price:"$$", best:"Weekday morning", dur:"2–3 hrs", hours:[[1,2,3,4,5],8,15], tags:["golf","cheap","quirky"],
+    bring:"Sunscreen and your own hat; clubs and a cart are available there." },
+
+  { id:"whalecentre", name:"Whale & Wildlife Centre", cat:"culture", deg:280, r:262, district:"Arorangi",
+    blurb:"A small research and education centre on the west coast run by the marine biologist who has spent decades identifying individual humpbacks in Cook Islands water. Talks are informal and the science is real.",
+    tip:"Ask about the whale that pushed her away from a tiger shark — it's a famous piece of footage and the story is better in person. Opening hours revolve around fieldwork, so call ahead.",
+    price:"$", best:"July–October", dur:"1 hr", hours:[[1,2,3,4,5],10,15], tags:["whales","science","rainy day"] },
+
+  { id:"fridaynight", name:"Avarua Friday Night", cat:"drink", deg:0, r:235, district:"Avarua town",
+    blurb:"Friday is the island's night out. Trader Jack's fills, the town bars fill after it, and by midnight a few hundred people are dancing to a mix of island reggae and whatever the DJ has. It is friendly and unpretentious and it goes late.",
+    tip:"Everything shuts hard at midnight on Saturday because Sunday is Sunday — the law and the culture agree on this. Do not drink and ride a scooter; there are shared taxis and everyone uses them.",
+    price:"$$", best:"Friday from 9pm", dur:"Late", hours:[[5,6],20,24], tags:["nightlife","dancing","local"] },
+
+  { id:"selfcater", name:"Supermarkets & Self-Catering", cat:"knowhow", deg:344, r:232, district:"Avarua, plus Wigmore's in the south",
+    blurb:"Almost everything in the supermarket arrived by ship and is priced accordingly, but the roadside stalls and the Saturday market are cheap. Cooking three nights out of seven is what makes a fortnight here affordable.",
+    tip:"Buy fish from the roadside coolers, fruit and rukau at Punanga Nui, and only the boxed goods from the supermarket. Wigmore's in Vaimaanga saves the trip to town if you're staying south.",
+    price:"$$", best:"Avoid Sunday — most close", dur:"45 min", hours:[[1,2,3,4,5,6],7,20], tags:["practical","budget","groceries"] },
+
+  { id:"money", name:"Money & the Triangle Coin", cat:"knowhow", deg:352, r:230, district:"Avarua banks",
+    blurb:"The currency is the New Zealand dollar, but the Cook Islands mints its own coins — including a genuinely triangular three-dollar piece with Ina and the shark on it. It's legal tender here and worthless anywhere else, which is exactly why you want one.",
+    tip:"ATMs are essentially confined to Avarua and one or two resorts — draw cash before you head round the island. Many small places are cash-only, and tipping is not a local custom.",
+    price:"—", best:"Weekday banking hours", dur:"20 min", hours:[[1,2,3,4,5],9,15], tags:["practical","cash","souvenir"] },
+
+  { id:"reefkit", name:"Reef Shoes & What Not to Wear", cat:"knowhow", deg:176, r:244, district:"Everywhere with water",
+    blurb:"The lagoon floor is coral rubble and stonefish are present but rare, so reef shoes are worn by locals and ignored by tourists, which is why the medical centre sees the injuries it does. Oxybenzone sunscreen is the other one: it bleaches the coral you came to look at.",
+    tip:"Buy reef shoes at any hire shop for the price of two cocktails. Reef-safe zinc is sold on-island. Shoulders and knees covered away from the beach, and never in a shop in just togs — it reads as rude here.",
+    price:"$", best:"Day one", dur:"15 min", hours:[[1,2,3,4,5,6],8,17], tags:["practical","safety","etiquette"] }
 ];
 
 /* ---------- derived helpers ---------- */
@@ -634,6 +809,76 @@ function driveFromTown(p){
   const mins = Math.max(1, Math.round(useCw ? cw : acw));
   return { text:`${mins} min ${useCw ? "clockwise" : "anticlockwise"}`, inland:false };
 }
+
+/* =========================================================================
+   REAL-WORLD GEO
+   The drawing is exaggerated; the geography underneath it is not. Rarotonga is
+   modelled as an ellipse centred on the interior — 4.87 km to the east and west
+   coasts, 3.54 km to the north and south. Any real latitude/longitude is turned
+   into a bearing plus a normalised radius (rho: 0 = summit, 1 = coastline,
+   >1 = out over the lagoon), and that rho is replayed against the cartoon
+   coastline. So the blue dot lands where you actually are, on a map that is
+   deliberately the wrong shape.
+   ========================================================================= */
+const ISLAND = { lat:-21.2330, lon:-159.7820, aKm:4.87, bKm:3.54 };
+const KM_PER_DEG_LAT = 110.57;
+const kmPerDegLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
+
+function realRadiusKm(deg){
+  const t = deg * Math.PI / 180, a = ISLAND.aKm, b = ISLAND.bKm;
+  return (a * b) / Math.hypot(b * Math.sin(t), a * Math.cos(t));
+}
+function projectLatLon(lat, lon){
+  const north = (lat - ISLAND.lat) * KM_PER_DEG_LAT;
+  const east  = (lon - ISLAND.lon) * kmPerDegLon(ISLAND.lat);
+  const distKm = Math.hypot(north, east);
+  let deg = Math.atan2(east, north) * 180 / Math.PI;
+  if (deg < 0) deg += 360;
+  const rho = distKm / realRadiusKm(deg);
+  const rSvg = Math.min(rho, 1.28) * coastR(deg);     // clamp so an off-island fix still draws
+  return { deg, distKm, rho, x:px(deg, rSvg), y:py(deg, rSvg) };
+}
+// Inverse: every pin already carries a bearing and a cartoon radius, so its real
+// position falls out of the same model rather than being a second source of truth.
+function placeLatLon(p){
+  const rho = p.r / coastR(p.deg);
+  const km = rho * realRadiusKm(p.deg);
+  const t = p.deg * Math.PI / 180;
+  return { lat: ISLAND.lat + (km * Math.cos(t)) / KM_PER_DEG_LAT,
+           lon: ISLAND.lon + (km * Math.sin(t)) / kmPerDegLon(ISLAND.lat) };
+}
+function haversineKm(a, b){
+  const R = 6371, toR = d => d * Math.PI / 180;
+  const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon);
+  const h = Math.sin(dLat/2)**2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+// Travel between two bearings is travel along the one road, in whichever
+// direction is shorter. This is how everybody on the island actually navigates.
+const SCOOTER_KMH = 35, WALK_KMH = 4.5;
+function ringLeg(fromDeg, toDeg){
+  const cw = ((toDeg - fromDeg) % 360 + 360) % 360;
+  const useCw = cw <= 360 - cw;
+  const deg = useCw ? cw : 360 - cw;
+  const km = deg / 360 * RING_KM;
+  return { km, dir: useCw ? "clockwise" : "anticlockwise", short: useCw ? "cw" : "acw",
+           ride: Math.max(1, Math.round(km / SCOOTER_KMH * 60)),
+           walk: Math.round(km / WALK_KMH * 60) };
+}
+const fmtKm = km => km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+
+// Where you can tell the app you're staying, when the browser won't share a fix.
+const ANCHORS = [
+  { n:"Avarua town",  lat:-21.2075, lon:-159.7750 },
+  { n:"Muri",         lat:-21.2530, lon:-159.7350 },
+  { n:"Ngatangiia",   lat:-21.2400, lon:-159.7300 },
+  { n:"Matavera",     lat:-21.2180, lon:-159.7420 },
+  { n:"Titikaveka",   lat:-21.2620, lon:-159.7770 },
+  { n:"Vaimaanga",    lat:-21.2650, lon:-159.7930 },
+  { n:"Aroa / Rutaki",lat:-21.2470, lon:-159.8100 },
+  { n:"Arorangi",     lat:-21.2265, lon:-159.8200 },
+  { n:"Nikao",        lat:-21.2030, lon:-159.7960 }
+];
 
 /* ---------- Rarotonga time: UTC-10, and the Cook Islands do not use DST ---------- */
 function raroNow(){
@@ -863,6 +1108,13 @@ function buildBaseMap(){
 const world = buildBaseMap();
 const pinLayer = el("g", { id:"pins" }, world);
 
+/* the blue dot, drawn above everything and hidden until we have a fix */
+const meLayer = el("g", { id:"me", style:"display:none" }, world);
+el("circle", { class:"ring", cx:0, cy:0, r:0, id:"meAccuracy" }, meLayer);
+el("circle", { class:"halo", cx:0, cy:0, r:14 }, meLayer);
+el("circle", { class:"puck", cx:0, cy:0, r:10 }, meLayer);
+el("text", { class:"plabel", x:0, y:30 }, meLayer).textContent = "You";
+
 /* =========================================================================
    PINS
    ========================================================================= */
@@ -893,6 +1145,9 @@ buildPins();
 /* =========================================================================
    VIEW: pan + zoom. Pins counter-scale so they stay thumb-sized.
    ========================================================================= */
+// me.fix holds the current position: {lat,lon,deg,distKm,rho,x,y,accuracy,source}
+const me = { fix:null, watchId:null, status:"idle", anchor:null };
+
 // The whole island plus its reef is ~700 SVG units across, so home sits a touch under 1:1
 // to keep the coast clear of the floating chrome.
 const HOME = { k:0.86, x:70, y:70 };
@@ -909,6 +1164,14 @@ function applyView(){
     const showLabel = view.k >= (p.hero ? 1.05 : 1.65);
     node.lab.style.display = showLabel ? "" : "none";
   });
+  if (me.fix){
+    // the puck counter-scales like a pin, but the accuracy ring is a real
+    // distance on the ground, so it must scale *with* the map
+    meLayer.setAttribute("transform", `translate(${me.fix.x} ${me.fix.y}) scale(${inv})`);
+    const kmToSvg = coastR(me.fix.deg) / realRadiusKm(me.fix.deg);
+    const accSvg = Math.min(90, (me.fix.accuracy / 1000) * kmToSvg) * view.k;
+    document.getElementById("meAccuracy").setAttribute("r", Math.max(0, accSvg));
+  }
 }
 function zoomAt(factor, cx, cy){
   const k2 = Math.min(MAX_K, Math.max(MIN_K, view.k * factor));
@@ -983,7 +1246,7 @@ document.getElementById("zoomReset").onclick = () => { view = { ...HOME }; apply
 const state = {
   cats:new Set(Object.keys(CATS)),
   q:"", openOnly:false, freeOnly:false, listOnly:false,
-  saved:loadSaved(), selected:null
+  saved:loadSaved(), selected:null, tab:"Place"
 };
 function loadSaved(){
   try { return new Set(JSON.parse(localStorage.getItem("raro.saved") || "[]")); }
@@ -1022,6 +1285,7 @@ function toggleChip(id, key){
 toggleChip("openNowChip","openOnly");
 toggleChip("freeChip","freeOnly");
 toggleChip("listChip","listOnly");
+document.getElementById("listChip").addEventListener("click", () => showTab("Loop"));
 
 document.getElementById("search").addEventListener("input", e => {
   state.q = e.target.value.trim().toLowerCase(); render();
@@ -1061,7 +1325,231 @@ function render(){
   });
   document.getElementById("listCount").textContent = state.saved.size;
   renderNow(t);
+  if (state.tab === "Near" && me.fix) renderNear();
 }
+
+/* =========================================================================
+   WHERE AM I
+   Two ways in: a real GPS fix, or telling the map where you're staying. The
+   second is not a consolation prize — inside an embedded frame the browser
+   often refuses to hand over location at all, and a visitor always knows which
+   village their bed is in.
+   ========================================================================= */
+const locateBtn = document.getElementById("locateBtn");
+
+function setFix(lat, lon, accuracy, source, label){
+  const proj = projectLatLon(lat, lon);
+  me.fix = { lat, lon, accuracy, source, label, ...proj };
+  meLayer.style.display = "";
+  locateBtn.classList.remove("busy"); locateBtn.classList.add("on");
+  applyView(); renderLocSetup(); renderNear(); renderLoop(); render();
+  if (state.tab === "Place" && state.selected) select(state.selected, false);
+}
+function clearFix(){
+  if (me.watchId != null){ navigator.geolocation.clearWatch(me.watchId); me.watchId = null; }
+  me.fix = null; me.status = "idle"; me.anchor = null;
+  meLayer.style.display = "none";
+  locateBtn.classList.remove("on","busy");
+  renderLocSetup(); renderNear(); renderLoop();
+}
+function locate(){
+  if (!navigator.geolocation){ me.status = "unsupported"; renderLocSetup(); return; }
+  me.status = "seeking"; locateBtn.classList.add("busy"); renderLocSetup();
+  me.watchId = navigator.geolocation.watchPosition(
+    pos => {
+      me.status = "live";
+      setFix(pos.coords.latitude, pos.coords.longitude,
+             pos.coords.accuracy || 60, "gps", "Your GPS position");
+    },
+    err => {
+      me.status = err.code === 1 ? "denied" : "unavailable";
+      locateBtn.classList.remove("busy");
+      renderLocSetup(); showTab("Near");
+    },
+    { enableHighAccuracy:true, timeout:12000, maximumAge:15000 }
+  );
+}
+function useAnchor(a){
+  if (me.watchId != null){ navigator.geolocation.clearWatch(me.watchId); me.watchId = null; }
+  me.status = "manual"; me.anchor = a.n;
+  setFix(a.lat, a.lon, 450, "manual", `Staying in ${a.n}`);
+}
+locateBtn.onclick = () => { showTab("Near"); me.fix ? flyToPoint(me.fix, 2.4) : locate(); };
+
+function flyToPoint(pt, k){ flyTo({ x:pt.x, y:pt.y }, k); }
+
+/* How you'd actually get from where you are to a given pin. */
+function travelTo(p){
+  if (!me.fix) return null;
+  if (p.offshore) return { main:`${p.offshore.km} km`, sub:p.offshore.note, km:p.offshore.km, sort:1e6 };
+  const crow = haversineKm(me.fix, placeLatLon(p));
+  if (crow < 0.25) return { main:"here", sub:"you're basically standing in it", km:crow, sort:crow };
+  if (p.r < 230){
+    return { main:fmtKm(crow), sub:"inland — walk or ride in from the coast road", km:crow, sort:crow };
+  }
+  const leg = ringLeg(me.fix.deg, p.deg);
+  // under about a kilometre nobody starts the scooter — lead with the walk
+  if (leg.km < 1.1)
+    return { main:`${Math.max(1, leg.walk)} min`, sub:`${fmtKm(leg.km)} on foot, ${leg.dir}`, km:leg.km, sort:leg.km };
+  return { main:`${leg.ride} min`, sub:`${fmtKm(leg.km)} ${leg.dir} by scooter`, km:leg.km, sort:leg.km };
+}
+
+function renderLocSetup(){
+  const box = document.getElementById("locSetup");
+  const offIsland = me.fix && me.fix.rho > 3;
+  let html = "";
+
+  if (me.fix && !offIsland){
+    const near = [...ANCHORS].sort((a,b) => haversineKm(me.fix,a) - haversineKm(me.fix,b))[0];
+    html += `<div class="loccard">
+      <div class="fix">
+        <div class="avatar" aria-hidden="true">${me.fix.source === "gps" ? "🛰️" : "🛏️"}</div>
+        <div>
+          <div class="who">${me.fix.label}</div>
+          <div class="acc">${me.fix.rho < 0.72 ? "up in the interior" : me.fix.rho > 1.12 ? "out on the lagoon" : "on the coast"}
+            · nearest village ${near.n} · ±${Math.round(me.fix.accuracy)} m</div>
+        </div>
+      </div>
+      <div class="picker">
+        ${me.fix.source === "manual" ? `<button id="tryGps">Use real GPS instead</button>` : ""}
+        <button id="clearLoc">Forget my location</button>
+      </div>
+    </div>`;
+  } else if (offIsland){
+    const km = Math.round(haversineKm(me.fix, ISLAND));
+    html += `<div class="loccard">
+      <h3>You're ${km.toLocaleString()} km from the reef</h3>
+      <p>Planning mode, then. Everything below is sorted from Avarua, which is where you'll land —
+      the flight from Auckland gets in around 4am, so your first morning is longer than you think.</p>
+      <div class="picker"><button id="clearLoc">Plan from somewhere else</button></div>
+    </div>`;
+  } else {
+    const msg = {
+      idle:"Turn this on and the map will show where you are, how far each place is along the ring road, and what's open near you right now.",
+      seeking:"Asking your device for a fix. Outdoors this takes a couple of seconds; indoors it can take a minute.",
+      denied:"Your browser blocked location for this page — that's normal for an embedded map, and nothing to fight with. Tell it which village you're staying in instead; it's accurate enough for an island 10 km across.",
+      unavailable:"No fix came back. GPS struggles under a tin roof and inside a hire car. Pick your village and carry on.",
+      unsupported:"This browser doesn't do location at all. Pick your village instead."
+    }[me.status];
+    html += `<div class="loccard">
+      <h3>Where are you?</h3>
+      <p>${msg}</p>
+      <div class="picker">
+        <button id="tryGps" aria-pressed="false">${me.status === "seeking" ? "Locating…" : "📍 Use my GPS"}</button>
+      </div>
+      <p class="small">Or tell it where you're staying:</p>
+      <div class="picker" id="anchorPicker">
+        ${ANCHORS.map((a,i) => `<button data-anchor="${i}">${a.n}</button>`).join("")}
+      </div>
+    </div>`;
+  }
+  box.innerHTML = html;
+
+  const gps = document.getElementById("tryGps");   if (gps) gps.onclick = locate;
+  const clr = document.getElementById("clearLoc"); if (clr) clr.onclick = clearFix;
+  box.querySelectorAll("[data-anchor]").forEach(b =>
+    b.onclick = () => useAnchor(ANCHORS[+b.dataset.anchor]));
+}
+
+/* ---------- Near me ---------- */
+function placeRow(p, right){
+  const t = raroNow(), open = isOpen(p, t), c = CATS[p.cat];
+  const b = document.createElement("button");
+  b.className = "row";
+  b.innerHTML = `
+    <span class="ic" aria-hidden="true">${c.icon}</span>
+    <span>
+      <span class="t">${p.name}</span>
+      <span class="s">${open === true ? '<span class="live-dot"></span>open' : open === false ? "closed" : c.label}
+        <span>·</span>${p.district}</span>
+    </span>
+    <span class="d">${right.main}<small>${right.sub}</small></span>`;
+  b.onclick = () => select(p.id);
+  return b;
+}
+function renderNear(){
+  const box = document.getElementById("nearList");
+  box.innerHTML = "";
+  if (!me.fix) return;
+  const ranked = PLACES
+    .map(p => ({ p, tr:travelTo(p) }))
+    .filter(o => o.tr)
+    .sort((a,b) => a.tr.sort - b.tr.sort)
+    .slice(0, 24);
+  ranked.forEach(o => box.appendChild(placeRow(o.p, o.tr)));
+}
+
+/* ---------- My loop: the saved list, ordered as one drive round the island ---------- */
+function renderLoop(){
+  const box = document.getElementById("loopBody");
+  document.getElementById("loopCount").textContent = state.saved.size;
+  const saved = PLACES.filter(p => state.saved.has(p.id) && !p.offshore);
+  const offshoreSaved = PLACES.filter(p => state.saved.has(p.id) && p.offshore);
+
+  if (!saved.length && !offshoreSaved.length){
+    box.innerHTML = `<div class="blank"><span class="big">⭐</span>
+      Star anything on the map and it lands here. The list then reorders itself into a single
+      loop of the island so you drive past everything once, in one direction, instead of
+      crossing back and forth all day.</div>`;
+    return;
+  }
+
+  // One road, so the optimal order is simply "in bearing order from where you start".
+  const startDeg = me.fix ? me.fix.deg : 0;                      // Avarua if we don't know
+  const startName = me.fix ? (me.fix.source === "gps" ? "Your position" : me.fix.label) : "Avarua";
+  const ordered = [...saved].sort((a,b) =>
+    ((a.deg - startDeg + 360) % 360) - ((b.deg - startDeg + 360) % 360));
+
+  let rideMin = 0, km = 0, prev = startDeg;
+  const legs = ordered.map(p => {
+    const leg = ringLeg(prev, p.deg);
+    rideMin += leg.ride; km += leg.km; prev = p.deg;
+    return { p, leg };
+  });
+  const home = ringLeg(prev, startDeg);
+
+  box.innerHTML = `
+    <div class="legs">
+      <div class="leg start"><span class="track"><span class="node">▲</span></span>
+        <span class="name">${startName}<small>Start of the loop, ${ordered.length} stop${ordered.length===1?"":"s"} ahead</small></span>
+        <span class="hop"></span></div>
+      ${legs.map((l, i) => `
+        <div class="leg" data-id="${l.p.id}">
+          <span class="track"><span class="node">${i+1}</span></span>
+          <span class="name">${l.p.name}<small>${l.p.district} · ${l.p.dur} · ${l.p.price}</small></span>
+          <span class="hop">${l.leg.ride} min ${l.leg.short}</span>
+        </div>`).join("")}
+      <div class="leg"><span class="track"><span class="node">▲</span></span>
+        <span class="name">Back where you started<small>Closing the ring</small></span>
+        <span class="hop">${home.ride} min ${home.short}</span></div>
+    </div>
+    <div class="summary">
+      <div><div class="lbl">Riding time</div><div class="big">${rideMin + home.ride} min</div></div>
+      <div><div class="lbl">Distance</div><div class="big">${(km + home.km).toFixed(1)} km</div></div>
+      <div><div class="lbl">Stops</div><div class="big">${ordered.length}</div></div>
+    </div>
+    ${offshoreSaved.length ? `<p class="foot"><b>${offshoreSaved.map(p=>p.name).join(", ")}</b>
+      isn't on the ring road — it's a separate flight, so give it its own day.</p>` : ""}
+    <p class="foot">Riding time only, at ${SCOOTER_KMH} km/h average, and it does not include how long
+      you'll spend at each stop. Sum the durations above and add an hour, because you will stop for a
+      nu somewhere and lose forty minutes to a conversation.</p>`;
+
+  box.querySelectorAll(".leg[data-id]").forEach(n =>
+    n.onclick = () => select(n.dataset.id));
+}
+
+/* ---------- tabs ---------- */
+function showTab(name){
+  state.tab = name;
+  document.querySelectorAll(".tab").forEach(t =>
+    t.setAttribute("aria-selected", String(t.dataset.pane === name)));
+  ["Place","Near","Loop"].forEach(n =>
+    document.getElementById("pane" + n).hidden = n !== name);
+  document.getElementById("panel").classList.add("open");
+  if (name === "Near"){ renderLocSetup(); renderNear(); }
+  if (name === "Loop") renderLoop();
+}
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.pane));
 
 /* =========================================================================
    DETAIL PANEL
@@ -1088,12 +1576,14 @@ function select(id, fly = true){
   pill("", `${p.dur}`);
   if (state.saved.has(p.id)) pill("", `⭐ On your list`);
 
-  document.getElementById("dFacts").innerHTML = [
-    ["Hours", hoursText(p)],
-    ["Best time", p.best],
-    ["From Avarua", drive.text],
-    ["Tags", p.tags.join(" · ")]
-  ].map(([k,v]) => `<li><span class="k">${k}</span><span class="v">${v}</span></li>`).join("");
+  const tr = travelTo(p);
+  const rows = [["Hours", hoursText(p)], ["Best time", p.best]];
+  if (tr) rows.push(["From you", `${tr.main} — ${tr.sub}`]);
+  rows.push(["From Avarua", p.offshore ? p.offshore.note : drive.text]);
+  if (p.bring) rows.push(["Bring", p.bring]);
+  rows.push(["Tags", p.tags.join(" · ")]);
+  document.getElementById("dFacts").innerHTML =
+    rows.map(([k,v]) => `<li><span class="k">${k}</span><span class="v">${v}</span></li>`).join("");
 
   const star = document.getElementById("dStar");
   const on = state.saved.has(p.id);
@@ -1101,11 +1591,11 @@ function select(id, fly = true){
   star.classList.toggle("on", on);
   star.onclick = () => {
     state.saved.has(p.id) ? state.saved.delete(p.id) : state.saved.add(p.id);
-    persistSaved(); select(p.id, false); render();
+    persistSaved(); select(p.id, false); render(); renderLoop();
   };
   document.getElementById("dFly").onclick = () => flyTo(p, 2.8);
 
-  panel.classList.add("open");
+  showTab("Place");
   panel.querySelector(".panel-scroll").scrollTop = 0;
   if (fly) flyTo(p, Math.max(view.k, 2.2));
 }
@@ -1131,7 +1621,11 @@ function renderNow(t){
   openNow.forEach(p => {
     const b = document.createElement("button");
     b.className = "nowcard";
-    b.innerHTML = `<span class="n">${p.name}</span><span class="m">${CATS[p.cat].icon} till ${fmtHour(p.hours[2])} · ${driveFromTown(p).inland ? "inland" : driveFromTown(p).text.replace(" clockwise","cw").replace(" anticlockwise","acw")}</span>`;
+    const tr = travelTo(p);
+    const how = p.offshore ? "by air"
+      : tr ? tr.main
+      : driveFromTown(p).inland ? "inland" : driveFromTown(p).text.replace(" clockwise"," cw").replace(" anticlockwise"," acw");
+    b.innerHTML = `<span class="n">${p.name}</span><span class="m">${CATS[p.cat].icon} till ${fmtHour(p.hours[2])} · ${how}</span>`;
     b.onclick = () => select(p.id);
     list.appendChild(b);
   });
@@ -1161,6 +1655,8 @@ setInterval(tick, 30000);
 /* ---------- open at rest on something worth seeing ---------- */
 applyView();
 syncCatChips();
+renderLocSetup();
+renderLoop();
 tick();
 (function openingPick(){
   const t = raroNow();
