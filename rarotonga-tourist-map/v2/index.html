@@ -26,7 +26,7 @@ button{border:0;background:none;cursor:pointer}
 
 /* ---------- stage ---------- */
 #stage{position:fixed;inset:0;touch-action:none;
-  background:linear-gradient(#0a2740 0%,#0e4b6b 42%,#12688c 62%,#0a3f5c 100%)}
+  background:linear-gradient(#08243c 0%,#0d4260 44%,#0e5878 60%,#062f47 100%)}
 #gl{display:block;width:100%;height:100%}
 #markers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
@@ -913,29 +913,80 @@ function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[
 
 const VS = `
 attribute vec3 aPos; attribute vec3 aNorm; attribute vec3 aCol;
-uniform mat4 uMVP; uniform vec3 uLight;
-varying vec3 vCol; varying float vShade; varying float vDepth;
+uniform mat4 uMVP;
+varying vec3 vCol; varying vec3 vN; varying vec3 vWorld; varying float vDepth;
 void main(){
   vec4 clip = uMVP * vec4(aPos, 1.0);
   gl_Position = clip;
-  vec3 n = normalize(aNorm);
-  // abs(), not max(): palm fronds, roofs and hulls are single-sided triangles
-  // whose normals may face away from the sun, and lighting only the front side
-  // turned every one of them black.
-  float key = abs(dot(n, normalize(uLight)));
-  float sky = 0.5 + 0.5 * n.y;                 // bounce off the sky and the lagoon
-  vShade = 0.30 + 0.32 * sky + 0.52 * key;
-  vCol = aCol;
+  vCol = aCol;                 // base colour, with occlusion and sun shadow baked in
+  vN = aNorm;
+  vWorld = aPos;
   vDepth = clip.w;
 }`;
 const FS = `
-precision mediump float;
-varying vec3 vCol; varying float vShade; varying float vDepth;
-uniform float uAlpha; uniform vec3 uFog;
+precision highp float;
+varying vec3 vCol; varying vec3 vN; varying vec3 vWorld; varying float vDepth;
+uniform float uAlpha; uniform vec3 uFog; uniform vec3 uLight; uniform vec3 uEye;
+uniform float uWater; uniform float uDetail;
+
+// Value noise, cheap enough to run per pixel. This is what gives the ground
+// texture at every zoom: vertex colours can only be as fine as the mesh, and
+// a 340-grid mesh is nowhere near fine enough to stop looking moulded.
+float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float n2(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hsh(i), hsh(i + vec2(1,0)), f.x),
+             mix(hsh(i + vec2(0,1)), hsh(i + vec2(1,1)), f.x), f.y);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++){ s += a * n2(p); p *= 2.07; a *= 0.5; }
+  return s;
+}
+
 void main(){
-  // aerial perspective: distance washes toward the haze on the horizon
+  vec3 n = normalize(vN);
+  vec3 L = normalize(uLight);
+  vec3 V = normalize(uEye - vWorld);
+  vec3 col = vCol;
+
+  if (uWater > 0.5){
+    // Water: a grazing angle reflects the sky, straight down shows the bottom,
+    // and the sun leaves a specular streak. A flat translucent sheet is the
+    // giveaway that you are looking at a diagram rather than an ocean.
+    float fres = pow(1.0 - max(dot(n, V), 0.0), 3.0);
+    vec3 H = normalize(L + V);
+    float spec = pow(max(dot(n, H), 0.0), 220.0);
+    float ripple = fbm(vWorld.xz * 0.30) * 0.06;
+    col = mix(col, vec3(0.42, 0.68, 0.80), fres * 0.85) + spec * 0.9 + ripple;
+    float a = uAlpha + fres * 0.34;
+    float fog = clamp((vDepth - 700.0) / 1500.0, 0.0, 0.66);
+    gl_FragColor = vec4(mix(col, uFog, fog), min(0.96, a));
+    return;
+  }
+
+  if (uDetail > 0.5){
+    // Ground texture at three scales: canopy grain, the patchwork of
+    // plantation and fern, and a broad tonal drift across the island.
+    float grain = fbm(vWorld.xz * 1.35);
+    float mid   = fbm(vWorld.xz * 0.28 + 31.0);
+    float broad = fbm(vWorld.xz * 0.055 + 7.0);
+    float t = (grain - 0.5) * 0.30 + (mid - 0.5) * 0.34 + (broad - 0.5) * 0.26;
+    col *= 1.0 + t;
+    // steep ground shows rock and bare earth through the vegetation
+    float steep = smoothstep(0.42, 0.10, n.y);
+    col = mix(col, vec3(0.38, 0.34, 0.29) * (0.75 + grain * 0.5), steep * 0.30);
+    col = max(col, vec3(0.0));
+  }
+
+  float key = abs(dot(n, L));
+  float sky = 0.5 + 0.5 * n.y;
+  float shade = 0.30 + 0.30 * sky + 0.56 * key;
+  col *= shade;
+
   float fog = clamp((vDepth - 700.0) / 1500.0, 0.0, 0.66);
-  gl_FragColor = vec4(mix(vCol * vShade, uFog, fog), uAlpha);
+  gl_FragColor = vec4(mix(col, uFog, fog), uAlpha);
 }`;
 function compile(type, src){
   const sh = gl.createShader(type);
@@ -956,7 +1007,9 @@ gl.useProgram(prog);
 const A = { pos:gl.getAttribLocation(prog,"aPos"), norm:gl.getAttribLocation(prog,"aNorm"),
             col:gl.getAttribLocation(prog,"aCol") };
 const U = { mvp:gl.getUniformLocation(prog,"uMVP"), light:gl.getUniformLocation(prog,"uLight"),
-            alpha:gl.getUniformLocation(prog,"uAlpha"), fog:gl.getUniformLocation(prog,"uFog") };
+            alpha:gl.getUniformLocation(prog,"uAlpha"), fog:gl.getUniformLocation(prog,"uFog"),
+            eye:gl.getUniformLocation(prog,"uEye"), water:gl.getUniformLocation(prog,"uWater"),
+            detail:gl.getUniformLocation(prog,"uDetail") };
 
 function makeMesh(pos, norm, col, idx){
   const buf = data => { const b = gl.createBuffer();
@@ -978,8 +1031,10 @@ function makeSoup(pos, norm, col){
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
   return { pos:buf(pos), norm:buf(norm), col:buf(col), soup:true, count:pos.length / 3 };
 }
-function drawMesh(m, alpha){
+function drawMesh(m, alpha, opts){
   gl.uniform1f(U.alpha, alpha);
+  gl.uniform1f(U.water,  opts === "water"  ? 1 : 0);
+  gl.uniform1f(U.detail, opts === "ground" ? 1 : 0);
   for (const [b, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
     gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.enableVertexAttribArray(loc);
@@ -1002,21 +1057,22 @@ const rgb = h => [(h>>16&255)/255, (h>>8&255)/255, (h&255)/255];
 // rock and fern. That single rule is most of what makes it read as real.
 function groundColour(m, flatness){
   let c;
-  if (m <= -60)      c = rgb(0x05203a);
-  else if (m <= -18) c = lerp3(rgb(0x0a3f66), rgb(0x1180a8), (m + 60) / 42);
-  else if (m < -1.5) c = lerp3(rgb(0x21b5bd), rgb(0x86ecdd), (m + 18) / 16.5);
-  else if (m < 3)    c = rgb(0xf6e8c4);
-  else if (m < 45)   c = lerp3(rgb(0x74c26f), rgb(0x4d9c57), m / 42);
-  else if (m < 200)  c = lerp3(rgb(0x4d9c57), rgb(0x2c7444), (m - 45) / 155);
-  else if (m < 420)  c = lerp3(rgb(0x2c7444), rgb(0x24603c), (m - 200) / 220);
-  else               c = lerp3(rgb(0x24603c), rgb(0x6f6a58), Math.min(1, (m - 420) / 210));
+  if (m <= -60)      c = rgb(0x0a2036);
+  else if (m <= -18) c = lerp3(rgb(0x0d3a55), rgb(0x1a6f88), (m + 60) / 42);
+  else if (m < -1.5) c = lerp3(rgb(0x2e9099), rgb(0x77c8bd), (m + 18) / 16.5);
+  else if (m < 3)    c = rgb(0xdfd2ae);                       // beach, not butter
+  else if (m < 45)   c = lerp3(rgb(0x5f8a4a), rgb(0x4a7540), m / 42);
+  else if (m < 200)  c = lerp3(rgb(0x4a7540), rgb(0x365c33), (m - 45) / 155);
+  else if (m < 540)  c = lerp3(rgb(0x365c33), rgb(0x2e4d2d), (m - 200) / 340);
+  else               c = lerp3(rgb(0x2e4d2d), rgb(0x63594b), Math.min(1, (m - 540) / 160));
   if (m > 6){
-    const steep = 1 - flatness;                       // 0 flat, 1 cliff
-    c = lerp3(c, rgb(0x8a7f6b), Math.pow(steep, 2.2) * 0.72);   // exposed rock
-    c = lerp3(c, rgb(0x8fd07a), Math.pow(flatness, 3) * 0.28);  // planted flat
+    const steep = 1 - flatness;
+    c = lerp3(c, rgb(0x6e6253), Math.pow(steep, 2.6) * 0.38);
+    c = lerp3(c, rgb(0x6f9349), Math.pow(flatness, 3) * 0.22);
   }
   return c;
 }
+
 const islandMesh = (() => {
   const t0 = performance.now();
   const n = GRID + 1, pos = [], col = [], norm = [], idx = [];
@@ -1050,6 +1106,28 @@ const islandMesh = (() => {
     AO[j*n+i] = 1 / (1 + (occ / OFF.length) * 5.5);
   }
 
+  // Cast shadows. For each point, walk toward the sun across the height grid;
+  // if anything stands above the ray, the point is in shadow. Ridges throwing
+  // shade into the valleys behind them is most of what makes a landscape read
+  // as lit rather than coloured in.
+  const SUN = norm3([-0.55, 0.62, 0.40]);
+  const cell = SPAN / GRID;
+  const sunStepI = -SUN[0] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]));
+  const sunStepJ = -SUN[2] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]));
+  const risePerStep = (SUN[1] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]))) * cell * M_PER_UNIT;
+  const SH = new Float32Array(n * n);
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
+    let hit = 0, ray = at(i, j) + 4;
+    for (let k = 1; k <= 60; k++){
+      const ii = Math.round(i + sunStepI * k), jj = Math.round(j + sunStepJ * k);
+      if (ii < 0 || jj < 0 || ii >= n || jj >= n) break;
+      ray += risePerStep;
+      const d = at(ii, jj) - ray;
+      if (d > 0){ hit = Math.min(1, d / 60); break; }
+    }
+    SH[j*n+i] = 1 - hit * 0.78;
+  }
+
   const step = SPAN / GRID;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
     const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
@@ -1062,14 +1140,8 @@ const islandMesh = (() => {
 
     let c = groundColour(m, v[1]);
     if (m > 2){
-      // Two scales of mottle: canopy clumps, and the broader patchwork of
-      // plantation, fern and bare ground. Flat colour is what reads as plastic.
-      const fine = vnoise(x * 0.085 + 11, z * 0.085 + 7) - 0.5;
-      const broad = vnoise(x * 0.021 + 3, z * 0.021 + 19) - 0.5;
-      const k = 1 + fine * 0.20 + broad * 0.26;
-      c = [c[0] * k, c[1] * (1 + fine * 0.15 + broad * 0.20), c[2] * k];
-      const ao = 0.42 + 0.58 * AO[j*n+i];
-      c = [c[0] * ao, c[1] * ao, c[2] * ao];
+      const lit = (0.44 + 0.56 * AO[j*n+i]) * SH[j*n+i];
+      c = [c[0] * lit, c[1] * lit, c[2] * lit];
     }
     col.push(Math.min(1, c[0]), Math.min(1, c[1]), Math.min(1, c[2]));
   }
@@ -1081,12 +1153,12 @@ const islandMesh = (() => {
 })();
 
 const abyssMesh = (() => {                    // hides the mesh's own edge
-  const S = 3200, c = rgb(0x072742);
+  const S = 3200, c = rgb(0x03131f);
   return makeMesh([-S,-72,-S, S,-72,-S, S,-72,S, -S,-72,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
                   [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
 })();
 const waterMesh = (() => {
-  const S = 2100, c = rgb(0x1a93b6);
+  const S = 2100, c = rgb(0x0d4a63);
   return makeMesh([-S,0.30,-S, S,0.30,-S, S,0.30,S, -S,0.30,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
                   [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
 })();
@@ -1295,18 +1367,19 @@ function drawScene(){
   gl.enable(gl.DEPTH_TEST);
   gl.uniformMatrix4fv(U.mvp, false, new Float32Array(viewProj));
   gl.uniform3f(U.light, -0.55, 0.62, 0.40);     // late afternoon, from the west
-  gl.uniform3f(U.fog, 0.09, 0.30, 0.42);
+  gl.uniform3f(U.fog, 0.07, 0.22, 0.32);
+  gl.uniform3f(U.eye, camEye[0], camEye[1], camEye[2]);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.depthMask(true);
   drawMesh(abyssMesh, 1);
-  drawMesh(islandMesh, 1);
+  drawMesh(islandMesh, 1, "ground");
   drawMesh(roadMesh, 1);
   // Detail earns its place only when you are near it: from orbit it is noise,
   // and skipping it keeps the far view cheap.
   if (cam.dist < 820) drawMesh(scenery, 1);
   gl.depthMask(false);
-  drawMesh(waterMesh, 0.58);
+  drawMesh(waterMesh, 0.50, "water");
   drawMesh(surfMesh, 0.92);
   drawMesh(foamMesh, 0.45);
   if (cam.dist > 380) drawMesh(cloudMesh, 0.18);   // from underneath it just fogs the view
@@ -1319,13 +1392,14 @@ function drawScene(){
 const cam = { az:-0.55, el:0.50, dist:880, tx:0, tz:-10 };
 const CAM_HOME = { ...cam };
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
-let camDirty = true, viewProj = null;
+let camDirty = true, viewProj = null, camEye = [0, 500, 800];
 
 function placeCamera(){
   cam.el = clamp(cam.el, 0.14, 1.5);
   cam.dist = clamp(cam.dist, 240, 1600);
   const r = cam.dist * Math.cos(cam.el);
   const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
+  camEye = eye;
   const proj = mPerspective(46 * Math.PI/180, canvas.width / canvas.height || 1, 4, 5200);
   viewProj = mMul(proj, mLookAt(eye, [cam.tx, 0, cam.tz], [0,1,0]));
   camDirty = true;
