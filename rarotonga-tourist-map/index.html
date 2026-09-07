@@ -73,8 +73,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 /* ---------- shell ---------- */
 .shell{position:fixed;inset:0;display:grid;grid-template-columns:1fr min(400px,34vw);}
 .stage{position:relative;overflow:hidden;background:var(--ocean-far)}
-/* pan-y keeps a phone able to scroll the page; drag and pinch are handled here */
-#map{width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
+/* the map handles every gesture itself; the browser must not claim any of them */
+#map{width:100%;height:100%;display:block;touch-action:none;cursor:grab;
+     -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #map.dragging{cursor:grabbing}
 
 /* ---------- floating chrome ---------- */
@@ -396,16 +397,6 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 }
 .oceanlabel{font-family:Fredoka,sans-serif;font-size:15px;fill:var(--foam);opacity:.4;letter-spacing:.3em;text-anchor:middle;pointer-events:none}
 
-/* scroll hint */
-.hint{
-  position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:7;
-  background:rgba(6,34,44,.3);opacity:0;transition:opacity .18s ease;
-}
-.hint.show{opacity:1}
-.hint span{
-  padding:11px 20px;border-radius:999px;background:var(--surface);color:var(--ink);
-  font-size:13.5px;font-weight:700;box-shadow:var(--shadow);
-}
 
 /* the selected pin sits proud of the rest */
 .pin.sel .bubble{transform:scale(1.22)}
@@ -501,7 +492,6 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   <div class="stage">
     <svg id="map" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid slice" role="application"
          aria-label="Exaggerated cartoon map of Rarotonga with tappable places"></svg>
-    <div class="hint" id="hint" aria-hidden="true"><span>Hold ⌘ or Ctrl and scroll to zoom · drag to pan</span></div>
 
     <div class="hud topbar">
       <div class="brand">
@@ -1307,30 +1297,46 @@ const me = { fix:null, watchId:null, status:"idle", anchor:null };
 // to keep the coast clear of the floating chrome.
 const HOME = { k:0.86, x:70, y:70 };
 let view = { ...HOME };
-const MIN_K = 0.7, MAX_K = 4.5;
+const MIN_K = 0.7, MAX_K = 6;
+const VB_W = 1000, VB_H = 800, EDGE = 240;   // viewBox size, and how far you may drag past the map
 
-function applyView(){
+let lastK = null, gesturing = false, labelTimer = 0;
+
+function applyView(force){
   world.setAttribute("transform", `translate(${view.x} ${view.y}) scale(${view.k})`);
-  const inv = 1 / view.k;
-  // Sixty-one bubbles at full size is a pile. Headline places hold their size;
-  // everything else is a chip until you zoom in on it.
-  const minor = view.k < 1.2 ? 0.52 : view.k < 1.6 ? 0.72 : 1;
-  PLACES.forEach(p => {
-    const node = pinNodes.get(p.id);
-    const sc = inv * (p.hero ? 1 : minor);
-    node.scale = p.hero ? 1 : minor;
-    node.g.setAttribute("transform", `translate(${p.x} ${p.y}) scale(${sc})`);
-  });
-  placeLabels();
-  if (me.fix){
-    // the puck counter-scales like a pin, but the accuracy ring is a real
-    // distance on the ground, so it must scale *with* the map
-    meLayer.setAttribute("transform", `translate(${me.fix.x} ${me.fix.y}) scale(${inv})`);
-    const kmToSvg = coastR(me.fix.deg) / realRadiusKm(me.fix.deg);
-    const accSvg = Math.min(90, (me.fix.accuracy / 1000) * kmToSvg) * view.k;
-    document.getElementById("meAccuracy").setAttribute("r", Math.max(0, accSvg));
+
+  // The pins counter-scale, and that depends only on k. So a pure pan costs one
+  // attribute write instead of sixty-three — which is the difference between a
+  // map that tracks your finger and one that lags a frame behind it.
+  if (force || view.k !== lastK){
+    const inv = 1 / view.k;
+    const minor = view.k < 1.2 ? 0.52 : view.k < 1.6 ? 0.72 : 1;
+    for (const pl of PLACES){
+      const node = pinNodes.get(pl.id);
+      node.scale = pl.hero ? 1 : minor;
+      node.g.setAttribute("transform", `translate(${pl.x} ${pl.y}) scale(${inv * node.scale})`);
+    }
+    if (me.fix){
+      // the character counter-scales like a pin, but the accuracy ring is a real
+      // distance on the ground, so it scales *with* the map
+      meLayer.setAttribute("transform", `translate(${me.fix.x} ${me.fix.y}) scale(${inv})`);
+      const kmToSvg = coastR(me.fix.deg) / realRadiusKm(me.fix.deg);
+      document.getElementById("meAccuracy").setAttribute("r",
+        Math.max(0, Math.min(90, (me.fix.accuracy / 1000) * kmToSvg) * view.k));
+    }
+    lastK = view.k;
   }
+
+  // Labels are children of their pin, so they travel with the map for free.
+  // Only the declutter decision goes stale mid-gesture, and that can wait until
+  // your finger comes off — solving it every frame is what made panning stutter.
+  if (!gesturing) scheduleLabels();
 }
+function scheduleLabels(){
+  clearTimeout(labelTimer);
+  labelTimer = setTimeout(() => requestAnimationFrame(placeLabels), 50);
+}
+
 /* Label placement, the way a cartographer does it: rank the candidates, then
    keep a name only if its box is still clear of the bubbles and names already
    on the map. Measured in viewBox units — labels counter-scale, so a box is the
@@ -1390,91 +1396,201 @@ function placeLabels(){
   }
 }
 
-function zoomAt(factor, cx, cy){
-  const k2 = Math.min(MAX_K, Math.max(MIN_K, view.k * factor));
-  const r = svg.getBoundingClientRect();
-  const sx = (cx - r.left) / r.width * 1000, sy = (cy - r.top) / r.height * 800;
-  view.x = sx - (sx - view.x) * (k2 / view.k);
-  view.y = sy - (sy - view.y) * (k2 / view.k);
-  view.k = k2;
-  applyView();
+/* =========================================================================
+   NAVIGATION
+   One finger pans, two pinch, the wheel zooms, double-click zooms in, and a
+   flick keeps going. Every screen position is converted through the SVG's own
+   screen matrix rather than by assuming the viewBox maps linearly onto the
+   element — it does not, because preserveAspectRatio is "slice", and that wrong
+   assumption was why the map used to slide away from the cursor.
+   ========================================================================= */
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+function toUser(clientX, clientY){
+  const m = svg.getScreenCTM();
+  if (!m) return { x:clientX, y:clientY };
+  const i = m.inverse();
+  return { x: i.a * clientX + i.c * clientY + i.e,
+           y: i.b * clientX + i.d * clientY + i.f };
 }
-function flyTo(p, k = 2.5){
-  const target = { k, x:500 - p.x * k, y:400 - p.y * k };
-  const from = { ...view }, t0 = performance.now(), dur = 620;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce){ view = target; applyView(); return; }
-  (function step(now){
+function viewCentre(){
+  const r = svg.getBoundingClientRect();
+  return toUser(r.left + r.width / 2, r.top + r.height / 2);
+}
+// You can drag past the island, but never lose it: something always stays on screen.
+function clampView(){
+  view.k = clamp(view.k, MIN_K, MAX_K);
+  view.x = clamp(view.x, EDGE - VB_W * view.k, VB_W - EDGE);
+  view.y = clamp(view.y, EDGE - VB_H * view.k, VB_H - EDGE);
+}
+// Scale about a fixed point: whatever is under the cursor stays under the cursor.
+function zoomAround(ux, uy, k){
+  const wx = (ux - view.x) / view.k, wy = (uy - view.y) / view.k;
+  view.k = clamp(k, MIN_K, MAX_K);
+  view.x = ux - wx * view.k;
+  view.y = uy - wy * view.k;
+  clampView(); applyView();
+}
+
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+let anim = 0;
+function stopAnim(){ cancelAnimationFrame(anim); anim = 0; }
+
+function animateZoom(targetK, at){
+  const k0 = view.k, k1 = clamp(targetK, MIN_K, MAX_K);
+  if (reduceMotion() || Math.abs(k1 - k0) < 0.001) return zoomAround(at.x, at.y, k1);
+  stopAnim();
+  const t0 = performance.now(), D = 230;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - t, 3);
+    zoomAround(at.x, at.y, k0 + (k1 - k0) * e);
+    if (t < 1) anim = requestAnimationFrame(step); else scheduleLabels();
+  };
+  anim = requestAnimationFrame(step);
+}
+function animateTo(target, dur = 480){
+  stopAnim();
+  const from = { ...view };
+  if (reduceMotion()){ view = { ...target }; clampView(); applyView(); return; }
+  const t0 = performance.now();
+  const step = now => {
     const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
     view = { k:from.k + (target.k - from.k) * e,
              x:from.x + (target.x - from.x) * e,
              y:from.y + (target.y - from.y) * e };
-    applyView();
-    if (t < 1) requestAnimationFrame(step);
-  })(performance.now());
+    clampView(); applyView();
+    if (t < 1) anim = requestAnimationFrame(step); else scheduleLabels();
+  };
+  anim = requestAnimationFrame(step);
+}
+function flyTo(p, k = 2.5){
+  const kk = clamp(k, MIN_K, MAX_K);
+  animateTo({ k:kk, x:VB_W/2 - p.x * kk, y:VB_H/2 - p.y * kk }, 560);
 }
 
-let drag = null, swallowClick = false;
-// Deliberately NOT setPointerCapture on the <svg>: capturing here retargets the
-// pointerup to the root, so the browser's click lands on the map instead of the
-// pin under your finger and nothing opens. Tracking on window does the same job
-// and leaves the pins clickable.
+/* ---------- pointers: 1 = pan, 2 = pinch ---------- */
+const pointers = new Map();
+let pinchPrev = null, downAt = null, moved = false, swallowClick = false;
+let vx = 0, vy = 0, lastMoveTime = 0;
+
 svg.addEventListener("pointerdown", e => {
-  if (e.button !== undefined && e.button !== 0) return;
-  drag = { x:e.clientX, y:e.clientY, vx:view.x, vy:view.y, moved:false };
-  svg.classList.add("dragging");
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  stopAnim();
+  pointers.set(e.pointerId, toUser(e.clientX, e.clientY));
+  if (pointers.size === 1){
+    downAt = { cx:e.clientX, cy:e.clientY };
+    moved = false; vx = vy = 0; lastMoveTime = performance.now();
+    gesturing = true;
+    svg.classList.add("dragging");
+  }
+  if (pointers.size === 2) pinchPrev = null;      // recomputed on the next move
 });
+
 window.addEventListener("pointermove", e => {
-  if (!drag) return;
-  const r = svg.getBoundingClientRect();
-  const dx = (e.clientX - drag.x) / r.width * 1000, dy = (e.clientY - drag.y) / r.height * 800;
-  if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-  if (!drag.moved) return;                       // a small wobble is a tap, not a pan
-  view.x = drag.vx + dx; view.y = drag.vy + dy; applyView();
+  if (!pointers.has(e.pointerId)) return;
+  const cur = toUser(e.clientX, e.clientY), prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, cur);
+
+  if (pointers.size >= 2){
+    const [a, b] = [...pointers.values()];
+    const mid = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
+    const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    if (pinchPrev){
+      view.x += mid.x - pinchPrev.mid.x;          // pinches drag as well as scale
+      view.y += mid.y - pinchPrev.mid.y;
+      zoomAround(mid.x, mid.y, view.k * (dist / pinchPrev.dist));
+    }
+    pinchPrev = { mid, dist };
+    moved = true;
+    return;
+  }
+
+  if (!moved && downAt && Math.hypot(e.clientX - downAt.cx, e.clientY - downAt.cy) < 5) return;
+  moved = true;
+  const dx = cur.x - prev.x, dy = cur.y - prev.y;
+  const now = performance.now(), dt = Math.max(1, now - lastMoveTime);
+  lastMoveTime = now;
+  // exponential smoothing, so one jittery sample cannot fling the map
+  vx = vx * 0.7 + (dx / dt * 16) * 0.3;
+  vy = vy * 0.7 + (dy / dt * 16) * 0.3;
+  view.x += dx; view.y += dy;
+  clampView(); applyView();
 });
-["pointerup","pointercancel"].forEach(ev => window.addEventListener(ev, () => {
-  if (drag && drag.moved){ swallowClick = true; setTimeout(() => swallowClick = false, 0); }
-  drag = null; svg.classList.remove("dragging");
-}));
-// A map that eats the wheel traps the page it is embedded in. Plain scrolling
-// passes straight through; zooming asks for ctrl/cmd, which is also what a
-// trackpad pinch sends, and the hint says so the first time you try.
-let hintTimer = null;
-function flashHint(){
-  const h = document.getElementById("hint");
-  h.classList.add("show");
-  clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => h.classList.remove("show"), 1400);
+
+function endPointer(e){
+  if (!pointers.delete(e.pointerId)) return;
+  if (pointers.size < 2) pinchPrev = null;
+  if (pointers.size) return;
+  gesturing = false;
+  svg.classList.remove("dragging");
+  if (moved){
+    swallowClick = true;                      // a drag must not open a place
+    setTimeout(() => swallowClick = false, 0);
+    glide();
+  } else scheduleLabels();
 }
+["pointerup","pointercancel"].forEach(ev => window.addEventListener(ev, endPointer));
+
+// A flick keeps going and settles, the way every map on this phone behaves.
+// Decay 0.88 adds roughly seven frames of travel — enough to feel like momentum,
+// short of the skating-on-ice that 0.93 gave. The cap stops a single jittery
+// sample at the moment of release from launching the island off screen.
+function glide(){
+  const speed = Math.hypot(vx, vy);
+  if (reduceMotion() || speed < 1.5){ scheduleLabels(); return; }
+  if (speed > 42){ vx *= 42 / speed; vy *= 42 / speed; }
+  stopAnim();
+  const step = () => {
+    vx *= 0.88; vy *= 0.88;
+    view.x += vx; view.y += vy;
+    const before = view.x + view.y;
+    clampView(); applyView();
+    if (view.x + view.y !== before){ vx = vy = 0; }     // stop dead at the edge
+    if (Math.hypot(vx, vy) > 0.4) anim = requestAnimationFrame(step);
+    else scheduleLabels();
+  };
+  anim = requestAnimationFrame(step);
+}
+
+/* ---------- wheel and trackpad ---------- */
 svg.addEventListener("wheel", e => {
-  if (e.ctrlKey || e.metaKey){
-    e.preventDefault();
-    zoomAt(e.deltaY < 0 ? 1.16 : 1 / 1.16, e.clientX, e.clientY);
-  } else if (Math.abs(e.deltaY) > 4) flashHint();
+  e.preventDefault();
+  stopAnim();
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  const p = toUser(e.clientX, e.clientY);
+  // ctrl+wheel is what a trackpad pinch sends; it is coarser, so it gets a
+  // smaller coefficient to land at the same feel as a mouse notch
+  zoomAround(p.x, p.y, view.k * Math.exp(-e.deltaY * unit * (e.ctrlKey ? 0.009 : 0.0026)));
 }, { passive:false });
 
-// pinch
-let pinch = null;
-svg.addEventListener("touchstart", e => {
-  if (e.touches.length === 2){
-    const [a,b] = e.touches;
-    pinch = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-  }
-}, { passive:true });
-svg.addEventListener("touchmove", e => {
-  if (e.touches.length === 2 && pinch){
-    const [a,b] = e.touches;
-    const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-    zoomAt(d / pinch, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
-    pinch = d;
-  }
-}, { passive:true });
-svg.addEventListener("touchend", () => { pinch = null; });
+svg.addEventListener("dblclick", e => {
+  e.preventDefault();
+  const p = toUser(e.clientX, e.clientY);
+  animateZoom(view.k * 1.9, p);
+});
 
-const centreRect = () => { const r = svg.getBoundingClientRect(); return [r.left + r.width/2, r.top + r.height/2]; };
-document.getElementById("zoomIn").onclick  = () => zoomAt(1.35, ...centreRect());
-document.getElementById("zoomOut").onclick = () => zoomAt(1/1.35, ...centreRect());
-document.getElementById("zoomReset").onclick = () => { view = { ...HOME }; applyView(); };
+/* ---------- buttons and keys ---------- */
+document.getElementById("zoomIn").onclick    = () => animateZoom(view.k * 1.55, viewCentre());
+document.getElementById("zoomOut").onclick   = () => animateZoom(view.k / 1.55, viewCentre());
+document.getElementById("zoomReset").onclick = () => animateTo({ ...HOME });
+
+addEventListener("keydown", e => {
+  const t = document.activeElement;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+  const pan = 90 / view.k;
+  const nudge = (dx, dy) => { view.x += dx; view.y += dy; clampView(); applyView(); };
+  switch (e.key){
+    case "ArrowLeft":  nudge(pan, 0); break;
+    case "ArrowRight": nudge(-pan, 0); break;
+    case "ArrowUp":    nudge(0, pan); break;
+    case "ArrowDown":  nudge(0, -pan); break;
+    case "+": case "=": animateZoom(view.k * 1.55, viewCentre()); break;
+    case "-": case "_": animateZoom(view.k / 1.55, viewCentre()); break;
+    case "0":           animateTo({ ...HOME }); break;
+    default: return;
+  }
+  e.preventDefault();
+});
 
 /* =========================================================================
    FILTERS
@@ -1760,7 +1876,7 @@ function setFix(lat, lon, accuracy, source, label){
   meLayer.style.display = "";
   locateBtn.classList.remove("busy"); locateBtn.classList.add("on");
   drawAvatar(meAvatar, avatar);
-  applyView(); renderLocSetup(); renderAvatarEditor(); renderNear(); renderLoop(); render();
+  applyView(true); renderLocSetup(); renderAvatarEditor(); renderNear(); renderLoop(); render();
   if (state.tab === "Place" && state.selected) select(state.selected, false);
 }
 function clearFix(){
