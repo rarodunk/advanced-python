@@ -137,14 +137,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .zbtn.small{font-size:13px;letter-spacing:.04em}
 .zbtn:hover{background:var(--surface-2)}
 
-/* sunday / season notice */
-.notice{
-  position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:6;
-  display:flex;align-items:center;gap:9px;padding:9px 15px;border-radius:999px;
-  background:var(--gold);color:#2A1A05;box-shadow:var(--shadow);font-size:13px;font-weight:700;
-  max-width:min(560px,88vw);
-}
-.notice span{font-weight:400}
+/* the day's context lives in the clock, not in a banner over the map */
+.clock .d .flag{color:var(--accent);font-weight:600}
 
 /* ---------- panel ---------- */
 .panel{
@@ -216,6 +210,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .nowcard .n{font-weight:700;font-size:13px;line-height:1.25;display:block}
 .nowcard .m{font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;margin-top:4px;display:block}
 .empty{font-size:13px;color:var(--ink-3);line-height:1.5;margin:0}
+.daynote{
+  font-size:12.5px;line-height:1.5;color:var(--ink-2);margin:0 0 11px;padding:0 0 0 11px;
+  border-left:3px solid var(--gold);
+}
 
 .foot{padding:0 22px 20px;font-size:11.5px;line-height:1.55;color:var(--ink-3)}
 .foot b{color:var(--ink-2)}
@@ -304,6 +302,63 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .summary .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:700}
 .blank{padding:34px 24px;text-align:center;color:var(--ink-3);font-size:13.5px;line-height:1.6}
 .blank .big{font-size:30px;display:block;margin-bottom:10px}
+
+/* ---------- character builder ---------- */
+.avbuild{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:start}
+.avprev{
+  width:96px;height:auto;aspect-ratio:68/76;background:var(--surface-3);border-radius:16px;padding:6px;
+}
+.avcontrols{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fieldlabel{
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:700;
+  margin-top:7px;
+}
+.namefield{
+  width:100%;padding:8px 11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);font:inherit;font-size:13px;font-weight:600;
+}
+.namefield:focus{outline:none;border-color:var(--lagoon)}
+.swrow{display:flex;gap:6px;flex-wrap:wrap}
+.sw{
+  width:24px;height:24px;border-radius:8px;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);
+  transition:transform .12s ease;
+}
+.sw:hover{transform:scale(1.12)}
+.sw[aria-pressed="true"]{border-color:var(--ink);transform:scale(1.12)}
+
+/* ---------- island brief ---------- */
+.brief{padding:20px 22px 6px}
+.brief h3{
+  margin:22px 0 4px;font-family:Fredoka,sans-serif;font-weight:600;font-size:18px;letter-spacing:-.01em;
+}
+.brief h3:first-child{margin-top:0}
+.brief .lede{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
+.brief dl{margin:12px 0 0;display:grid;gap:11px}
+.brief .item{display:grid;gap:3px}
+.brief dt{font-weight:700;font-size:13.5px;color:var(--ink)}
+.brief dt .say{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-left:7px;
+}
+.brief dd{margin:0;font-size:13px;line-height:1.55;color:var(--ink-2)}
+.brief .stat{
+  display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;padding:9px 0;
+  border-bottom:1px solid var(--line);
+}
+.brief .stat:last-child{border-bottom:0}
+.brief .stat b{
+  font-family:Fredoka,sans-serif;font-weight:600;font-size:19px;color:var(--accent);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.brief .stat span{font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+.seasons{display:grid;gap:7px;margin-top:12px}
+.season{
+  display:grid;grid-template-columns:78px 1fr;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;
+  background:var(--surface-2);font-size:12.5px;line-height:1.45;color:var(--ink-2);
+}
+.season b{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);letter-spacing:.02em;
+}
+.season.peak{background:var(--accent-soft)}
 
 .zbtn.accent{background:var(--accent);color:var(--accent-ink)}
 .zbtn.accent.on{background:var(--lagoon);color:#052a2e}
@@ -401,8 +456,6 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       </div>
     </div>
 
-    <div class="notice" id="notice" hidden></div>
-
     <div class="hud chips">
       <div class="chiprow" id="catChips"></div>
       <div class="chiprow">
@@ -424,9 +477,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   <aside class="panel" id="panel" aria-live="polite">
     <button class="panel-close" id="panelClose" aria-label="Close details">✕</button>
     <div class="tabs" role="tablist">
-      <button class="tab" data-pane="Place" role="tab" aria-selected="true">This place</button>
+      <button class="tab" data-pane="Place" role="tab" aria-selected="true">Place</button>
       <button class="tab" data-pane="Near"  role="tab" aria-selected="false">Near me</button>
-      <button class="tab" data-pane="Loop"  role="tab" aria-selected="false">My loop <span class="count" id="loopCount">0</span></button>
+      <button class="tab" data-pane="Loop"  role="tab" aria-selected="false">Loop <span class="count" id="loopCount">0</span></button>
+      <button class="tab" data-pane="Brief" role="tab" aria-selected="false">Island</button>
     </div>
 
     <div class="panel-scroll">
@@ -457,16 +511,22 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 
       <section class="pane" id="paneNear" role="tabpanel" hidden>
         <div id="locSetup"></div>
+        <div id="avatarEditor"></div>
         <div id="nearList" class="nearlist"></div>
       </section>
 
       <section class="pane" id="paneLoop" role="tabpanel" hidden>
         <div id="loopBody"></div>
       </section>
+
+      <section class="pane" id="paneBrief" role="tabpanel" hidden>
+        <div id="briefBody"></div>
+      </section>
     </div>
 
     <div class="nowbar">
       <h3><span class="live" aria-hidden="true"></span><span id="nowTitle">Open right now</span></h3>
+      <p class="daynote" id="dayNote" hidden></p>
       <div class="nowlist" id="nowList"></div>
       <p class="empty" id="nowEmpty" hidden></p>
     </div>
@@ -790,7 +850,33 @@ const PLACES = [
   { id:"reefkit", name:"Reef Shoes & What Not to Wear", cat:"knowhow", deg:176, r:244, district:"Everywhere with water",
     blurb:"The lagoon floor is coral rubble and stonefish are present but rare, so reef shoes are worn by locals and ignored by tourists, which is why the medical centre sees the injuries it does. Oxybenzone sunscreen is the other one: it bleaches the coral you came to look at.",
     tip:"Buy reef shoes at any hire shop for the price of two cocktails. Reef-safe zinc is sold on-island. Shoulders and knees covered away from the beach, and never in a shop in just togs — it reads as rude here.",
-    price:"$", best:"Day one", dur:"15 min", hours:[[1,2,3,4,5,6],8,17], tags:["practical","safety","etiquette"] }
+    price:"$", best:"Day one", dur:"15 min", hours:[[1,2,3,4,5,6],8,17], tags:["practical","safety","etiquette"] },
+
+  { id:"takitumu", name:"Takitumu Conservation Area", cat:"adventure", deg:148, r:172, district:"South-east valleys",
+    blurb:"A private reserve in the inland valleys run by the three landowning families, and the reason the kākerōri — the Rarotonga flycatcher — still exists. In 1989 there were 29 birds left. Sustained rat control has taken the population into the hundreds, and it is one of the Pacific's genuine conservation successes.",
+    tip:"Guided walks only, by booking, and the guides are the landowners. Go in the morning when the birds are calling. The orange-and-grey plumage difference is age, not sex — young birds are orange.",
+    price:"$$$", best:"Morning, dry weather", dur:"3 hrs", hours:[[1,2,3,4,5],8,13], tags:["birds","conservation","guided","rainforest"],
+    bring:"Insect repellent, closed shoes, and binoculars if you have them." },
+
+  { id:"titikavekacicc", name:"Titikaveka Coral Church", cat:"culture", deg:188, r:253, district:"Titikaveka",
+    blurb:"Built in 1841 from coral blocks cut out of the reef and burnt for lime, with walls a metre thick and a graveyard of family plots running down toward the lagoon. One of the oldest buildings in the country and still the parish church.",
+    tip:"The coral blocks were hauled by hand from the reef in front of it — stand at the seaward wall and you can see where. Sunday 10am service, same dress standards as anywhere.",
+    price:"Free", best:"Sunday, or any quiet weekday", dur:"30 min", hours:[ALL,7,18], tags:["free","history","architecture","sunday"] },
+
+  { id:"nikaobeach", name:"Nikao Beach & the Runway Sunset", cat:"swim", deg:330, r:269, district:"Nikao",
+    blurb:"A long shallow beach at the airport end of the north-west coast where locals park up in the evening. The sun goes down over the water and, if the timing is right, the Auckland flight lifts off directly over your head.",
+    tip:"Free, no facilities, and the swimming is better at high tide. Check the departure board in town if you want the plane in the shot — it's the same time most nights.",
+    price:"Free", best:"An hour before sunset", dur:"1–2 hrs", hours:[ALL,6,20], tags:["free","sunset","local","photo"] },
+
+  { id:"saturdaysport", name:"Saturday Rugby & Netball", cat:"culture", deg:342, r:224, district:"Avarua fields",
+    blurb:"Rugby league is close to a national religion and Saturday is when the island plays it, on the fields behind town, with netball on the courts alongside and half the village watching from the boot of a car.",
+    tip:"Turn up, stand at the fence, and nobody will mind. Season runs roughly through the middle of the year. This is the most local thing on this map and it costs nothing.",
+    price:"Free", best:"Saturday afternoon", dur:"2 hrs", hours:[[6],12,18], tags:["free","sport","local","community"] },
+
+  { id:"honesty", name:"Roadside Honesty Boxes", cat:"knowhow", deg:150, r:257, district:"All the way round",
+    blurb:"Tables at the end of driveways stacked with pawpaw, bananas, limes, eggs, sometimes fish, with a jar or a tin for the money and nobody watching. They are everywhere once you start noticing them, and they tell you more about the place than any tour will.",
+    tip:"Carry coins and small notes on the scooter — most boxes can't make change and you'll pass four in a day. Take what you pay for, obviously.",
+    price:"$", best:"Morning, when they're restocked", dur:"5 min", hours:[[1,2,3,4,5,6],7,18], tags:["free to look","local","cheap","produce"] }
 ];
 
 /* ---------- derived helpers ---------- */
@@ -1108,12 +1194,11 @@ function buildBaseMap(){
 const world = buildBaseMap();
 const pinLayer = el("g", { id:"pins" }, world);
 
-/* the blue dot, drawn above everything and hidden until we have a fix */
+/* you, drawn above everything and hidden until we have a fix */
 const meLayer = el("g", { id:"me", style:"display:none" }, world);
 el("circle", { class:"ring", cx:0, cy:0, r:0, id:"meAccuracy" }, meLayer);
 el("circle", { class:"halo", cx:0, cy:0, r:14 }, meLayer);
-el("circle", { class:"puck", cx:0, cy:0, r:10 }, meLayer);
-el("text", { class:"plabel", x:0, y:30 }, meLayer).textContent = "You";
+const meAvatar = el("g", { id:"meAvatar" }, meLayer);
 
 /* =========================================================================
    PINS
@@ -1329,6 +1414,133 @@ function render(){
 }
 
 /* =========================================================================
+   YOUR CHARACTER
+   Drawn as SVG rather than picked from a sprite sheet, so it counter-scales
+   with the pins and stays crisp at any zoom. Five choices, all of which
+   change the drawing rather than a filename.
+   ========================================================================= */
+const SKINS  = ["#F7D9BC","#EFC199","#D89A66","#B0703E","#7E4A28","#53301A"];
+const HAIRS  = ["#1A1310","#3E2A1C","#6B4423","#B8863F","#D8D2C6","#C0392B"];
+const SHIRTS = ["#F2513F","#FFB23F","#2FCBC0","#12809B","#8B5CF6","#FFF4DF","#2E8F58"];
+const HAIRSTYLES = [
+  { k:"short",  n:"Short" }, { k:"curls", n:"Curls" }, { k:"long", n:"Long" },
+  { k:"bun",    n:"Bun"   }, { k:"buzz",  n:"Buzz"  }
+];
+const EXTRAS = [
+  { k:"ei",      n:"Ei katu" },  { k:"shades", n:"Shades" },
+  { k:"snorkel", n:"Snorkel" },  { k:"cap",    n:"Cap"    }, { k:"none", n:"None" }
+];
+const DEFAULT_AVATAR = { name:"You", skin:2, hair:0, shirt:2, style:"short", extra:"ei" };
+
+function loadAvatar(){
+  try { return { ...DEFAULT_AVATAR, ...JSON.parse(localStorage.getItem("raro.avatar") || "{}") }; }
+  catch { return { ...DEFAULT_AVATAR }; }
+}
+function saveAvatar(){ try { localStorage.setItem("raro.avatar", JSON.stringify(avatar)); } catch {} }
+const avatar = loadAvatar();
+
+function drawAvatar(g, a, opts = {}){
+  while (g.firstChild) g.removeChild(g.firstChild);
+  const skin = SKINS[a.skin], hair = HAIRS[a.hair], shirt = SHIRTS[a.shirt];
+  const outline = opts.outline || "var(--road)";
+
+  el("ellipse", { cx:0, cy:5, rx:16, ry:4.5, fill:"#000", opacity:".2" }, g);
+  if (a.style === "long")                                     // hair behind the shoulders
+    el("path", { d:"M-15 -30 q-6 26 0 32 h30 q6 -6 0 -32 z", fill:hair }, g);
+
+  el("path", { d:"M-18 6 q0 -17 18 -17 q18 0 18 17 z", fill:shirt,
+               stroke:outline, "stroke-width":2.5, "stroke-linejoin":"round" }, g);
+  el("rect", { x:-4.5, y:-19, width:9, height:9, fill:skin }, g);
+  el("circle", { cx:-13.5, cy:-26, r:3.2, fill:skin }, g);
+  el("circle", { cx:13.5,  cy:-26, r:3.2, fill:skin }, g);
+  el("circle", { cx:0, cy:-27, r:13.5, fill:skin, stroke:outline, "stroke-width":2.5 }, g);
+
+  // hair over the crown
+  if (a.style === "curls"){
+    for (let i = 0; i <= 7; i++){
+      const th = Math.PI + (i / 7) * Math.PI;
+      el("circle", { cx:Math.cos(th) * 12, cy:-27 + Math.sin(th) * 12, r:5.2, fill:hair }, g);
+    }
+  } else if (a.style === "buzz"){
+    el("path", { d:"M-13.5 -29 a13.5 13.5 0 0 1 27 0 q-13.5 -4 -27 0 z", fill:hair }, g);
+  } else {
+    el("path", { d:"M-13.5 -28 a13.5 13.5 0 0 1 27 0 q-7 -6 -14 -3.5 q-7 2.5 -13 3.5 z", fill:hair }, g);
+    if (a.style === "bun") el("circle", { cx:0, cy:-43, r:7, fill:hair }, g);
+  }
+
+  // face
+  const eye = (x) => el("circle", { cx:x, cy:-28, r:1.8, fill:"#1E140E" }, g);
+  if (a.extra !== "shades" && a.extra !== "snorkel"){ eye(-4.8); eye(4.8); }
+  el("path", { d:"M-4.8 -22.5 q4.8 4.2 9.6 0", fill:"none", stroke:"#1E140E",
+               "stroke-width":1.8, "stroke-linecap":"round" }, g);
+
+  // the one thing you're wearing
+  if (a.extra === "shades"){
+    el("path", { d:"M-12 -29 h24", stroke:"#1E140E", "stroke-width":2 }, g);
+    el("rect", { x:-11.5, y:-31, width:9.5, height:7, rx:3, fill:"#1E140E" }, g);
+    el("rect", { x:2, y:-31, width:9.5, height:7, rx:3, fill:"#1E140E" }, g);
+  } else if (a.extra === "snorkel"){
+    el("rect", { x:-11, y:-32.5, width:22, height:11, rx:5, fill:"#8CEFE4", stroke:"#12809B", "stroke-width":2 }, g);
+    el("path", { d:"M11 -32 q7 -2 6 -12", fill:"none", stroke:"#F2513F", "stroke-width":3, "stroke-linecap":"round" }, g);
+  } else if (a.extra === "cap"){
+    el("path", { d:"M-13.5 -32 a13.5 13.5 0 0 1 27 0 z", fill:"#F2513F" }, g);
+    el("path", { d:"M-14 -32 h22 q6 0 6 3.5 h-28 z", fill:"#D8402F" }, g);
+  } else if (a.extra === "ei"){
+    // ei katu: the flower crown you get on arrival and at every celebration
+    for (let i = 0; i <= 6; i++){
+      const th = Math.PI * 1.06 + (i / 6) * Math.PI * 0.88;
+      const fx = Math.cos(th) * 13.5, fy = -27 + Math.sin(th) * 13.5;
+      const petal = ["#FFF4DF","#FFB23F","#F2513F","#FFF4DF","#FF7BA6","#FFB23F","#FFF4DF"][i];
+      for (let q = 0; q < 5; q++){
+        const pa = (q / 5) * Math.PI * 2;
+        el("circle", { cx:fx + Math.cos(pa) * 2.4, cy:fy + Math.sin(pa) * 2.4, r:2.2, fill:petal }, g);
+      }
+      el("circle", { cx:fx, cy:fy, r:1.5, fill:"#E8C33F" }, g);
+    }
+  }
+
+  if (!opts.noLabel && a.name)
+    el("text", { class:"plabel", x:0, y:24 }, g).textContent = a.name;
+}
+
+function renderAvatarEditor(){
+  const box = document.getElementById("avatarEditor");
+  if (!box) return;
+  const swatches = (arr, key) => arr.map((c,i) =>
+    `<button class="sw" data-key="${key}" data-i="${i}" style="background:${c}"
+       aria-pressed="${avatar[key] === i}" aria-label="${key} option ${i+1}"></button>`).join("");
+  const opts = (arr, key) => arr.map(o =>
+    `<button data-opt="${key}" data-v="${o.k}" aria-pressed="${avatar[key] === o.k}">${o.n}</button>`).join("");
+
+  box.innerHTML = `
+    <div class="loccard">
+      <h3>Your character</h3>
+      <p>This is who stands on the map. It's saved in this browser, so it's still you tomorrow morning.</p>
+      <div class="avbuild">
+        <svg class="avprev" viewBox="-32 -54 64 66" aria-label="Preview of your character"></svg>
+        <div class="avcontrols">
+          <label class="fieldlabel" for="avName">Name</label>
+          <input id="avName" class="namefield" maxlength="14" value="${avatar.name.replace(/"/g,"&quot;")}" placeholder="You">
+          <span class="fieldlabel">Skin</span><div class="swrow">${swatches(SKINS,"skin")}</div>
+          <span class="fieldlabel">Hair colour</span><div class="swrow">${swatches(HAIRS,"hair")}</div>
+          <span class="fieldlabel">Hair</span><div class="picker">${opts(HAIRSTYLES,"style")}</div>
+          <span class="fieldlabel">Shirt</span><div class="swrow">${swatches(SHIRTS,"shirt")}</div>
+          <span class="fieldlabel">Wearing</span><div class="picker">${opts(EXTRAS,"extra")}</div>
+        </div>
+      </div>
+    </div>`;
+
+  drawAvatar(box.querySelector(".avprev"), avatar, { noLabel:true, outline:"var(--surface)" });
+  const restyle = () => { saveAvatar(); drawAvatar(meAvatar, avatar); renderAvatarEditor(); };
+  box.querySelectorAll(".sw").forEach(b =>
+    b.onclick = () => { avatar[b.dataset.key] = +b.dataset.i; restyle(); });
+  box.querySelectorAll("[data-opt]").forEach(b =>
+    b.onclick = () => { avatar[b.dataset.opt] = b.dataset.v; restyle(); });
+  const nf = box.querySelector("#avName");
+  nf.oninput = () => { avatar.name = nf.value.trim() || "You"; saveAvatar(); drawAvatar(meAvatar, avatar); };
+}
+
+/* =========================================================================
    WHERE AM I
    Two ways in: a real GPS fix, or telling the map where you're staying. The
    second is not a consolation prize — inside an embedded frame the browser
@@ -1342,7 +1554,8 @@ function setFix(lat, lon, accuracy, source, label){
   me.fix = { lat, lon, accuracy, source, label, ...proj };
   meLayer.style.display = "";
   locateBtn.classList.remove("busy"); locateBtn.classList.add("on");
-  applyView(); renderLocSetup(); renderNear(); renderLoop(); render();
+  drawAvatar(meAvatar, avatar);
+  applyView(); renderLocSetup(); renderAvatarEditor(); renderNear(); renderLoop(); render();
   if (state.tab === "Place" && state.selected) select(state.selected, false);
 }
 function clearFix(){
@@ -1538,16 +1751,120 @@ function renderLoop(){
     n.onclick = () => select(n.dataset.id));
 }
 
+/* =========================================================================
+   THE ISLAND BRIEF
+   The things a good host tells you in the first hour: how to speak, what to
+   eat, when to come, and how not to be the visitor everyone remembers badly.
+   ========================================================================= */
+const BRIEF = {
+  phrases: [
+    ["Kia orana", "kee-ah oh-RAH-nah", "Hello — literally “may you live on”. Say it to everyone you pass, including strangers on the road. Not saying it is the one thing visitors get wrong."],
+    ["Meitaki", "may-TAH-kee", "Thank you. Meitaki ma‘ata is thank you very much."],
+    ["Pē‘ea koe?", "PAY-ay-ah kway", "How are you? Answer: meitaki au — I’m well."],
+    ["‘Aere rā / Ka kite", "EYE-reh rah", "Goodbye to the person leaving / see you later."],
+    ["Āe · Kāre", "eye · KAH-reh", "Yes · no."],
+    ["Papa‘ā", "pah-pah-AH", "A European or foreigner. Descriptive, not an insult — you are one."],
+    ["Mama · Papa", "", "How you address an older woman or man you respect. Use it."],
+    ["Ariki", "ah-REE-kee", "Paramount chief. Not a historical term — the ariki titles are live, and land is held under them."],
+    ["Tapu", "TAH-poo", "Sacred, restricted. If somewhere is tapu, you don’t climb on it, take from it, or picnic there."],
+    ["Ei · ei katu", "ay · ay KAH-too", "A flower garland · a flower crown. You’ll be given one within an hour of landing."]
+  ],
+  eat: [
+    ["Ika mata", "The national dish and the thing to order first: raw tuna cured in lime, then folded through coconut cream with cucumber and onion. Every family makes it slightly differently and every family’s is the best."],
+    ["Rukau", "Taro leaves slow-cooked in coconut cream. Creamed spinach with far more going on."],
+    ["Poke", "Nothing to do with Hawaiian poke — a set pudding of banana or pawpaw with arrowroot and coconut cream, eaten cold."],
+    ["Umukai", "A feast cooked in the umu, an earth oven of hot stones and banana leaves. Pork, chicken, taro, kuru, fish, all steamed underground for hours."],
+    ["Kuru", "Breadfruit, roasted whole until the skin is black. Eats like a dense roast potato."],
+    ["Eke · maroro", "Octopus, usually in coconut cream · flying fish, netted at night under lights. Seasonal and worth chasing."],
+    ["Curry and rice", "The island’s default takeaway. Cheap, enormous, and better than it has any need to be."],
+    ["Nu", "A green drinking coconut, opened with a machete for a couple of dollars. Ask them to split it afterwards for the flesh."]
+  ],
+  seasons: [
+    ["May–Oct", "Dry season. 24–26°C, low humidity, steady trade winds. The best months to be here, and the reason prices climb.", false],
+    ["Nov–Apr", "Wet and warm — 28–30°C, humid, heavy afternoon rain. Officially cyclone season, and the lagoon can turn milky after a downpour.", false],
+    ["Jul–Oct", "Humpbacks calving in Cook Islands water, often visible from shore.", false],
+    ["Late Jul–Aug", "Te Maeva Nui: the constitution celebrations, a week of island-by-island dance and drumming competitions. The single best week of the year to be here.", true],
+    ["September", "Round Rarotonga Road Race — 31 km of the ring road, and half the island turns out to watch.", false],
+    ["November", "Vaka Eiva: the outrigger canoe festival. The lagoon fills with paddlers from across the Pacific.", false],
+    ["May & Sep", "The shoulder: dry weather, thin crowds, softer prices. If you can choose, choose these.", true]
+  ],
+  numbers: [
+    ["15", "islands, holding 240 km² of land — scattered across 2.2 million km² of ocean. The exclusive economic zone is roughly the size of Western Europe."],
+    ["~15k", "people live in the Cook Islands. Around 80,000 Cook Islanders live in New Zealand: most of the nation is abroad, and almost everyone here has family in Auckland."],
+    ["1965", "self-governing in free association with New Zealand. Cook Islanders hold New Zealand citizenship, which is why the connection runs so deep in both directions."],
+    ["32 km", "around Rarotonga on the coast road, over 67 km² of island, rising to 653 m at Te Manga."],
+    ["~1,000", "years since the Ara Metua, the inland coral road, was laid. It still carries traffic."],
+    ["~170k", "visitors a year against 15,000 residents. Tourism is the economy, which is worth remembering when you're deciding how to behave."]
+  ],
+  manners: [
+    ["Greet everyone", "Kia orana to people you pass on foot, a raised hand to every driver. The island runs on acknowledgement and the absence of it is noticed."],
+    ["Sunday is real", "Observance is both law and habit. Shops shut, noise near a church is rude, and the beach is fine — just quietly."],
+    ["Cover up off the beach", "Shoulders and knees away from the sand, and never swimwear into a shop. This one genuinely irritates people."],
+    ["Shoes off at the door", "Entering a home, always. Church: dress up rather than down; a hat for women is traditional but not expected of visitors."],
+    ["Marae are not backdrops", "Ancient sites are tapu. Stay on the road side, take nothing, move nothing, and don't pose on the stones."],
+    ["Ask before photographing", "People, children, and anything during worship. A no is a no."],
+    ["No tipping, no haggling", "Neither is customary and both land awkwardly. Pay the price and say meitaki."],
+    ["That fence is somebody's", "Land is family land under Cook Islands Māori title and effectively never sold. An empty-looking beach path usually crosses someone's."]
+  ],
+  practical: [
+    ["There are no addresses", "Directions are given by landmark and by which way round the island: “past the Muri shop, clockwise side”. Ask for the landmark, not the street."],
+    ["Two buses, one road", "Clockwise and anticlockwise, flagged down anywhere with a wave. Cash to the driver."],
+    ["Scooters need a local licence", "From the Avarua police station. Helmets are compulsory, the limit is 50 open road and 30 through villages, and there are dogs."],
+    ["Cash and the triangle coin", "New Zealand dollars, with locally minted coins including a triangular $3. ATMs are effectively Avarua-only, so draw before you head round."],
+    ["Water and power", "Tank and stream-fed water — ask your host whether to drink it. Power is 240V on New Zealand plugs."],
+    ["Phone", "Local SIMs are sold in Avarua. Coverage is good round the coast, patchy in the valleys, and absent on the Cross-Island Track."]
+  ]
+};
+
+function renderBrief(){
+  const box = document.getElementById("briefBody");
+  if (box.dataset.built) return;                       // static content, build once
+  const defs = arr => `<dl>${arr.map(([t,s,d]) => d === undefined
+    ? `<div class="item"><dt>${t}</dt><dd>${s}</dd></div>`
+    : `<div class="item"><dt>${t}<span class="say">${s}</span></dt><dd>${d}</dd></div>`).join("")}</dl>`;
+
+  box.innerHTML = `<div class="brief">
+    <h3>Say this</h3>
+    <p class="lede">Cook Islands Māori is the everyday language alongside English, and visitors who try it are treated differently.</p>
+    ${defs(BRIEF.phrases)}
+
+    <h3>Eat this</h3>
+    <p class="lede">Almost everything in a supermarket arrived by ship. Everything below did not.</p>
+    ${defs(BRIEF.eat)}
+
+    <h3>The year</h3>
+    <p class="lede">One island, two seasons, and a handful of weeks worth planning a trip around.</p>
+    <div class="seasons">${BRIEF.seasons.map(([w,d,peak]) =>
+      `<div class="season${peak ? " peak" : ""}"><b>${w}</b><span>${d}</span></div>`).join("")}</div>
+
+    <h3>Numbers that explain the place</h3>
+    <div style="margin-top:12px">${BRIEF.numbers.map(([n,d]) =>
+      `<div class="stat"><b>${n}</b><span>${d}</span></div>`).join("")}</div>
+
+    <h3>Manners</h3>
+    <p class="lede">None of this is fussy. It's the difference between being a guest and being traffic.</p>
+    ${defs(BRIEF.manners)}
+
+    <h3>Getting on with it</h3>
+    ${defs(BRIEF.practical)}
+
+    <p class="foot">Written from general knowledge of the island rather than a live feed. Anything with an
+    opening time or a price on it should be checked locally — and on Rarotonga, asking is the point.</p>
+  </div>`;
+  box.dataset.built = "1";
+}
+
 /* ---------- tabs ---------- */
 function showTab(name){
   state.tab = name;
   document.querySelectorAll(".tab").forEach(t =>
     t.setAttribute("aria-selected", String(t.dataset.pane === name)));
-  ["Place","Near","Loop"].forEach(n =>
+  ["Place","Near","Loop","Brief"].forEach(n =>
     document.getElementById("pane" + n).hidden = n !== name);
   document.getElementById("panel").classList.add("open");
-  if (name === "Near"){ renderLocSetup(); renderNear(); }
-  if (name === "Loop") renderLoop();
+  if (name === "Near"){ renderLocSetup(); renderAvatarEditor(); renderNear(); }
+  if (name === "Loop")  renderLoop();
+  if (name === "Brief") renderBrief();
 }
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.pane));
 
@@ -1611,6 +1928,9 @@ function renderNow(t){
                         .slice(0, 12);
   document.getElementById("nowTitle").textContent =
     `Open right now · ${DAYNAMES[t.getDay()]} ${fmtHour(t.getHours() + t.getMinutes()/60)}`;
+  const flag = dayFlag(t), note = document.getElementById("dayNote");
+  note.hidden = !flag;
+  if (flag) note.textContent = flag.long;
   list.innerHTML = "";
   if (!openNow.length){
     empty.hidden = false;
@@ -1636,26 +1956,34 @@ function tick(){
   const h = t.getHours();
   document.getElementById("clockTime").textContent =
     `${String(h).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
-  document.getElementById("clockDay").textContent = `${DAYSHORT[t.getDay()]} · Raro time`;
+  document.getElementById("clockDay").innerHTML = dayFlag(t)
+    ? `${DAYSHORT[t.getDay()]} · <span class="flag">${dayFlag(t).short}</span>`
+    : `${DAYSHORT[t.getDay()]} · Raro time`;
   document.getElementById("sundot").style.background = (h >= 6 && h < 18) ? "var(--gold)" : "var(--ocean-near)";
-
-  const notice = document.getElementById("notice");
-  if (t.getDay() === 0){
-    notice.hidden = false;
-    notice.innerHTML = `Sunday on Raro. <span>Most shops and many kitchens are shut. Church at 10am, lagoon all afternoon — plan around it, don't fight it.</span>`;
-  } else if (t.getDay() === 6 && h < 12){
-    notice.hidden = false;
-    notice.innerHTML = `Saturday market morning. <span>Punanga Nui is on until about midday and it is the best thing happening on the island right now.</span>`;
-  } else notice.hidden = true;
-
   render();
+}
+
+// What today means here, surfaced inline rather than as a banner over the island.
+function dayFlag(t){
+  const h = t.getHours() + t.getMinutes() / 60;
+  if (t.getDay() === 0) return { short:"shops shut",
+    long:"Most shops and many kitchens are shut, and that is the law as much as the custom. Church at 10am, lagoon all afternoon, and the resort restaurants are your dinner." };
+  if (t.getDay() === 6 && h < 12) return { short:"Market morning",
+    long:"Punanga Nui runs until about midday and is the best thing happening on the island right now." };
+  if (t.getDay() === 5 && h >= 15) return { short:"Friday night",
+    long:"Friday afternoon is the island's social hinge: Matutu opens the brewery, the fishing club fills, and Trader Jack's goes late." };
+  if (t.getDay() === 6 && h >= 20) return { short:"Last night out",
+    long:"Everything stops hard at midnight because Sunday starts. Nobody bends this." };
+  return null;
 }
 setInterval(tick, 30000);
 
 /* ---------- open at rest on something worth seeing ---------- */
 applyView();
 syncCatChips();
+drawAvatar(meAvatar, avatar);
 renderLocSetup();
+renderAvatarEditor();
 renderLoop();
 tick();
 (function openingPick(){
