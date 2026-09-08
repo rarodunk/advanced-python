@@ -27,6 +27,33 @@ Hours and prices are from general knowledge of the island, not a live feed. On a
 15,000-person island, kitchens close and families take a month off. The app says
 so to the user rather than pretending otherwise.
 
+## Publishing it
+
+`./deploy.sh` builds every page and pushes the result to Netlify in one step.
+It needs the Netlify CLI, which `npx` fetches for you, and a login the first
+time (`npx netlify-cli login`). `./deploy.sh --draft` gives you a preview URL
+instead of touching production.
+
+To stop deploying by hand entirely, connect the repository to Netlify once —
+Add new site, Import an existing project, pick this repo and the branch. The
+committed `netlify.toml` already tells it what to do: rebuild from
+`rarotonga-tourist-map/` and serve `dist/`. After that every push publishes.
+
+One thing that path needs: the satellite mosaic has to be in the repository,
+because the Netlify build has no way to fetch it. Once, after your first
+`python3 tools/fetch_imagery.py`:
+
+    git add -f v4/imagery.jpg v4/imagery.json
+    git commit -m "Add the fetched satellite mosaic"
+
+Without that step the build still succeeds, but it draws the offline base map
+from the elevation grid instead of the satellite imagery.
+
+`tools/make_site.py` is what lays out `dist/`: the satellite guide as
+`index.html`, the painted map as `painted.html`, the installable app under
+`/app`, and a `_headers` file that keeps hosts from caching the pages. `dist/`
+is disposable and is not committed.
+
 ## Running it on a phone
 
 The app installs to the iOS or Android home screen and works with no signal,

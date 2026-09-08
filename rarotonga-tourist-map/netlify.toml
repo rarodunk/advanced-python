@@ -1,0 +1,13 @@
+# Push-to-deploy for the Rarotonga guide.
+#
+# Netlify runs this from rarotonga-tourist-map/, rebuilds every page from its
+# inputs, and serves dist/. The satellite mosaic and the elevation grid are
+# committed, so the build needs no network beyond installing Pillow.
+
+[build]
+  base = "rarotonga-tourist-map"
+  publish = "dist"
+  command = "python3 -m pip install --quiet pillow && python3 build_all.py && python3 tools/make_site.py"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"

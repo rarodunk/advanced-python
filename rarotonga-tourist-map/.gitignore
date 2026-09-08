@@ -9,3 +9,6 @@ _*.html
 # Pages workflow serves it and checks it is in sync.
 v3/index.html
 v4/index.html
+
+# The folder the deploy is assembled into, rebuilt on demand.
+dist/
