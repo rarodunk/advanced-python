@@ -1,5 +1,11 @@
 # v4: the guide on real imagery
 
+> `index.html` here is generated and deliberately **not** committed, so your
+> rebuild never collides with a `git pull`. After pulling, run
+> `python3 build_all.py` from `rarotonga-tourist-map/` to rebuild every
+> version at once.
+
+
 `index.html` is generated. Do not edit it by hand.
 
 ## From a fresh clone

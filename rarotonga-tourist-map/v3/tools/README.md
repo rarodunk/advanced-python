@@ -1,5 +1,11 @@
 # How v3 is built
 
+> `index.html` here is generated and deliberately **not** committed, so your
+> rebuild never collides with a `git pull`. After pulling, run
+> `python3 build_all.py` from `rarotonga-tourist-map/` to rebuild every
+> version at once.
+
+
 `index.html` is generated, not hand-edited:
 
 1. `src.png` is the painted island (an AI-generated mockup, not committed: 8 MB).
