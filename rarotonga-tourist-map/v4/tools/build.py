@@ -3,9 +3,29 @@ import pathlib, base64
 HERE = pathlib.Path(__file__).resolve().parent      # <version>/tools
 VER  = HERE.parent                                  # <version>
 ROOT = VER.parent                                   # rarotonga-tourist-map
-import json
+import json, sys
 V4 = VER
-meta = json.loads((V4 / "imagery.json").read_text())
+
+def read_meta():
+    """imagery.json, with a readable failure. It is written by the fetch and by
+    the stand-in, and it is the one file a bad merge can leave with conflict
+    markers in it, which json will not explain."""
+    path = V4 / "imagery.json"
+    if not path.exists():
+        sys.exit("v4/imagery.json is missing. Run tools/fetch_imagery.py, or "
+                 "v4/tools/standin.py for the offline base.")
+    text = path.read_text()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        if "<<<<<<<" in text or ">>>>>>>" in text:
+            sys.exit("v4/imagery.json still has merge conflict markers in it.\n"
+                     "  git checkout -- v4/imagery.json v4/imagery.jpg v4/terrain.png\n"
+                     "then re-run tools/fetch_terrain.py and tools/fetch_imagery.py.")
+        sys.exit(f"v4/imagery.json is not valid JSON ({e}).\n"
+                 "Re-run tools/fetch_imagery.py to rewrite it.")
+
+meta = read_meta()
 v2 = (ROOT / "v2" / "index.html").read_text()
 BANNER = "/* =========================================================================\n"
 # slice by section banners, so edits to v2 elsewhere never shift the cut points
