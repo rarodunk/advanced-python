@@ -36,6 +36,10 @@ def tile_bounds(tx, ty, z):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--zoom", type=int, default=16)
+    # A zoom-16 mosaic of the island is ~7700 px wide, which base64-encodes past
+    # the 16 MB an artifact page may be. Downscale to something publishable.
+    ap.add_argument("--max-px", type=int, default=6000, help="longest edge of the saved mosaic")
+    ap.add_argument("--quality", type=int, default=82)
     ap.add_argument("--out", default=str(pathlib.Path(__file__).resolve().parent.parent / "v4"))
     a = ap.parse_args()
     try:
@@ -61,8 +65,12 @@ def main():
                     if attempt == 3: sys.exit(f"tile {tx},{ty} failed: {e}")
                     time.sleep(1.5 * (attempt + 1))
         print(f"row {j + 1}/{rows}")
+    if max(mosaic.size) > a.max_px:
+        k = a.max_px / max(mosaic.size)
+        mosaic = mosaic.resize((round(mosaic.width * k), round(mosaic.height * k)), Image.LANCZOS)
+        print(f"downscaled to {mosaic.size[0]} x {mosaic.size[1]}")
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    mosaic.save(out / "imagery.jpg", quality=88, optimize=True, progressive=True)
+    mosaic.save(out / "imagery.jpg", quality=a.quality, optimize=True, progressive=True)
     north, west = tile_bounds(tx0, ty0, z)
     south, east = tile_bounds(tx1 + 1, ty1 + 1, z)
     # The page paints these behind the map, so a portrait screen continues the
@@ -75,7 +83,12 @@ def main():
              "zoom": z, "source": "Esri World Imagery",
              "attribution": "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" }
     (out / "imagery.json").write_text(json.dumps(meta, indent=2))
-    print("wrote", out / "imagery.jpg", mosaic.size, "and imagery.json")
+    mb = (out / "imagery.jpg").stat().st_size / 1e6
+    print(f"wrote {out / 'imagery.jpg'} {mosaic.size} ({mb:.1f} MB) and imagery.json")
+    # the page embeds the JPEG as a data URI, which costs a third again
+    if mb * 4 / 3 > 13:
+        print(f"WARNING: ~{mb * 4 / 3:.1f} MB once embedded, near the 16 MB page limit.\n"
+              f"         Re-run with a smaller --max-px or --quality.")
 
 if __name__ == "__main__":
     main()

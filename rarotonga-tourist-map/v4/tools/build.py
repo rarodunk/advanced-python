@@ -1,8 +1,12 @@
 import pathlib, base64
+# Paths are derived from this file, so the tree works wherever it is cloned.
+HERE = pathlib.Path(__file__).resolve().parent      # <version>/tools
+VER  = HERE.parent                                  # <version>
+ROOT = VER.parent                                   # rarotonga-tourist-map
 import json
-V4 = pathlib.Path("/home/user/advanced-python/rarotonga-tourist-map/v4")
+V4 = VER
 meta = json.loads((V4 / "imagery.json").read_text())
-v2 = pathlib.Path("/home/user/advanced-python/rarotonga-tourist-map/v2/index.html").read_text()
+v2 = (ROOT / "v2" / "index.html").read_text()
 BANNER = "/* =========================================================================\n"
 # slice by section banners, so edits to v2 elsewhere never shift the cut points
 head = v2[:v2.index(BANNER + "   THE RENDERER")]
@@ -21,7 +25,7 @@ head = head.replace('  <button class="iconbtn" id="tiltBtn" title="Flatten to ov
 head = head.replace('<div class="modal" id="modal">', '<div class="credit" id="credit"></div>\n<div class="modal" id="modal">')
 head = head.replace('#world svg{', '.credit{position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;font-size:10px;color:#cfd8e3;background:rgba(6,20,36,.55);padding:3px 7px;border-radius:6px;pointer-events:none;max-width:70vw}\n#world svg{')
 assert '#world' in head and 'id="island"' in head and 'tiltBtn' not in head
-mid = pathlib.Path("/home/user/advanced-python/rarotonga-tourist-map/v4/tools/map.js").read_text()
+mid = (HERE / "map.js").read_text()
 tail = tail.replace('''  if (fly){
     const target = { az: Math.atan2(p.world[0], p.world[2]) - 0.3, dist: 520, el: 0.55,
                      tx: p.world[0] * 0.55, tz: p.world[2] * 0.55 };
@@ -44,5 +48,5 @@ assert 'p.img.x' in tail and 'CAM_HOME()' in tail
 for bad in ["tiltBtn", "p.world", "drawScene", "viewProj"]: assert bad not in tail, bad
 jpg = base64.b64encode((V4 / "imagery.jpg").read_bytes()).decode()
 out = head + "\n" + 'const ISLAND_JPG = "data:image/jpeg;base64,' + jpg + '";\nconst IMAGERY = ' + json.dumps(meta) + ';\n' + mid + "\n" + tail
-pathlib.Path("/home/user/advanced-python/rarotonga-tourist-map/v4/index.html").write_text(out)
+(VER / "index.html").write_text(out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")
