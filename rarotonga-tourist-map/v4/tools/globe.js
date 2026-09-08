@@ -8,14 +8,21 @@
    imagery already carries the sun that was shining when it was taken — with
    only a whisper of slope shading so ridges read as ridges.
 
-   Heights are true to scale. Rarotonga rises 653 m out of a 10 km island, and
-   that is what you see; exaggerating it would be the one thing guaranteed to
-   make it look fake.
+   Heights come from the elevation grid at close to true scale. Rarotonga rises
+   about 650 m out of an 11 km island, and a 30 m grid rounds the sharp ridges
+   down, so VEX puts a little of that back. Push it much past 1.5 and the
+   island starts to look like a model of itself.
    ========================================================================= */
 (function(){
 const KM_LAT_M = 110570, kmLonM = lat => 111320 * Math.cos(lat * Math.PI / 180);
-const VEX = 1.0;                       // vertical exaggeration; 1 is life-size
-const HAZE = [0.043, 0.153, 0.282];    // distance haze, and the colour behind everything
+const VEX = 1.35;                      // vertical exaggeration; 1 is life-size
+// the haze, and the colour behind everything: the mosaic's own top edge, so
+// the 3D setting sits on exactly the sea the flat map fades into
+const HAZE = (() => {
+  const hex = (IMAGERY.edge && IMAGERY.edge.top) || "#0b2748";
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
+})();
 
 const canvas = document.createElement("canvas");
 canvas.id = "globe";
@@ -77,6 +84,10 @@ void main(){
   // Sea haze, which also does the quiet job of dissolving the square edge of
   // the data before you ever see it.
   float f = smoothstep(uFog.x, uFog.y, vDist);
+  // and the same haze eats the last few per cent of the grid, so the square
+  // edge of the data never shows as a horizon of its own
+  float edge = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
+  f = max(f, 1.0 - smoothstep(0.0, 0.06, edge));
   gl_FragColor = vec4(mix(c, uHaze, f), 1.0);
 }`;
 function compile(type, src){
@@ -183,8 +194,14 @@ function decodeTerrain(img){
   cx.drawImage(img, 0, 0);
   const d = cx.getImageData(0, 0, TW, TH).data;
   heights = new Float32Array(TW * TH);
-  for (let i = 0, k = 0; i < heights.length; i++, k += 4)
-    heights[i] = d[k] * 256 + d[k+1] + d[k+2] / 256 - 32768;
+  for (let i = 0, k = 0; i < heights.length; i++, k += 4){
+    const m = d[k] * 256 + d[k+1] + d[k+2] / 256 - 32768;
+    // Rarotonga is the top of a seamount: the real grid falls past 2800 m a
+    // few kilometres offshore. There is no water surface to hide that, so the
+    // sea floor is compressed into a shallow shelf. The reef edge still reads,
+    // the island does not sit in a pit.
+    heights[i] = m < 0 ? Math.max(-9, m * 0.03) : m;
+  }
 }
 const tex = gl.createTexture();
 function uploadTexture(img){
@@ -217,7 +234,7 @@ tImg.onerror = () => console.warn("terrain.png missing; run tools/fetch_terrain.
 tImg.src = TERRAIN_PNG;
 
 /* ---------- camera ---------- */
-const view = { lat:-21.2420, lon:-159.7800, az:0.35, el:0.42, dist:14000 };
+const view = { lat:-21.2349, lon:-159.7776, az:0.35, el:0.42, dist:11000 };
 const clampV = () => {
   view.el = Math.max(0.10, Math.min(1.45, view.el));
   view.dist = Math.max(700, Math.min(40000, view.dist));

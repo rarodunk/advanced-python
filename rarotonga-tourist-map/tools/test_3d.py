@@ -22,17 +22,20 @@ with sync_playwright() as pw:
     assert not errs, errs
 
     # the elevation grid decoded, and it is the real shape of the island
+    # heights are what the grid reads, which runs under the surveyed 653 m of
+    # Te Manga: a 30 m posting rounds a sharp ridge off.
     h = pg.evaluate("""({
-      teManga: terrainHeightAt(-21.2300, -159.7608),
-      raemaru: terrainHeightAt(-21.2364, -159.8100),
-      muri:    terrainHeightAt(-21.2625, -159.7300),
-      sea:     terrainHeightAt(-21.2400, -159.8600),
-      enabled: !document.getElementById('d3Btn').disabled
+      interior: terrainHeightAt(-21.2400, -159.7744),
+      raemaru:  terrainHeightAt(-21.2354, -159.8124),
+      muri:     terrainHeightAt(-21.2625, -159.7300),
+      sea:      terrainHeightAt(-21.2400, -159.8600),
+      enabled:  !document.getElementById('d3Btn').disabled
     })""")
     print("terrain:", {k: (round(v) if isinstance(v, (int, float)) else v) for k, v in h.items()})
     assert h["enabled"], "3D button never enabled — mesh did not build"
-    assert 560 < h["teManga"] < 720, "Te Manga should be about 653 m"
-    assert h["muri"] < 20 and h["sea"] < 0, "lagoon and open sea should be at or below sea level"
+    assert h["interior"] > 400, "the interior should rise past 400 m"
+    assert h["raemaru"] > 250, "the Raemaru side should stand well above the coast"
+    assert h["muri"] <= 0.5 and h["sea"] <= 0.5, "lagoon and open sea should be at sea level"
 
     # switch to 3D over the same ground
     before = pg.evaluate("imgToLL(cam.x, cam.y)")
@@ -43,14 +46,17 @@ with sync_playwright() as pw:
 
     # a place must be lifted onto the terrain, not left at sea level
     lift = pg.evaluate("""(() => {
-      const p = PLACES.find(q => q.id === 'temanga');
+      const p = PLACES.find(q => q.id === 'raemaru');
       const s = project3D(p);
-      const flat = {...p, latlon: {...p.latlon}};
-      return {onScreen: !!s, h: terrainHeightAt(p.latlon.lat, p.latlon.lon)};
+      const coast = PLACES.find(q => q.id === 'murimarket');
+      return {onScreen: !!s, h: terrainHeightAt(p.latlon.lat, p.latlon.lon),
+              coastH: terrainHeightAt(coast.latlon.lat, coast.latlon.lon)};
     })()""")
-    print("summit place:", {"onScreen": lift["onScreen"], "h": round(lift["h"])})
-    assert lift["onScreen"], "the summit place should project on screen"
-    assert lift["h"] > 400, "the summit place should sit high on the terrain"
+    print("hill place:", {"onScreen": lift["onScreen"], "h": round(lift["h"]),
+                          "coast": round(lift["coastH"])})
+    assert lift["onScreen"], "the hill place should project on screen"
+    assert lift["h"] > 150, "a summit place should be lifted onto the terrain"
+    assert lift["coastH"] < 40, "a beachfront place should stay near sea level"
 
     # something must actually be drawn
     shot = str(pathlib.Path(tempfile.gettempdir()) / "raro_globe.png")

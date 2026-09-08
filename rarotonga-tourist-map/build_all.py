@@ -19,6 +19,8 @@ STEPS = [
     # real one; this only draws the stand-in when nothing is there yet, so a
     # fetched grid is never overwritten.
     ("elevation stand-in",       ["tools/standin_terrain.py"], "v4/terrain.png"),
+    # and the base map it colours, when there is no satellite mosaic yet
+    ("base map stand-in",        ["v4/tools/standin.py"],      "v4/imagery.jpg"),
     ("v4 satellite map",         ["v4/tools/build.py"],      None),
 ]
 

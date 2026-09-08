@@ -74,6 +74,19 @@ the layer stays off and the mosaic carries the map exactly as before. Point it
 at another provider by setting `window.RARO_TILE_URL` before the page script,
 using `{z}` `{x}` `{y}` placeholders.
 
+## Auditing the pins against the coastline
+
+`tools/snap_coast.py` reads the elevation grid, works out how far every place
+is from the shore, and pulls the strays onto it:
+
+    python3 tools/snap_coast.py           # report only
+    python3 tools/snap_coast.py --write   # apply to tools/geo.py
+
+The first run of this moved 29 places, several of which were sitting in the
+lagoon by more than a kilometre. Places that belong inland or offshore — the
+summits, the trailheads, the whale boats — are listed in `KEEP` and never
+move. The pass is idempotent, so it is safe to run after any coordinate edit.
+
 ## Correcting a pin
 
 Coordinates for small island businesses are not reliably published, so some
@@ -85,10 +98,13 @@ restores the built-in coordinates.
 
 ## What is committed
 
-`imagery.jpg` here is a synthetic stand-in drawn from the island model by
-`standin.js`, so the page builds and tests offline; the page labels itself as
-such. Running the fetch replaces it. `terrain.png` is the stand-in elevation
-grid, on the same terms.
+`imagery.jpg` here is a stand-in, drawn by `v4/tools/standin.py` from the
+island's own elevation grid: the coastline is wherever Copernicus stops being
+sea, the relief is that grid hillshaded, and the lagoon comes from the real
+distance to the shore. It is not satellite imagery and the page says so, but
+every pin sits on the same geography it will sit on once `fetch_imagery.py`
+replaces it. `terrain.png` is committed too, so a fresh clone has a working
+3D setting before it fetches anything.
 
 ## For the App Store build
 

@@ -129,7 +129,7 @@ document.getElementById("reset").onclick = () => animateCam(CAM_HOME());
    MARKERS — HTML pins placed over the painting. Screen-space, so they stay
    the same size at every zoom and never blur with the image.
    ========================================================================= */
-const ISLAND = { lat:-21.2420, lon:-159.7800, aKm:5.2, bKm:4.3 };
+const ISLAND = { lat:-21.2349, lon:-159.7776, aKm:5.69, bKm:4.00 };
 const KM_LAT = 110.57, kmLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
 function latLonOf(p){
   if (p.ll) return { lat: p.ll[0], lon: p.ll[1] };

@@ -27,10 +27,10 @@ function imgToLL(x, y){
 function toImg(deg, r){ const g = latLonOfModel(deg, r); return llToImg(g.lat, g.lon); }
 
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
-const ISLAND_PX = llToImg(-21.242, -159.780);           // the island's centre in the mosaic
+const ISLAND_PX = llToImg(-21.2349, -159.7776);         // the island's centre in the mosaic
 const cam = { x: ISLAND_PX.x, y: ISLAND_PX.y, zoom: 0.4 };
 let camDirty = true, minZoom = 0.2, MAX_ZOOM = 2.2;   // raised once live tiles answer
-const ISLAND_SPAN = llToImg(-21.242, -159.723).x - llToImg(-21.242, -159.837).x;   // ~12 km in image px
+const ISLAND_SPAN = llToImg(-21.2349, -159.7226).x - llToImg(-21.2349, -159.8326).x;   // ~12 km in image px
 function fitZoom(){ return Math.min(innerWidth, innerHeight * 1.25) / ISLAND_SPAN * 0.84; }
 // Home view: the island fills the width. In portrait that means bleeding a
 // little sea off the sides rather than a small picture between two bands.
@@ -209,7 +209,7 @@ function drawTiles(){
 // layer on, so a blocked or offline page simply keeps the mosaic.
 (function probeTiles(){
   const z = 12, n = Math.pow(2, z);
-  const tx = Math.floor(mercX(-159.78) * n), ty = Math.floor(mercY(-21.24) * n);
+  const tx = Math.floor(mercX(-159.7776) * n), ty = Math.floor(mercY(-21.2349) * n);
   const probe = new Image();
   probe.onload = () => {
     tilesOn = true;
@@ -224,7 +224,7 @@ function drawTiles(){
    MARKERS — HTML pins placed over the painting. Screen-space, so they stay
    the same size at every zoom and never blur with the image.
    ========================================================================= */
-const ISLAND = { lat:-21.2420, lon:-159.7800, aKm:5.2, bKm:4.3 };
+const ISLAND = { lat:-21.2349, lon:-159.7776, aKm:5.69, bKm:4.00 };
 const KM_LAT = 110.57, kmLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
 function latLonOf(p){
   if (p.ll) return { lat: p.ll[0], lon: p.ll[1] };

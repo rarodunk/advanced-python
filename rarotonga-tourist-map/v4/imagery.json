@@ -5,14 +5,14 @@
     -159.705,
     -21.17
   ],
-  "width": 2400,
-  "height": 2000,
+  "width": 1200,
+  "height": 1000,
   "zoom": null,
   "source": "synthetic stand-in",
-  "attribution": "Stand-in base drawn from the island model. Run tools/fetch_imagery.py for satellite imagery.",
+  "attribution": "Stand-in base drawn from the island's own elevation. Run tools/fetch_imagery.py for satellite imagery.",
   "edge": {
-    "top": "#082748",
-    "bottom": "#082748"
+    "top": "#0a2a44",
+    "bottom": "#0a2a44"
   },
   "terrain": {
     "bbox": [
@@ -21,10 +21,10 @@
       -159.705,
       -21.17
     ],
-    "width": 768,
-    "height": 768,
+    "width": 594,
+    "height": 468,
     "zoom": null,
     "encoding": "terrarium",
-    "source": "synthetic stand-in from the surveyed summits"
+    "source": "Copernicus GLO-30 (AWS Open Data)"
   }
 }
