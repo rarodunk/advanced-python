@@ -412,6 +412,14 @@ function render(){
   requestAnimationFrame(render);
 }
 
+// The loading curtain must never outlive the page. If anything later in the
+// script throws, the map underneath it is still perfectly usable, and a page
+// stuck on "Loading the island" tells you nothing.
+setTimeout(() => {
+  const l = document.getElementById("loading");
+  if (l && !l.classList.contains("gone")) l.classList.add("gone");
+}, 6000);
+
 /* ---------- the island card's thumbnail ---------- */
 // The same picture the map is made of, cropped to the island, so the card is
 // never a stock photograph of somewhere else.

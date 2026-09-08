@@ -20,6 +20,10 @@ with sync_playwright() as pw:
     pg.goto("http://127.0.0.1:8905/v4/index.html"); pg.wait_for_timeout(9000)
     pg.evaluate("closeSheet()")
     assert not errs, errs
+    # the loading curtain must be gone: it sits over everything, so a page that
+    # keeps it is a page that looks broken however well the map underneath works
+    assert pg.evaluate("document.getElementById('loading').classList.contains('gone')"), \
+        "the page never finished loading"
 
     # the elevation grid decoded, and it is the real shape of the island
     # heights are what the grid reads, which runs under the surveyed 653 m of

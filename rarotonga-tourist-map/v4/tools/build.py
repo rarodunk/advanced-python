@@ -169,11 +169,29 @@ for bad in ["tiltBtn", "p.world", "drawScene", "viewProj"]: assert bad not in ta
 jpg = base64.b64encode((V4 / "imagery.jpg").read_bytes()).decode()
 terr = base64.b64encode((VER / "terrain.png").read_bytes()).decode()
 globe = (HERE / "globe.js").read_text()
+# The 3D setting goes in last, wrapped, and after the rest of the page has
+# already run. A WebGL driver that refuses a shader must cost you the 3D
+# button, not the whole guide: before this, a throw here left the page sitting
+# on its loading curtain forever.
+GLOBE = """
+try {
+""" + globe + """
+} catch (err) {
+  const why = (err && err.message) || String(err);
+  console.error("the 3D setting failed to start:", err);
+  const btn = document.getElementById("d3Btn");
+  if (btn){ btn.disabled = true; btn.title = "3D unavailable: " + why; }
+  const credit = document.getElementById("credit");
+  if (credit) credit.textContent = (credit.textContent || "") + "  \u00b7  3D unavailable: " + why;
+}
+"""
+
 out = (head + "\n"
        + 'const ISLAND_JPG = "data:image/jpeg;base64,' + jpg + '";\n'
        + 'const TERRAIN_PNG = "data:image/png;base64,' + terr + '";\n'
        + 'const IMAGERY = ' + json.dumps(meta) + ';\n'
        + 'const TERRAIN = IMAGERY.terrain;\n'
-       + mid + "\n" + globe + "\n" + tail)
+       + mid + "\n" + tail          # tail closes the page's <script>
+       + "\n<script>\n" + GLOBE + "\n</script>\n")
 (VER / "index.html").write_text('<meta charset="utf-8">\n' + out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")
