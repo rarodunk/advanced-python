@@ -4,8 +4,9 @@ BANNER = "/* ===================================================================
 # slice by section banners, so edits to v2 elsewhere never shift the cut points
 head = v2[:v2.index(BANNER + "   THE RENDERER")]
 tail = v2[v2.index(BANNER + "   TIME, TRAVEL, FILTERS"):]
+W, H = '2360', '1595'
 head = head.replace('#gl{display:block;width:100%;height:100%}',
- '#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}\n#world img{display:block;width:2360px;height:1595px;pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000);mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000)}\n.mk.tiny.small .dot{width:13px;height:13px;border-width:1.5px}\n.mk.tiny .dot span{display:none}\n.mk.tiny .cap{display:none}\n#world svg{position:absolute;left:0;top:0;pointer-events:none}')
+ '#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;width:' + W + 'px;height:' + H + 'px}\n#world img{display:block;max-width:none!important;max-height:none!important;width:2360px;height:1595px;pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000);mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000)}\n.mk.tiny.small .dot{width:13px;height:13px;border-width:1.5px}\n.mk.tiny .dot span{display:none}\n.mk.tiny .cap{display:none}\n#world svg{position:absolute;left:0;top:0;pointer-events:none}')
 head = head.replace('#stage{position:fixed;inset:0;touch-action:none;', '#stage{position:fixed;inset:0;touch-action:none;background:linear-gradient(#0d2e62 0%,#0e3f74 45%,#0a3a68 100%);')
 head = head.replace('  <canvas id="gl"></canvas>\n', '  <div id="world"><img id="island" alt="Rarotonga, painted from the south-west"></div>\n')
 head = head.replace('<b>Rarotonga</b><small>Building the island</small>', '<b>Rarotonga</b><small>Loading the island</small>')
