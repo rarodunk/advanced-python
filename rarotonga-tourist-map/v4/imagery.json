@@ -1,0 +1,13 @@
+{
+  "bbox": [
+    -159.87,
+    -21.3,
+    -159.705,
+    -21.17
+  ],
+  "width": 2400,
+  "height": 2000,
+  "zoom": null,
+  "source": "synthetic stand-in",
+  "attribution": "Stand-in base drawn from the island model. Run tools/fetch_imagery.py for satellite imagery."
+}
