@@ -7,14 +7,14 @@
    geometry: every place is positioned by its real bearing and distance from
    the island's centre, mapped onto the painting's perspective.
    ========================================================================= */
-const IMG_W = 2360, IMG_H = 1595;
+const IMG_W = 2360, IMG_H = 1495;
 const stage = document.getElementById("stage"), world = document.getElementById("world");
 const island = document.getElementById("island");
 island.src = ISLAND_JPG;
 
 // Model → painting. The painting looks north across the island with the far
 // side foreshortened, so x and y scale change with how far north a point is.
-const MAP = { cx:1192, cy:880, sx:2.85, sy:2.225, kx:0.0, ky:0.0 };
+const MAP = { cx:1192, cy:780, sx:2.85, sy:2.225, kx:0.0, ky:0.0 };
 function toImg(deg, r){
   const t = deg * Math.PI / 180, xm = r * Math.sin(t), ym = -r * Math.cos(t), f = ym / B_UNITS;
   return { x: MAP.cx + xm * MAP.sx * (1 + MAP.kx * f), y: MAP.cy + ym * MAP.sy * (1 + MAP.ky * f) };

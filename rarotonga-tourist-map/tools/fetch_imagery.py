@@ -65,7 +65,13 @@ def main():
     mosaic.save(out / "imagery.jpg", quality=88, optimize=True, progressive=True)
     north, west = tile_bounds(tx0, ty0, z)
     south, east = tile_bounds(tx1 + 1, ty1 + 1, z)
+    # The page paints these behind the map, so a portrait screen continues the
+    # picture instead of ending it in a band of flat colour.
+    def edge(y0, y1):
+        px = mosaic.crop((0, y0, mosaic.width, y1)).resize((1, 1))
+        return "#%02x%02x%02x" % px.getpixel((0, 0))
     meta = { "bbox": [west, south, east, north], "width": mosaic.width, "height": mosaic.height,
+             "edge": { "top": edge(0, 40), "bottom": edge(mosaic.height - 40, mosaic.height) },
              "zoom": z, "source": "Esri World Imagery",
              "attribution": "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" }
     (out / "imagery.json").write_text(json.dumps(meta, indent=2))

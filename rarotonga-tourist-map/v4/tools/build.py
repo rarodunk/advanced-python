@@ -10,7 +10,11 @@ tail = v2[v2.index(BANNER + "   TIME, TRAVEL, FILTERS"):]
 W, H = str(meta['width']), str(meta['height'])
 head = head.replace('#gl{display:block;width:100%;height:100%}',
  '#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;width:' + W + 'px;height:' + H + 'px}\n#world img{display:block;max-width:none!important;max-height:none!important;width:' + str(meta['width']) + 'px;height:' + str(meta['height']) + 'px;pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000);mask-image:linear-gradient(#0000,#000 5%,#000 94%,#0000)}\n.mk.tiny.small .dot{width:13px;height:13px;border-width:1.5px}\n.mk.tiny .dot span{display:none}\n.mk.tiny .cap{display:none}\n#world svg{position:absolute;left:0;top:0;pointer-events:none}')
-head = head.replace('#stage{position:fixed;inset:0;touch-action:none;', '#stage{position:fixed;inset:0;touch-action:none;background:linear-gradient(#0d2e62 0%,#0e3f74 45%,#0a3a68 100%);')
+EDGE = meta.get('edge') or {}
+TOP, BOT = EDGE.get('top', '#082748'), EDGE.get('bottom', '#082748')
+head = head.replace("background:linear-gradient(#5aa4dc 0%,#1e5f98 40%,#0f4a7a 60%,#0a3556 100%)",
+                    "background:linear-gradient(" + TOP + " 0%," + TOP + " 38%," + BOT + " 62%," + BOT + " 100%)")
+assert "#5aa4dc" not in head
 head = head.replace('  <canvas id="gl"></canvas>\n', '  <div id="world"><img id="island" alt="Rarotonga, painted from the south-west"></div>\n')
 head = head.replace('<b>Rarotonga</b><small>Building the island</small>', '<b>Rarotonga</b><small>Loading the island</small>')
 head = head.replace('  <button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>\n', '')

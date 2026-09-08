@@ -9,5 +9,9 @@
   "height": 2000,
   "zoom": null,
   "source": "synthetic stand-in",
-  "attribution": "Stand-in base drawn from the island model. Run tools/fetch_imagery.py for satellite imagery."
+  "attribution": "Stand-in base drawn from the island model. Run tools/fetch_imagery.py for satellite imagery.",
+  "edge": {
+    "top": "#082748",
+    "bottom": "#082748"
+  }
 }
