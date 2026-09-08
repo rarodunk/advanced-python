@@ -842,7 +842,7 @@ function ridged(x, y, oct){
   return sum / norm;
 }
 
-const SEA = 0, VSCALE = 0.185;   // world units per metre, about 3x life so the
+const SEA = 0, VSCALE = 0.14;    // world units per metre, about 3x life so the
                                  // relief reads from an orbiting camera
 function elevation(deg, rad){
   const cr = coastR(deg);
@@ -860,9 +860,9 @@ function elevation(deg, rad){
   const wx = X - CX, wz = Y - CY;                // shader space: island centre at 0
   const rg = ridged(wx * 0.0152, wz * 0.0152, 5);
   h += (rg - 0.30) * 520 * belt * Math.min(1, 0.28 + h / 430);
-  const g1 = 1 - Math.abs(vnoise(wx * 0.075, wz * 0.075) * 2 - 1);
-  const g2 = 1 - Math.abs(vnoise(wx * 0.16 + 9, wz * 0.16 + 9) * 2 - 1);
-  h += (g1 * g1 * 0.7 + g2 * g2 * 0.3 - 0.45) * 75 * belt * smoothstep(60, 220, h);
+  const q1 = vnoise(wx * 0.075, wz * 0.075) * 2 - 1, q2 = vnoise(wx * 0.16 + 9, wz * 0.16 + 9) * 2 - 1;
+  const g1 = 1 - q1 * q1, g2 = 1 - q2 * q2;
+  h += (g1 * g1 * 0.8 + g2 * g2 * 0.2 - 0.5) * 55 * belt * smoothstep(60, 220, h);
   // Then the named valleys cut down through all of it.
   let cut = 0;
   for (const v of VALLEYS){
@@ -931,7 +931,7 @@ uniform vec3  uSun;
 uniform vec4  uPeak[6];      // world x, world z, amplitude in metres, spread
 uniform vec2  uValley[8];    // bearing, angular width
 
-const float VS = 0.185;                       // world units per metre of relief
+const float VS = 0.14;                        // world units per metre of relief
 const float A_UNITS = 291.1, B_UNITS = 232.7; // the island's real semi-axes, scaled
 
 float hash21(vec2 p){
@@ -995,9 +995,11 @@ float landM(vec2 p, float deg, float rad, float cr){
   h += (ridged(p * 0.0152) - 0.30) * 520.0 * belt * min(1.0, 0.28 + h / 430.0);
   // fine erosion fluting down every face — the parallel gullies that make a
   // young volcanic island read as one from the air
-  float g1 = 1.0 - abs(vnoise(p * 0.075) * 2.0 - 1.0);
-  float g2 = 1.0 - abs(vnoise(p * 0.16 + 9.0) * 2.0 - 1.0);
-  h += (g1 * g1 * 0.7 + g2 * g2 * 0.3 - 0.45) * 75.0 * belt * smoothstep(60.0, 220.0, h);
+  // smooth domes, not |x| creases: crease lines line up with the noise grid
+  // and read as corduroy from close range
+  float q1 = vnoise(p * 0.075) * 2.0 - 1.0, q2 = vnoise(p * 0.16 + 9.0) * 2.0 - 1.0;
+  float g1 = 1.0 - q1 * q1, g2 = 1.0 - q2 * q2;
+  h += (g1 * g1 * 0.8 + g2 * g2 * 0.2 - 0.5) * 55.0 * belt * smoothstep(60.0, 220.0, h);
   float cut = 0.0;
   for (int i = 0; i < 8; i++){
     float dd = mod(deg - uValley[i].x + 540.0, 360.0) - 180.0;
@@ -1041,12 +1043,12 @@ vec3 normalAt(vec2 p, float e){
                         groundY(p - vec2(0.0,e)) - groundY(p + vec2(0.0,e))));
 }
 float trace(vec3 ro, vec3 rd){
-  float t = 1.0, lastStep = 1.0;
+  float t = 1.0, lastStep = 1.0, dPrev = 1e9;
   for (int i = 0; i < 190; i++){
     vec3 p = ro + rd * t;
     float d = p.y - groundY(p.xz);
-    if (d < 0.03 + t * 0.0012){
-      // bisect between the last two samples to land on the surface exactly
+    if (d < 0.0){
+      // crossed the surface: bisect between the last two samples
       float lo = t - lastStep, hi = t;
       for (int j = 0; j < 5; j++){
         float mid = 0.5 * (lo + hi);
@@ -1055,7 +1057,14 @@ float trace(vec3 ro, vec3 rd){
       }
       return hi;
     }
-    lastStep = max(0.12 + t * 0.006, d * mix(0.32, 0.5, smoothstep(80.0, 320.0, t)));
+    if (d < 0.01 + t * 0.0008){
+      // close enough: interpolate to where the surface would be, so a grazing
+      // hit is not quantised to the step and does not band into contours
+      float w = (dPrev - d) > 1e-4 ? clamp(d / (dPrev - d), 0.0, 1.0) : 0.0;
+      return t + lastStep * w * 0.5;
+    }
+    dPrev = d;
+    lastStep = max(0.10 + t * 0.005, d * mix(0.26, 0.5, smoothstep(100.0, 360.0, t)));
     t += lastStep;
     if (t > 3600.0) break;
   }
@@ -1106,9 +1115,13 @@ float cloudShadow(vec3 p){
   float t = (CLOUD_Y - p.y) / max(uSun.y, 0.05);
   return 1.0 - 0.75 * cloudAt((p + uSun * t).xz);
 }
-vec3 landColour(vec3 p, vec3 n, float m, float deg, float rad, float cr){
-  float grain = fbm(p.xz * 1.9);
-  float mid   = fbm(p.xz * 0.30 + 41.0);
+vec3 landColour(vec3 p, vec3 n, vec3 nGeo, float m, float deg, float rad, float cr){
+  // Textures projected straight down streak into stripes on a cliff, so steep
+  // faces sample a second field laid along the face and blend by slope.
+  float wall = smoothstep(0.75, 0.35, nGeo.y);
+  vec2 face = vec2((p.x - p.z) * 0.707, p.y);
+  float grain = mix(fbm(p.xz * 1.9), fbm(face * 1.9 + 3.0), wall);
+  float mid   = mix(fbm(p.xz * 0.30 + 41.0), fbm(face * 0.30 + 17.0), wall);
   float broad = fbm(p.xz * 0.055 + 11.0);
 
   vec3 jungle = mix(vec3(0.22,0.46,0.16), vec3(0.10,0.30,0.11), mid);
@@ -1121,7 +1134,7 @@ vec3 landColour(vec3 p, vec3 n, float m, float deg, float rad, float cr){
   float plots = fbm(p.xz * 0.14 + 77.0);
   c = mix(c, mix(vec3(0.20,0.42,0.14), vec3(0.52,0.62,0.26), smoothstep(0.35, 0.65, plots)), 0.5 * (1.0 - smoothstep(20.0, 60.0, m)));
   float steep = smoothstep(0.55, 0.16, n.y);
-  float cliff = smoothstep(0.34, 0.10, n.y);
+  float cliff = smoothstep(0.30, 0.08, nGeo.y);
   c = mix(c, rock, cliff * smoothstep(120.0, 380.0, m) * 0.75);
   c = mix(c, rock * 1.05, smoothstep(600.0, 660.0, m) * 0.35);
   c = mix(c, sand, 1.0 - smoothstep(1.2, 3.2, cr - rad));    // the beach: ~50 m of it
@@ -1210,16 +1223,21 @@ void main(){
     vec3 p = ro + rd * tG;
     float e = max(0.35, tG * 0.0016);
     vec3 n = normalAt(p.xz, e);
+    vec3 nGeo = n;
     float m = groundM(p.xz);
     float deg = bearing(p.xz), rad = length(p.xz), cr = coastR(deg);
 
     // Canopy relief: perturbing the normal with fine noise is what turns a
     // smooth green slope into forest. It costs nothing and does most of the work.
     float canopy = smoothstep(18.0, 60.0, m) * (1.0 - smoothstep(430.0, 560.0, m));
-    vec2 g = p.xz * 2.6;
+    float wallN = smoothstep(0.75, 0.35, n.y);
+    vec2 g = mix(p.xz, vec2((p.x - p.z) * 0.707, p.y), wallN) * 2.6;
     float nx = fbm(g + vec2(0.7,0.0)) - fbm(g - vec2(0.7,0.0));
     float nz = fbm(g + vec2(0.0,0.7)) - fbm(g - vec2(0.0,0.7));
-    n = normalize(n + vec3(nx, 0.0, nz) * canopy * 2.6 * clamp(420.0 / tG, 0.15, 1.0));
+    // on a wall the perturbation has to tilt the normal across the face, not down through it
+    vec3 tangentX = normalize(cross(vec3(0.0,1.0,0.0), n + vec3(0.0,0.0,0.002))), tangentY = cross(n, tangentX);
+    vec3 bump = mix(vec3(nx, 0.0, nz), tangentX * nx + tangentY * nz, wallN);
+    n = normalize(n + bump * canopy * 2.6 * clamp(420.0 / tG, 0.15, 1.0));
     // individual crowns, only when the camera is close enough to resolve them
     float closeUp = 1.0 - smoothstep(90.0, 260.0, tG);
     if (closeUp > 0.0){
@@ -1227,13 +1245,13 @@ void main(){
       float cx = vnoise(g2 + vec2(0.5,0.0)) - vnoise(g2 - vec2(0.5,0.0));
       float cz = vnoise(g2 + vec2(0.0,0.5)) - vnoise(g2 - vec2(0.0,0.5));
       float crowns = max(canopy, smoothstep(2.0, 6.0, m) * 0.7);
-      n = normalize(n + vec3(cx, 0.0, cz) * crowns * closeUp * 1.4);
+      n = normalize(n + vec3(cx, 0.0, cz) * crowns * closeUp * 0.8);
     }
 
     // Light in linear space or the colours turn to milk: albedos are authored
     // the way they look, so they have to be de-gamma'd before anything is
     // multiplied by them, and re-gamma'd at the very end.
-    vec3 albedo = pow(landColour(p, n, m, deg, rad, cr), vec3(2.2));
+    vec3 albedo = pow(landColour(p, n, nGeo, m, deg, rad, cr), vec3(2.2));
     float sh = shadow(p + n * 0.6, uSun);
     float ao = occlusion(p, n);
     float key = max(dot(n, uSun), 0.0) * sh * cloudShadow(p);
@@ -1382,8 +1400,10 @@ const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 let camDirty = true, viewProj = null, camEye = [0, 500, 800], camTgt = [0, 0, 0];
 
 function placeCamera(){
-  cam.el = clamp(cam.el, 0.14, 1.5);
-  cam.dist = clamp(cam.dist, 70, 1600);
+  // A low helicopter is as close as the orbit goes: nearer than this the
+  // procedural surface stops reading as forest and turns to paint.
+  cam.el = clamp(cam.el, 0.30, 1.5);
+  cam.dist = clamp(cam.dist, 150, 1600);
   const r = cam.dist * Math.cos(cam.el);
   const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
   // The camera looks at the ground under the target, and the eye is lifted until
