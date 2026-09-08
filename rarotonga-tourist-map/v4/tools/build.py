@@ -66,6 +66,82 @@ body.editing .mk .dot{box-shadow:0 0 0 3px rgba(255,210,90,.75)}
 .iconbtn.on{background:#1d6fd0;color:#fff}
 #world svg{''')
 assert "editBtn" in head and "fixPanel" in head
+
+# ---------------------------------------------------------------------------
+# The chrome from the illustrations: a script wordmark, the categories as a
+# left rail rather than a strip of chips, an island card, and a compass that
+# turns with the 3D camera. Layout only; nothing here invents content.
+head = head.replace(
+    'family=Outfit:wght@300;400;500;600;700',
+    'family=Kaushan+Script&family=Outfit:wght@300;400;500;600;700')
+
+GALLERY_CSS = """
+/* ---------- the wordmark ---------- */
+.logo{background:none;border:0;backdrop-filter:none;padding:2px 0 0;display:block}
+.logo .mark{display:none}
+.logo b{font-family:"Kaushan Script","Snell Roundhand","Brush Script MT",cursive;font-size:clamp(26px,3.4vw,38px);
+  font-weight:400;line-height:1;letter-spacing:0;display:block;
+  text-shadow:0 3px 18px rgba(0,0,0,.55)}
+.logo small{letter-spacing:.30em;font-size:9px;margin-top:5px;color:#c9e3f0;
+  text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.bar{max-width:1240px;align-items:flex-start}
+.searchbox{margin-top:4px}
+
+/* ---------- categories down the left ---------- */
+.cats{position:fixed;left:16px;top:104px;z-index:20;flex-direction:column;align-items:stretch;
+  width:184px;max-width:none;margin:0;padding:0;gap:9px;overflow:visible}
+.cat{width:100%;justify-content:flex-start;gap:11px;padding:8px 14px 8px 8px;border-radius:16px;
+  background:rgba(8,22,36,.74);font-size:14px;box-shadow:0 10px 26px rgba(0,0,0,.28)}
+.cat i{width:30px;height:30px;border-radius:11px;font-size:14px}
+.cat .n{margin-left:auto}
+.cat.on{background:#fff;color:#08202c}
+
+/* ---------- the island card ---------- */
+.isle{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:20;
+  display:flex;align-items:center;gap:14px;padding:11px 18px 11px 11px;border-radius:20px;
+  background:rgba(8,22,36,.78);backdrop-filter:blur(14px);border:1px solid var(--line);
+  box-shadow:0 16px 40px rgba(0,0,0,.42)}
+.isle .thumb{width:96px;height:64px;border-radius:14px;background:#0b2740 center/170% no-repeat;
+  flex:0 0 auto;border:1px solid rgba(255,255,255,.14)}
+.isle .who b{display:block;font-size:15px;font-weight:600;line-height:1.1}
+.isle .who small{display:block;font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.isle .stats{display:flex;gap:16px;padding-left:16px;border-left:1px solid var(--line)}
+.isle .stats span{display:block;font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700}
+.isle .stats b{display:block;font-size:16px;font-weight:600;margin-top:2px}
+.isle.hide{display:none}
+
+/* ---------- compass ---------- */
+#compass svg{width:22px;height:22px;transition:transform .18s ease-out}
+.credit{left:16px;bottom:calc(122px + env(safe-area-inset-bottom));max-width:52vw}
+
+@media (max-width:860px){
+  .cats{position:static;flex-direction:row;width:auto;overflow-x:auto;padding:12px 2px 4px}
+  .cat{width:auto}
+  .isle .stats{display:none}
+  .isle .thumb{width:64px;height:44px}
+  .credit{bottom:calc(88px + env(safe-area-inset-bottom))}
+}
+"""
+head = head.replace("</style>", GALLERY_CSS + "\n</style>", 1)
+
+head = head.replace('<div class="rail" id="rail">',
+  '''<div class="isle" id="isle">
+  <div class="thumb" id="isleThumb"></div>
+  <div class="who"><b>Rarotonga</b><small>Cook Islands</small></div>
+  <div class="stats">
+    <div><span>Circumference</span><b>32 km</b></div>
+    <div><span>Area</span><b>67 km&sup2;</b></div>
+  </div>
+</div>
+
+<div class="rail" id="rail">
+  <button class="iconbtn" id="compass" title="Face north">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3 15 13 12 11 9 13Z" fill="#ff5f5f"></path>
+      <path d="M12 21 9 11 12 13 15 11Z" fill="#e9f2f6"></path>
+    </svg>
+  </button>''')
 head = head.replace('<div class="modal" id="modal">', '<div class="credit" id="credit"></div>\n<div class="modal" id="modal">')
 head = head.replace('#world svg{', '.credit{position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;font-size:10px;color:#cfd8e3;background:rgba(6,20,36,.55);padding:3px 7px;border-radius:6px;pointer-events:none;max-width:70vw}\n#world svg{')
 assert '#world' in head and 'id="island"' in head and 'tiltBtn' not in head

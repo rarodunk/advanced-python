@@ -406,6 +406,22 @@ function render(){
   requestAnimationFrame(render);
 }
 
+/* ---------- the island card's thumbnail ---------- */
+// The same picture the map is made of, cropped to the island, so the card is
+// never a stock photograph of somewhere else.
+(function(){
+  const thumb = document.getElementById("isleThumb");
+  if (!thumb) return;
+  const tl = llToImg(-21.194, -159.840), br = llToImg(-21.279, -159.716);
+  const spanX = br.x - tl.x, spanY = br.y - tl.y;
+  const w = thumb.offsetWidth || 96, h = thumb.offsetHeight || 64;
+  const k = Math.max(w / spanX, h / spanY);
+  thumb.style.backgroundImage = "url(" + ISLAND_JPG + ")";
+  thumb.style.backgroundSize = (IMG_W * k) + "px " + (IMG_H * k) + "px";
+  thumb.style.backgroundPosition =
+    (-(tl.x * k) - (spanX * k - w) / 2) + "px " + (-(tl.y * k) - (spanY * k - h) / 2) + "px";
+})();
+
 // ?fit=1 draws the geographic coastline over the painting, for aligning MAP.
 if (location.search.includes("fit=1")){
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");

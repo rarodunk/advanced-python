@@ -1,28 +1,53 @@
 /* =========================================================================
-   THE 3D SETTING — real photography draped over real elevation.
+   THE 3D SETTING — real photography, real elevation, painted light.
 
-   Nothing here is invented. The surface is the satellite mosaic the 2D view
-   uses; the shape under it is a Terrarium elevation grid. That is the whole
-   trick behind every convincing 3D map: the realism comes from the two data
-   sets, not from shading. So the terrain is drawn essentially unlit — the
-   imagery already carries the sun that was shining when it was taken — with
-   only a whisper of slope shading so ridges read as ridges.
+   The geometry is not invented: the surface is the satellite mosaic the flat
+   map uses, and the shape under it is the Copernicus elevation grid. What is
+   invented, deliberately, is the light. A satellite photograph of a tropical
+   island is flat, hazy and grey-green; the illustrations this view is chasing
+   are dramatic because of relief, shadow and colour, so those are added back
+   on top of true geography rather than made up in place of it.
 
-   Heights come from the elevation grid at close to true scale. Rarotonga rises
-   about 650 m out of an 11 km island, and a 30 m grid rounds the sharp ridges
-   down, so VEX puts a little of that back. Push it much past 1.5 and the
-   island starts to look like a model of itself.
+   Three things do the work:
+
+     lift()      vertical exaggeration that scales with height, so the coast
+                 stays flat and the interior gets its drama. Rarotonga really
+                 rises 650 m over 11 km, which reads as a bump from the air.
+     buildShade()  the sun's own shadows and the valleys' ambient occlusion,
+                 both marched through the elevation grid once at load and
+                 handed to the shader as a texture.
+     the sea and sky   an ocean plane and a gradient horizon, so the island
+                 sits in a scene rather than on a square patch of data.
    ========================================================================= */
 (function(){
 const KM_LAT_M = 110570, kmLonM = lat => 111320 * Math.cos(lat * Math.PI / 180);
-const VEX = 1.35;                      // vertical exaggeration; 1 is life-size
-// the haze, and the colour behind everything: the mosaic's own top edge, so
-// the 3D setting sits on exactly the sea the flat map fades into
-const HAZE = (() => {
-  const hex = (IMAGERY.edge && IMAGERY.edge.top) || "#0b2748";
+
+/* ---------- the look ---------- */
+const VEX_COAST = 1.8, VEX_PEAK = 3.6, PEAK_M = 520;   // exaggeration, low to high
+const SUN_AZ = (315 * Math.PI) / 180;                  // out of the north-west
+const SUN_EL = (40 * Math.PI) / 180;
+// The open ocean has to meet the edge of the mosaic without a seam, so it is
+// taken from the mosaic's own outer colour and put through the same grade the
+// shader applies to water. Change the imagery and the sea follows it.
+const SEA_NEAR = (() => {
+  const hex = (IMAGERY.edge && IMAGERY.edge.top) || "#0a2a44";
   const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
+  let c = [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255];
+  const l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  c = c.map((v, i) => (l + (v - l) * 1.20) * [0.86, 1.03, 1.18][i]);
+  return c.map(v => Math.max(0, Math.min(1, v)));
 })();
+const SEA_FAR = SEA_NEAR.map((v, i) => v * [0.82, 0.92, 1.06][i]);   // deep ocean
+const SKY_TOP  = [0.086, 0.396, 0.729];
+const SKY_HAZE = [0.741, 0.867, 0.945];                // the pale band at the horizon
+const CLOUDS = 11;
+
+// heights are exaggerated more the higher they are, so the beach stays a beach
+function lift(m){
+  if (m <= 0) return m * 0.5;
+  const t = Math.min(1, m / PEAK_M);
+  return m * (VEX_COAST + (VEX_PEAK - VEX_COAST) * t);
+}
 
 const canvas = document.createElement("canvas");
 canvas.id = "globe";
@@ -63,49 +88,135 @@ function mul(a, b){                       // a * b, both column-major
 }
 
 /* ---------- shaders ---------- */
-const VS = `
-attribute vec3 aPos; attribute vec2 aUV; attribute vec3 aNrm;
-uniform mat4 uMVP; uniform vec3 uEye;
-varying vec2 vUV; varying vec3 vNrm; varying float vDist;
+function build(vsSrc, fsSrc){
+  const compile = (type, src) => {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  };
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+
+const terrainProg = build(`
+attribute vec3 aPos; attribute vec2 aUV; attribute vec2 aTUV;
+attribute vec3 aNrm; attribute float aH;
+uniform mat4 uMVP;
+varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
-  vUV = aUV; vNrm = aNrm; vDist = distance(aPos, uEye);
+  vUV = aUV; vTUV = aTUV; vNrm = aNrm; vPos = aPos; vH = aH;
   gl_Position = uMVP * vec4(aPos, 1.0);
-}`;
-const FS = `
+}`, `
 precision highp float;
-uniform sampler2D uTex; uniform vec3 uSun; uniform vec3 uHaze; uniform vec2 uFog;
-varying vec2 vUV; varying vec3 vNrm; varying float vDist;
+uniform sampler2D uTex;      // the satellite mosaic
+uniform sampler2D uShade;    // r: the sun's shadows, g: ambient occlusion
+uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec2 uFog;
+varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
   vec3 c = texture2D(uTex, vUV).rgb;
-  // The photograph already contains the light. Only a whisper of slope shading
-  // goes on top, enough that a ridge reads as a ridge when the camera tilts.
-  float sh = clamp(dot(normalize(vNrm), uSun) * 0.5 + 0.5, 0.0, 1.0);
-  c *= mix(1.0, 0.72 + 0.55 * sh, 0.22);
-  // Sea haze, which also does the quiet job of dissolving the square edge of
-  // the data before you ever see it.
-  float f = smoothstep(uFog.x, uFog.y, vDist);
-  // and the same haze eats the last few per cent of the grid, so the square
-  // edge of the data never shows as a horizon of its own
-  float edge = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
-  f = max(f, 1.0 - smoothstep(0.0, 0.06, edge));
+  vec2 sh = texture2D(uShade, vTUV).rg;
+  float land = smoothstep(0.0, 5.0, vH);
+
+  // Saturation and a push towards the palette of the place: the greens warm,
+  // the water towards turquoise. Satellite colour is honest but washed out.
+  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(l), c, mix(1.20, 1.34, land));
+  // water towards turquoise, land towards a deeper jungle green rather than
+  // the yellow-green a saturation push alone gives you
+  c *= mix(vec3(0.86, 1.03, 1.18), vec3(0.88, 1.06, 0.86), land);
+
+  vec3 n = normalize(vNrm);
+  float lam = clamp(dot(n, uSun), 0.0, 1.0);
+  // the sun, its own shadows, and the darkness deep in the valleys. The
+  // texture already carries flat daylight, so this is shape, not exposure:
+  // it stays near 1.0 on average and swings either side of it.
+  float lit = 0.62 + 0.85 * lam * mix(0.30, 1.0, sh.r);
+  c *= mix(1.0, lit, 0.75 * land);
+  c *= mix(1.0, 0.70 + 0.30 * sh.g, 0.85 * land);
+  // sunlit ridge tops, which is what actually reads as height
+  c += vec3(0.11, 0.12, 0.08) * land * pow(lam, 2.5) * sh.r;
+
+  // sun glitter on the water
+  vec3 V = normalize(uEye - vPos);
+  float spec = pow(max(dot(reflect(-uSun, vec3(0.0, 1.0, 0.0)), V), 0.0), 48.0);
+  c += vec3(0.85, 0.92, 1.0) * spec * 0.30 * (1.0 - land);
+
+  // a little contrast, the way a photograph is graded
+  c = clamp((c - 0.5) * 1.12 + 0.5, 0.0, 1.4);
+
+  float f = smoothstep(uFog.x, uFog.y, distance(vPos, uEye));
+  float edge = min(min(vTUV.x, 1.0 - vTUV.x), min(vTUV.y, 1.0 - vTUV.y));
+  // the mosaic's own ocean is a square; dissolve a wide band of it into the
+  // open water so the join never shows
+  f = max(f, 1.0 - smoothstep(0.0, 0.20, edge));
   gl_FragColor = vec4(mix(c, uHaze, f), 1.0);
-}`;
-function compile(type, src){
-  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
-  return s;
-}
-const prog = gl.createProgram();
-gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
-gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
-gl.linkProgram(prog);
-if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-gl.useProgram(prog);
-const A = { pos: gl.getAttribLocation(prog, "aPos"), uv: gl.getAttribLocation(prog, "aUV"),
-            nrm: gl.getAttribLocation(prog, "aNrm") };
-const U = { mvp: gl.getUniformLocation(prog, "uMVP"), tex: gl.getUniformLocation(prog, "uTex"),
-            sun: gl.getUniformLocation(prog, "uSun"), eye: gl.getUniformLocation(prog, "uEye"),
-            haze: gl.getUniformLocation(prog, "uHaze"), fog: gl.getUniformLocation(prog, "uFog") };
+}`);
+
+const skyProg = build(`
+attribute vec2 aP; varying float vY;
+void main(){ vY = aP.y * 0.5 + 0.5; gl_Position = vec4(aP, 0.0, 1.0); }`, `
+precision mediump float;
+uniform vec3 uTop; uniform vec3 uHazeSky; uniform float uHorizon;
+varying float vY;
+void main(){
+  float t = smoothstep(uHorizon - 0.06, uHorizon + 0.65, vY);
+  gl_FragColor = vec4(mix(uHazeSky, uTop, t), 1.0);
+}`);
+
+const seaProg = build(`
+attribute vec2 aP; uniform mat4 uMVP; uniform float uSize;
+varying vec2 vXZ;
+void main(){ vXZ = aP * uSize; gl_Position = uMVP * vec4(vXZ.x, -2.0, vXZ.y, 1.0); }`, `
+precision mediump float;
+uniform vec3 uNear; uniform vec3 uFar; uniform vec3 uHazeSky;
+varying vec2 vXZ;
+void main(){
+  float d = length(vXZ);
+  vec3 c = mix(uNear, uFar, smoothstep(7000.0, 45000.0, d));
+  c = mix(c, uHazeSky, smoothstep(30000.0, 150000.0, d));   // into the horizon
+  gl_FragColor = vec4(c, 1.0);
+}`);
+
+const cloudProg = build(`
+attribute vec2 aP;
+uniform mat4 uMVP; uniform vec3 uCenter; uniform vec3 uRight; uniform vec3 uUp;
+uniform vec2 uSize;
+varying vec2 vT;
+void main(){
+  vT = aP * 0.5 + 0.5;
+  vec3 p = uCenter + uRight * (aP.x * uSize.x) + uUp * (aP.y * uSize.y);
+  gl_Position = uMVP * vec4(p, 1.0);
+}`, `
+precision mediump float;
+uniform sampler2D uPuff; uniform float uAlpha;
+varying vec2 vT;
+void main(){
+  float a = texture2D(uPuff, vT).a * uAlpha;
+  gl_FragColor = vec4(vec3(1.0, 0.99, 0.97) * a, a);   // premultiplied
+}`);
+
+const T = {
+  pos: gl.getAttribLocation(terrainProg, "aPos"), uv: gl.getAttribLocation(terrainProg, "aUV"),
+  tuv: gl.getAttribLocation(terrainProg, "aTUV"), nrm: gl.getAttribLocation(terrainProg, "aNrm"),
+  h: gl.getAttribLocation(terrainProg, "aH"),
+  mvp: gl.getUniformLocation(terrainProg, "uMVP"), tex: gl.getUniformLocation(terrainProg, "uTex"),
+  shade: gl.getUniformLocation(terrainProg, "uShade"), sun: gl.getUniformLocation(terrainProg, "uSun"),
+  eye: gl.getUniformLocation(terrainProg, "uEye"), haze: gl.getUniformLocation(terrainProg, "uHaze"),
+  fog: gl.getUniformLocation(terrainProg, "uFog") };
+const S = { p: gl.getAttribLocation(skyProg, "aP"), top: gl.getUniformLocation(skyProg, "uTop"),
+            haze: gl.getUniformLocation(skyProg, "uHazeSky"),
+            horizon: gl.getUniformLocation(skyProg, "uHorizon") };
+const O = { p: gl.getAttribLocation(seaProg, "aP"), mvp: gl.getUniformLocation(seaProg, "uMVP"),
+            size: gl.getUniformLocation(seaProg, "uSize"), near: gl.getUniformLocation(seaProg, "uNear"),
+            far: gl.getUniformLocation(seaProg, "uFar"), haze: gl.getUniformLocation(seaProg, "uHazeSky") };
+const C = { p: gl.getAttribLocation(cloudProg, "aP"), mvp: gl.getUniformLocation(cloudProg, "uMVP"),
+            center: gl.getUniformLocation(cloudProg, "uCenter"), right: gl.getUniformLocation(cloudProg, "uRight"),
+            up: gl.getUniformLocation(cloudProg, "uUp"), size: gl.getUniformLocation(cloudProg, "uSize"),
+            puff: gl.getUniformLocation(cloudProg, "uPuff"), alpha: gl.getUniformLocation(cloudProg, "uAlpha") };
 
 /* ---------- the elevation grid ---------- */
 const TB = TERRAIN.bbox, TW = TERRAIN.width, TH = TERRAIN.height;
@@ -130,24 +241,100 @@ function heightAtLL(lat, lon){
   return (h(x0,y0) * (1-tx) + h(x1,y0) * tx) * (1-ty) +
          (h(x0,y1) * (1-tx) + h(x1,y1) * tx) * ty;
 }
-window.terrainHeightAt = heightAtLL;
+window.terrainHeightAt = heightAtLL;             // true metres, never exaggerated
+const worldY = (lat, lon) => lift(heightAtLL(lat, lon));
 
+// height straight off the grid, for the shading pass
+function hGrid(gx, gy){
+  const x = Math.max(0, Math.min(TW - 1, gx)), y = Math.max(0, Math.min(TH - 1, gy));
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const x1 = Math.min(TW - 1, x0 + 1), y1 = Math.min(TH - 1, y0 + 1);
+  const tx = x - x0, ty = y - y0;
+  const h = (i, j) => heights[j * TW + i];
+  return (h(x0,y0) * (1-tx) + h(x1,y0) * tx) * (1-ty) +
+         (h(x0,y1) * (1-tx) + h(x1,y1) * tx) * ty;
+}
+
+/* ---------- the light, marched through the grid once ---------- */
+const shadeTex = gl.createTexture();
+function buildShade(){
+  // half the elevation grid's resolution: shadows and occlusion are smooth,
+  // and this keeps the pass well under a frame's worth of work
+  const SW = Math.max(64, TW >> 1), SH = Math.max(64, TH >> 1);
+  const px = new Uint8Array(SW * SH * 3);
+  const cellX = (TB_E - TB_W) / TW * M_LON;        // metres per grid cell
+  const cellY = (TB_N - TB_S) / TH * KM_LAT_M;
+  const cell = (cellX + cellY) / 2;
+  const dx = Math.sin(SUN_AZ), dy = -Math.cos(SUN_AZ);   // grid steps towards the sun
+  const tanSun = Math.tan(SUN_EL);
+  const AO_DIRS = 8, AO_STEPS = 10, SUN_STEPS = 70;
+  const dirs = [];
+  for (let a = 0; a < AO_DIRS; a++){
+    const t = (a / AO_DIRS) * Math.PI * 2;
+    dirs.push([Math.sin(t), -Math.cos(t)]);
+  }
+  for (let j = 0; j < SH; j++){
+    const gy = (j + 0.5) * TH / SH;
+    for (let i = 0; i < SW; i++){
+      const gx = (i + 0.5) * TW / SW;
+      const h0 = hGrid(gx, gy);
+      // how far the ridge between here and the sun rises above the sun ray
+      let over = 0;
+      for (let s = 1; s <= SUN_STEPS; s++){
+        const x = gx + dx * s, y = gy + dy * s;
+        if (x < 0 || y < 0 || x > TW - 1 || y > TH - 1) break;
+        over = Math.max(over, hGrid(x, y) - (h0 + 3 + s * cell * tanSun));
+      }
+      const shadow = Math.max(0, Math.min(1, 1 - over / 45));
+      // how much sky this point can see
+      let closed = 0;
+      for (let d = 0; d < AO_DIRS; d++){
+        let maxTan = 0;
+        for (let s = 1; s <= AO_STEPS; s++){
+          const x = gx + dirs[d][0] * s, y = gy + dirs[d][1] * s;
+          if (x < 0 || y < 0 || x > TW - 1 || y > TH - 1) break;
+          maxTan = Math.max(maxTan, (hGrid(x, y) - h0) / (s * cell));
+        }
+        closed += Math.sin(Math.atan(maxTan));
+      }
+      const ao = Math.max(0, 1 - closed / AO_DIRS);
+      const k = (j * SW + i) * 3;
+      px[k] = shadow * 255; px[k+1] = ao * 255; px[k+2] = 0;
+    }
+  }
+  gl.bindTexture(gl.TEXTURE_2D, shadeTex);
+  // three bytes a pixel and an odd width: without this GL expects each row
+  // padded to four bytes, rejects the buffer, and the shader reads zeros
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, SW, SH, 0, gl.RGB, gl.UNSIGNED_BYTE, px);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+}
+
+/* ---------- geometry ---------- */
+let bufs = {};
 function buildMesh(){
-  // one vertex per grid sample, capped so 16-bit indices still work if the
-  // context cannot do better
   const maxSeg = uint32 ? 512 : 254;
   const N = Math.min(maxSeg, Math.max(TW, TH) - 1);
   const n1 = N + 1;
   const pos = new Float32Array(n1 * n1 * 3);
   const uv  = new Float32Array(n1 * n1 * 2);
+  const tuv = new Float32Array(n1 * n1 * 2);
   const nrm = new Float32Array(n1 * n1 * 3);
+  const hgt = new Float32Array(n1 * n1);
   const llAt = (i, j) => [TB_N + (TB_S - TB_N) * j / N, TB_W + (TB_E - TB_W) * i / N];
   for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++){
     const k = j * n1 + i;
     const [lat, lon] = llAt(i, j);
+    const m = heightAtLL(lat, lon);
     pos[k*3]   = toWorldX(lon);
-    pos[k*3+1] = heightAtLL(lat, lon) * VEX;
+    pos[k*3+1] = lift(m);
     pos[k*3+2] = toWorldZ(lat);
+    hgt[k] = m;
+    tuv[k*2] = i / N; tuv[k*2+1] = j / N;
     // texture coordinates come from the imagery's own bbox, so the picture
     // lands on the terrain without any hand calibration
     const im = llToImg(lat, lon);
@@ -172,19 +359,63 @@ function buildMesh(){
     idx[o++] = b; idx[o++] = c; idx[o++] = d;
   }
   indexCount = idx.length;
-  const bind = (data, loc, size) => {
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  const buf = data => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    return b;
   };
-  bind(pos, A.pos, 3); bind(uv, A.uv, 2); bind(nrm, A.nrm, 3);
-  const ib = gl.createBuffer();
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+  bufs.pos = buf(pos); bufs.uv = buf(uv); bufs.tuv = buf(tuv);
+  bufs.nrm = buf(nrm); bufs.h = buf(hgt);
+  bufs.idx = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufs.idx);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-  return N;
+  // a unit quad, reused by the sky, the sea and every cloud
+  bufs.quad = buf(new Float32Array([-1,-1, 1,-1, -1,1, 1,1]));
 }
+function attach(bufName, loc, size){
+  if (loc < 0) return;
+  gl.bindBuffer(gl.ARRAY_BUFFER, bufs[bufName]);
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+}
+
+/* ---------- the clouds ---------- */
+const puffTex = gl.createTexture();
+function buildPuff(){
+  const s = 128;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const cx = c.getContext("2d");
+  // a handful of overlapping soft discs, which reads as a cumulus from a
+  // distance and costs nothing
+  const blobs = [[64,74,34],[44,66,24],[84,66,26],[56,54,22],[76,56,20],[64,48,16]];
+  for (const [x, y, r] of blobs){
+    const g = cx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(255,255,255,0.95)");
+    g.addColorStop(0.55, "rgba(255,255,255,0.55)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    cx.fillStyle = g;
+    cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill();
+  }
+  gl.bindTexture(gl.TEXTURE_2D, puffTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+}
+// fixed positions, so the sky looks the same every time the page opens
+const clouds = (() => {
+  let seed = 20250908;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  return Array.from({ length: CLOUDS }, () => ({
+    x: (rnd() - 0.5) * 24000, z: (rnd() - 0.5) * 24000,
+    y: 3400 + rnd() * 2000, r: 800 + rnd() * 1400,
+    a: 0.65 + rnd() * 0.35, drift: 4 + rnd() * 5,
+  }));
+})();
 
 /* ---------- load elevation, then the texture ---------- */
 function decodeTerrain(img){
@@ -196,10 +427,8 @@ function decodeTerrain(img){
   heights = new Float32Array(TW * TH);
   for (let i = 0, k = 0; i < heights.length; i++, k += 4){
     const m = d[k] * 256 + d[k+1] + d[k+2] / 256 - 32768;
-    // Rarotonga is the top of a seamount: the real grid falls past 2800 m a
-    // few kilometres offshore. There is no water surface to hide that, so the
-    // sea floor is compressed into a shallow shelf. The reef edge still reads,
-    // the island does not sit in a pit.
+    // the terrain-tile source carries bathymetry, and Rarotonga is the top of
+    // a seamount: without this the island sits in a 3 km pit
     heights[i] = m < 0 ? Math.max(-9, m * 0.03) : m;
   }
 }
@@ -223,6 +452,8 @@ tImg.onload = () => {
   const sat = new Image();
   sat.onload = () => {
     uploadTexture(sat);
+    buildShade();
+    buildPuff();
     buildMesh();
     ready = true;
     document.getElementById("d3Btn").disabled = false;
@@ -234,55 +465,156 @@ tImg.onerror = () => console.warn("terrain.png missing; run tools/fetch_terrain.
 tImg.src = TERRAIN_PNG;
 
 /* ---------- camera ---------- */
-const view = { lat:-21.2349, lon:-159.7776, az:0.35, el:0.42, dist:11000 };
+// The camera starts where those aerial illustrations put you: low enough that
+// the horizon and the sky are in frame, which is most of why they read as a
+// place rather than a map. The vertical field of view is 46 degrees, so the
+// horizon leaves the top of the screen once the tilt passes about 23.
+const view = { lat:-21.2349, lon:-159.7776, az:0.35, el:0.26, dist:11000 };
 const clampV = () => {
-  view.el = Math.max(0.10, Math.min(1.45, view.el));
+  view.el = Math.max(0.07, Math.min(1.45, view.el));
   view.dist = Math.max(700, Math.min(40000, view.dist));
 };
 function eyeAndTarget(){
-  const ty = heightAtLL(view.lat, view.lon) * VEX;
-  const t = [toWorldX(view.lon), ty, toWorldZ(view.lat)];
+  const t = [toWorldX(view.lon), worldY(view.lat, view.lon), toWorldZ(view.lat)];
   const r = view.dist * Math.cos(view.el);
   const e = [t[0] + r * Math.sin(view.az), t[1] + view.dist * Math.sin(view.el),
              t[2] + r * Math.cos(view.az)];
-  // never put the eye underground
   const eLat = C_LAT - e[2] / KM_LAT_M, eLon = C_LON + e[0] / M_LON;
-  e[1] = Math.max(e[1], heightAtLL(eLat, eLon) * VEX + 60);
+  e[1] = Math.max(e[1], worldY(eLat, eLon) + 60);   // never underground
   return { e, t };
 }
+
+// where the sea meets the sky on screen, 0 at the bottom edge and 1 at the
+// top: project a point on the water far out along the way the camera is
+// looking, rather than guessing from the tilt
+function horizonNDC(m, e, t){
+  const d = norm([t[0] - e[0], 0, t[2] - e[2]]);
+  const p = [e[0] + d[0] * 300000, 0, e[2] + d[2] * 300000];
+  const w = m[3]*p[0] + m[7]*p[1] + m[11]*p[2] + m[15];
+  if (w <= 0) return 0.5;
+  const y = m[1]*p[0] + m[5]*p[1] + m[9]*p[2] + m[13];
+  return Math.max(0, Math.min(1, y / w * 0.5 + 0.5));
+}
+
 let mvp = null;
+const t0 = performance.now();
 function draw(){
   if (!ready) return;
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
   gl.viewport(0, 0, w, h);
-  gl.enable(gl.DEPTH_TEST);
-  gl.clearColor(HAZE[0], HAZE[1], HAZE[2], 1);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   clampV();
   const { e, t } = eyeAndTarget();
-  const P = perspective(48 * Math.PI / 180, w / h, 20, 120000);
+  const P = perspective(46 * Math.PI / 180, w / h, 20, 400000);
   mvp = mul(P, lookAt(e, t, [0, 1, 0]));
-  gl.useProgram(prog);
-  gl.uniformMatrix4fv(U.mvp, false, new Float32Array(mvp));
-  gl.uniform1i(U.tex, 0);
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  const s = norm([-0.42, 0.80, 0.34]);
-  gl.uniform3f(U.sun, s[0], s[1], s[2]);
-  gl.uniform3f(U.eye, e[0], e[1], e[2]);
-  gl.uniform3f(U.haze, HAZE[0], HAZE[1], HAZE[2]);
-  gl.uniform2f(U.fog, view.dist * 1.6, view.dist * 3.4);
+  const sun = norm([Math.sin(SUN_AZ) * Math.cos(SUN_EL), Math.sin(SUN_EL),
+                    -Math.cos(SUN_AZ) * Math.cos(SUN_EL)]);
+
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if (window.syncCompass) syncCompass();
+
+  // sky first, behind everything
+  gl.disable(gl.DEPTH_TEST);
+  gl.useProgram(skyProg);
+  attach("quad", S.p, 2);
+  gl.uniform3fv(S.top, SKY_TOP);
+  gl.uniform3fv(S.haze, SKY_HAZE);
+  // where the horizon falls on screen: straight down the camera's tilt
+  gl.uniform1f(S.horizon, horizonNDC(mvp, e, t));
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // the open ocean the island sits in
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  gl.useProgram(seaProg);
+  attach("quad", O.p, 2);
+  gl.uniformMatrix4fv(O.mvp, false, new Float32Array(mvp));
+  gl.uniform1f(O.size, 180000);
+  gl.uniform3fv(O.near, SEA_NEAR);
+  gl.uniform3fv(O.far, SEA_FAR);
+  gl.uniform3fv(O.haze, SKY_HAZE);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // the island
+  gl.useProgram(terrainProg);
+  attach("pos", T.pos, 3); attach("uv", T.uv, 2); attach("tuv", T.tuv, 2);
+  attach("nrm", T.nrm, 3); attach("h", T.h, 1);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufs.idx);
+  gl.uniformMatrix4fv(T.mvp, false, new Float32Array(mvp));
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.uniform1i(T.tex, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, shadeTex);
+  gl.uniform1i(T.shade, 1);
+  gl.uniform3f(T.sun, sun[0], sun[1], sun[2]);
+  gl.uniform3f(T.eye, e[0], e[1], e[2]);
+  gl.uniform3fv(T.haze, SEA_NEAR);
+  gl.uniform2f(T.fog, view.dist * 2.0, view.dist * 4.5);
   gl.drawElements(gl.TRIANGLES, indexCount, uint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
+
+  // clouds last, facing the camera, drifting west to east
+  const fwd = norm(sub(t, e));
+  const right = norm(cross(fwd, [0, 1, 0]));
+  const up = cross(right, fwd);
+  const secs = (performance.now() - t0) / 1000;
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);     // premultiplied
+  gl.depthMask(false);
+  gl.useProgram(cloudProg);
+  attach("quad", C.p, 2);
+  gl.uniformMatrix4fv(C.mvp, false, new Float32Array(mvp));
+  gl.uniform3f(C.right, right[0], right[1], right[2]);
+  gl.uniform3f(C.up, up[0], up[1], up[2]);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, puffTex);
+  gl.uniform1i(C.puff, 2);
+  for (const c of clouds){
+    const span = 34000;
+    let x = c.x + secs * c.drift;
+    x = ((x + span / 2) % span + span) % span - span / 2;     // wrap around
+    // a cloud right on top of the camera is a grey smear, not weather
+    if (Math.hypot(x - e[0], c.y - e[1], c.z - e[2]) < 3000) continue;
+    gl.uniform3f(C.center, x, c.y, c.z);
+    gl.uniform2f(C.size, c.r, c.r * 0.52);
+    gl.uniform1f(C.alpha, c.a);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
 }
 window.draw3D = draw;
+
+/* ---------- the compass ---------- */
+// It turns with the camera in 3D and points north in 2D, and clicking it puts
+// the camera back on north.
+const compass = document.getElementById("compass");
+if (compass){
+  const needle = compass.querySelector("svg");
+  window.syncCompass = () => {
+    needle.style.transform = "rotate(" + (window.mode3d ? view.az : 0) * 180 / Math.PI + "deg)";
+  };
+  compass.onclick = () => {
+    if (!window.mode3d) return;
+    view.az = 0; camDirty = true; syncCompass(); draw();
+  };
+  syncCompass();
+}
+
+// the clouds drift, so the 3D setting keeps its own slow frame loop
+let raf = 0;
+function loop(){
+  raf = 0;
+  if (!window.mode3d) return;
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+function startLoop(){ if (!raf && window.mode3d) raf = requestAnimationFrame(loop); }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) startLoop(); });
 
 // where a place lands on screen in 3D, or null when it is behind the camera
 window.project3D = function(p){
   if (!mvp || !p.latlon) return null;
   const x = toWorldX(p.latlon.lon), z = toWorldZ(p.latlon.lat);
-  const y = heightAtLL(p.latlon.lat, p.latlon.lon) * VEX;
+  const y = worldY(p.latlon.lat, p.latlon.lon);
   const cw = mvp[3]*x + mvp[7]*y + mvp[11]*z + mvp[15];
   if (cw <= 0) return null;
   const cx = mvp[0]*x + mvp[4]*y + mvp[8]*z  + mvp[12];
@@ -334,11 +666,13 @@ window.setMode3D = function(on){
   canvas.style.display = on ? "" : "none";
   world.style.display = on ? "none" : "";
   document.getElementById("d3Btn").classList.toggle("on", on);
+  if (window.syncCompass) syncCompass();
   document.querySelector("#d3Btn .lbl").textContent = on ? "2D" : "3D";
   if (on){
     const ll = imgToLL(cam.x, cam.y);
     view.lat = ll.lat; view.lon = ll.lon;
     view.dist = Math.max(900, metresAcross() * 1.15);
+    startLoop();
   } else {
     const im = llToImg(view.lat, view.lon);
     cam.x = im.x; cam.y = im.y;
