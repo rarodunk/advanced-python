@@ -129,16 +129,27 @@ document.getElementById("reset").onclick = () => animateCam(CAM_HOME());
    MARKERS — HTML pins placed over the painting. Screen-space, so they stay
    the same size at every zoom and never blur with the image.
    ========================================================================= */
-const ISLAND = { lat:-21.2330, lon:-159.7820, aKm:5.18, bKm:4.14 };
+const ISLAND = { lat:-21.2420, lon:-159.7800, aKm:5.2, bKm:4.3 };
 const KM_LAT = 110.57, kmLon = lat => 111.32 * Math.cos(lat * Math.PI / 180);
 function latLonOf(p){
+  if (p.ll) return { lat: p.ll[0], lon: p.ll[1] };
   const t = p.deg * Math.PI / 180, a = ISLAND.aKm, b = ISLAND.bKm;
   const realR = (a * b) / Math.hypot(b * Math.sin(t), a * Math.cos(t));
   const km = (p.r / coastR(p.deg)) * realR;
   return { lat: ISLAND.lat + (km * Math.cos(t)) / KM_LAT,
            lon: ISLAND.lon + (km * Math.sin(t)) / kmLon(ISLAND.lat) };
 }
-PLACES.forEach(p => { p.img = toImg(p.deg, p.r); p.latlon = latLonOf(p); });
+function fromLatLon(lat, lon){
+  const dx = (lon - ISLAND.lon) * kmLon(ISLAND.lat), dy = (lat - ISLAND.lat) * KM_LAT;
+  let deg = Math.atan2(dx, dy) * 180 / Math.PI; if (deg < 0) deg += 360;
+  const t = deg * Math.PI / 180, a = ISLAND.aKm, b = ISLAND.bKm;
+  const realR = (a * b) / Math.hypot(b * Math.sin(t), a * Math.cos(t));
+  return { deg, r: Math.hypot(dx, dy) / realR * coastR(deg) };
+}
+PLACES.forEach(p => {
+  if (p.ll){ const g = fromLatLon(p.ll[0], p.ll[1]); p.deg = g.deg; p.r = g.r; }
+  p.img = toImg(p.deg, p.r); p.latlon = latLonOf(p);
+});
 
 const layer = document.getElementById("markers");
 const nodes = new Map();
