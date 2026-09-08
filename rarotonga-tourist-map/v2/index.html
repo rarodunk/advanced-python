@@ -26,7 +26,7 @@ button{border:0;background:none;cursor:pointer}
 
 /* ---------- stage ---------- */
 #stage{position:fixed;inset:0;touch-action:none;
-  background:linear-gradient(#08243c 0%,#0d4260 44%,#0e5878 60%,#062f47 100%)}
+  background:linear-gradient(#5aa4dc 0%,#1e5f98 40%,#0f4a7a 60%,#0a3556 100%)}
 #gl{display:block;width:100%;height:100%}
 #markers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 
@@ -789,7 +789,7 @@ function coastR(deg){
 // The reef hugs the north shore and stands well off Muri and Titikaveka —
 // which is exactly why the snorkelling is on the south and east.
 function lagoonWidth(deg){
-  return 11 + bump(deg,120,26,52) + bump(deg,182,34,34) + bump(deg,236,24,17) + bump(deg,60,20,9);
+  return 14 + bump(deg,120,26,52) + bump(deg,182,34,34) + bump(deg,236,24,17) + bump(deg,60,20,9);
 }
 
 // Surveyed positions, converted from latitude and longitude.
@@ -816,24 +816,28 @@ const VALLEYS = [
 ];
 
 /* ---------- deterministic noise, for ridges that erode like real ones ---------- */
+// Same hash as the shader, evaluated in float32 so the JS terrain (marker
+// heights, camera floor) is the surface the GPU actually draws.
+const f32 = Math.fround, fract = v => v - Math.floor(v);
 function hash2(x, y){
-  let h = (x | 0) * 374761393 + (y | 0) * 668265263;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+  let px = f32(fract(f32(x * 123.34))), py = f32(fract(f32(y * 456.21)));
+  const d = f32(f32(px * f32(px + 45.32)) + f32(py * f32(py + 45.32)));
+  px = f32(px + d); py = f32(py + d);
+  return fract(f32(px * py));
 }
 function vnoise(x, y){
   const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
   const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
-  return hash2(xi, yi)     * (1-u) * (1-v) + hash2(xi+1, yi)   * u * (1-v)
-       + hash2(xi, yi+1)   * (1-u) * v     + hash2(xi+1, yi+1) * u * v;
+  const a = hash2(xi, yi), b = hash2(xi+1, yi), c = hash2(xi, yi+1), d = hash2(xi+1, yi+1);
+  return (a + (b - a) * u) + ((c + (d - c) * u) - (a + (b - a) * u)) * v;
 }
 // Ridged multifractal: the standard way to get sharp crests rather than dunes.
 function ridged(x, y, oct){
   let sum = 0, amp = 0.5, freq = 1, norm = 0;
   for (let i = 0; i < oct; i++){
     const n = 1 - Math.abs(vnoise(x * freq, y * freq) * 2 - 1);
-    sum += n * n * amp; norm += amp;
-    amp *= 0.52; freq *= 2.07;
+    sum += n * n * n * amp; norm += amp;
+    amp *= 0.55; freq *= 2.15;
   }
   return sum / norm;
 }
@@ -849,12 +853,16 @@ function elevation(deg, rad){
   let h = 88 * Math.pow(t, 1.3);                // the eroded shield
   for (const pk of PEAKS){
     const d = Math.hypot(X - pk.x, Y - pk.y);
-    h += pk.m * 0.92 * Math.exp(-(d*d) / (2 * pk.spread * pk.spread));
+    h += pk.m * 0.95 * Math.exp(-(d*d) / (2 * pk.spread * pk.spread));
   }
   // Knife ridges, held off the coastal flat where the villages and plantations are.
-  const belt = smoothstep(0.05, 0.34, t);
-  const rg = ridged(X * 0.0152, Y * 0.0152, 5);
-  h += (rg - 0.40) * 425 * belt * Math.min(1, 0.28 + h / 430);
+  const belt = smoothstep(0.04, 0.30, t);
+  const wx = X - CX, wz = Y - CY;                // shader space: island centre at 0
+  const rg = ridged(wx * 0.0152, wz * 0.0152, 5);
+  h += (rg - 0.30) * 520 * belt * Math.min(1, 0.28 + h / 430);
+  const g1 = 1 - Math.abs(vnoise(wx * 0.075, wz * 0.075) * 2 - 1);
+  const g2 = 1 - Math.abs(vnoise(wx * 0.16 + 9, wz * 0.16 + 9) * 2 - 1);
+  h += (g1 * g1 * 0.7 + g2 * g2 * 0.3 - 0.45) * 75 * belt * smoothstep(60, 220, h);
   // Then the named valleys cut down through all of it.
   let cut = 0;
   for (const v of VALLEYS){
@@ -866,6 +874,16 @@ function elevation(deg, rad){
 }
 // Below the waterline: the lagoon shelf, the reef crest, then the wall — which
 // really does fall past a thousand metres within sight of the beach.
+const MOTU = [[112, 0.62, 6], [117.5, 0.52, 5], [122.5, 0.55, 5.5], [128.5, 0.60, 4.5]];  // bearing, lagoon fraction, size
+function motu(x, z){
+  let h = 0;
+  for (const [b, f, sz] of MOTU){
+    const cb = coastR(b) + lagoonWidth(b) * f, a = b * Math.PI / 180;
+    const d = Math.hypot(x - cb * Math.sin(a), z + cb * Math.cos(a));
+    h = Math.max(h, 9 * (1 - smoothstep(sz * 0.4, sz, d)));
+  }
+  return h;
+}
 function seabed(deg, rad){
   const cr = coastR(deg), lw = lagoonWidth(deg), reef = cr + lw;
   if (rad < cr) return 0;
@@ -876,7 +894,10 @@ function seabed(deg, rad){
 function heightAt(x, z){
   const dx = x - CX, dz = z - CY, rad = Math.hypot(dx, dz);
   let deg = Math.atan2(dx, -dz) * 180 / Math.PI; if (deg < 0) deg += 360;
-  return rad < coastR(deg) ? elevation(deg, rad) : seabed(deg, rad);
+  if (rad < coastR(deg)) return elevation(deg, rad);
+  const sb = seabed(deg, rad);
+  if (deg > 105 && deg < 135){ const mh = motu(dx, dz); if (mh > 0) return Math.max(sb, mh - 2); }
+  return sb;
 }
 
 /* =========================================================================
@@ -936,8 +957,9 @@ float ridged(vec2 p){
   for (int i = 0; i < 5; i++){
     if (float(i) >= uOct) break;
     float n = 1.0 - abs(vnoise(p * fq) * 2.0 - 1.0);
-    sum += n * n * amp; nrm += amp;
-    amp *= 0.52; fq *= 2.07;
+    n = n * n * n;                         // cubic gain: knife crests, not dunes
+    sum += n * amp; nrm += amp;
+    amp *= 0.55; fq *= 2.15;
   }
   return sum / max(nrm, 0.001);
 }
@@ -959,7 +981,7 @@ float coastR(float deg){
              + sin(deg * 0.118) * 5.0 + sin(deg * 0.207 + 1.4) * 3.4;
 }
 float lagoonW(float deg){
-  return 11.0 + bmp(deg,120.0,26.0,52.0) + bmp(deg,182.0,34.0,34.0)
+  return 14.0 + bmp(deg,120.0,26.0,52.0) + bmp(deg,182.0,34.0,34.0)
               + bmp(deg,236.0,24.0,17.0) + bmp(deg,60.0,20.0,9.0);
 }
 float landM(vec2 p, float deg, float rad, float cr){
@@ -969,8 +991,13 @@ float landM(vec2 p, float deg, float rad, float cr){
     vec2 d = p - uPeak[i].xy;
     h += uPeak[i].z * exp(-dot(d, d) / (2.0 * uPeak[i].w * uPeak[i].w));
   }
-  float belt = smoothstep(0.05, 0.34, t);
-  h += (ridged(p * 0.0152) - 0.40) * 425.0 * belt * min(1.0, 0.28 + h / 430.0);
+  float belt = smoothstep(0.04, 0.30, t);
+  h += (ridged(p * 0.0152) - 0.30) * 520.0 * belt * min(1.0, 0.28 + h / 430.0);
+  // fine erosion fluting down every face — the parallel gullies that make a
+  // young volcanic island read as one from the air
+  float g1 = 1.0 - abs(vnoise(p * 0.075) * 2.0 - 1.0);
+  float g2 = 1.0 - abs(vnoise(p * 0.16 + 9.0) * 2.0 - 1.0);
+  h += (g1 * g1 * 0.7 + g2 * g2 * 0.3 - 0.45) * 75.0 * belt * smoothstep(60.0, 220.0, h);
   float cut = 0.0;
   for (int i = 0; i < 8; i++){
     float dd = mod(deg - uValley[i].x + 540.0, 360.0) - 180.0;
@@ -978,6 +1005,20 @@ float landM(vec2 p, float deg, float rad, float cr){
   }
   h *= 1.0 - 0.52 * cut * smoothstep(0.02, 0.5, t);
   return max(5.5, h);
+}
+float motuM(vec2 p, float deg, float rad, float cr, float lw){
+  // four coral islets in Muri lagoon, at real bearings, each a low sand dome
+  float h = 0.0;
+  for (int i = 0; i < 4; i++){
+    float b = i == 0 ? 112.0 : i == 1 ? 117.5 : i == 2 ? 122.5 : 128.5;
+    float f = i == 0 ? 0.62 : i == 1 ? 0.52 : i == 2 ? 0.55 : 0.60;
+    float sz = i == 0 ? 6.0 : i == 1 ? 5.0 : i == 2 ? 5.5 : 4.5;
+    float cb = coastR(b) + lagoonW(b) * f;
+    vec2 c = vec2(cb * sin(radians(b)), -cb * cos(radians(b)));
+    float d = length(p - c);
+    h = max(h, 9.0 * (1.0 - smoothstep(sz * 0.4, sz, d)));
+  }
+  return h;
 }
 float seabedM(float deg, float rad, float cr){
   float lw = lagoonW(deg), reef = cr + lw;
@@ -987,7 +1028,10 @@ float seabedM(float deg, float rad, float cr){
 }
 float groundM(vec2 p){                       // metres, land or seabed
   float rad = length(p), deg = bearing(p), cr = coastR(deg);
-  return rad < cr ? landM(p, deg, rad, cr) : seabedM(deg, rad, cr);
+  if (rad < cr) return landM(p, deg, rad, cr);
+  float sb = seabedM(deg, rad, cr);
+  if (deg > 105.0 && deg < 135.0){ float mh = motuM(p, deg, rad, cr, lagoonW(deg)); if (mh > 0.0) sb = max(sb, mh - 2.0); }
+  return sb;
 }
 float groundY(vec2 p){ return groundM(p) * VS; }
 
@@ -997,12 +1041,22 @@ vec3 normalAt(vec2 p, float e){
                         groundY(p - vec2(0.0,e)) - groundY(p + vec2(0.0,e))));
 }
 float trace(vec3 ro, vec3 rd){
-  float t = 1.0;
+  float t = 1.0, lastStep = 1.0;
   for (int i = 0; i < 190; i++){
     vec3 p = ro + rd * t;
     float d = p.y - groundY(p.xz);
-    if (d < 0.12) return t;
-    t += max(1.1, d * 0.55);
+    if (d < 0.03 + t * 0.0012){
+      // bisect between the last two samples to land on the surface exactly
+      float lo = t - lastStep, hi = t;
+      for (int j = 0; j < 5; j++){
+        float mid = 0.5 * (lo + hi);
+        vec3 q = ro + rd * mid;
+        if (q.y - groundY(q.xz) < 0.0) hi = mid; else lo = mid;
+      }
+      return hi;
+    }
+    lastStep = max(0.12 + t * 0.006, d * mix(0.32, 0.5, smoothstep(80.0, 320.0, t)));
+    t += lastStep;
     if (t > 3600.0) break;
   }
   return -1.0;
@@ -1010,13 +1064,13 @@ float trace(vec3 ro, vec3 rd){
 // Traced shadows, softened by how near the ray passes to the ridge that casts
 // them. A landscape without these reads as coloured in rather than lit.
 float shadow(vec3 p, vec3 L){
-  float res = 1.0, t = 4.0;
-  for (int i = 0; i < 44; i++){
+  float res = 1.0, t = 1.2;
+  for (int i = 0; i < 48; i++){
     vec3 q = p + L * t;
     float d = q.y - groundY(q.xz);
-    res = min(res, 14.0 * d / t);
+    res = min(res, 12.0 * d / t);
     if (res < 0.02 || t > 1000.0) break;
-    t += max(2.5, d * 0.85);
+    t += max(0.8 + t * 0.02, d * 0.7);
   }
   return clamp(res, 0.0, 1.0);
 }
@@ -1033,42 +1087,72 @@ float occlusion(vec3 p, vec3 n){
 
 vec3 skyCol(vec3 rd){
   float h = max(rd.y, 0.0);
-  vec3 c = mix(vec3(0.74,0.85,0.93), vec3(0.13,0.36,0.66), pow(h, 0.48));
-  c += vec3(1.0,0.93,0.78) * pow(max(dot(rd, uSun), 0.0), 700.0) * 1.4;
-  c += vec3(1.0,0.88,0.70) * pow(max(dot(rd, uSun), 0.0), 6.0) * 0.10;
+  vec3 c = mix(vec3(0.86,0.93,0.98), vec3(0.20,0.50,0.88), pow(h, 0.55));
+  c += vec3(1.0,0.95,0.82) * pow(max(dot(rd, uSun), 0.0), 800.0) * 1.6;
+  c += vec3(1.0,0.92,0.78) * pow(max(dot(rd, uSun), 0.0), 8.0) * 0.12;
   return c;
 }
 
 // The road, the beach and the reef are drawn as surface, not as geometry:
 // each is simply a distance from a radius the island already defines.
+const float CLOUD_Y = 150.0;               // ~800 m: the trade-wind cap on Te Manga
+float cloudAt(vec2 xz){
+  float d = fbm(xz * 0.011 + vec2(uTime * 0.004, 0.0)) * 0.7 + fbm(xz * 0.03 + 7.0) * 0.3;
+  // the cap forms over the mountains and thins offshore
+  float overIsland = 1.0 - smoothstep(90.0, 260.0, length(xz - vec2(40.0, -20.0)));
+  return smoothstep(0.56, 0.70, d + overIsland * 0.10 - 0.08);
+}
+float cloudShadow(vec3 p){
+  float t = (CLOUD_Y - p.y) / max(uSun.y, 0.05);
+  return 1.0 - 0.75 * cloudAt((p + uSun * t).xz);
+}
 vec3 landColour(vec3 p, vec3 n, float m, float deg, float rad, float cr){
   float grain = fbm(p.xz * 1.9);
   float mid   = fbm(p.xz * 0.30 + 41.0);
   float broad = fbm(p.xz * 0.055 + 11.0);
 
-  vec3 jungle = mix(vec3(0.19,0.34,0.14), vec3(0.10,0.23,0.10), mid);
-  vec3 lowland = mix(vec3(0.36,0.50,0.20), vec3(0.24,0.40,0.16), grain);
-  vec3 rock    = mix(vec3(0.40,0.36,0.31), vec3(0.29,0.26,0.23), grain);
-  vec3 sand    = vec3(0.86,0.80,0.64);
+  vec3 jungle = mix(vec3(0.22,0.46,0.16), vec3(0.10,0.30,0.11), mid);
+  vec3 lowland = mix(vec3(0.40,0.62,0.22), vec3(0.24,0.46,0.16), grain * 0.6 + mid * 0.4);
+  vec3 rock    = mix(vec3(0.42,0.38,0.32), vec3(0.28,0.25,0.22), grain);
+  vec3 sand    = vec3(0.94,0.89,0.72);
 
   vec3 c = mix(lowland, jungle, smoothstep(30.0, 130.0, m));
+  // taro patches and plantation: the flat is a patchwork, not a lawn
+  float plots = fbm(p.xz * 0.14 + 77.0);
+  c = mix(c, mix(vec3(0.20,0.42,0.14), vec3(0.52,0.62,0.26), smoothstep(0.35, 0.65, plots)), 0.5 * (1.0 - smoothstep(20.0, 60.0, m)));
   float steep = smoothstep(0.55, 0.16, n.y);
-  c = mix(c, rock, steep * smoothstep(120.0, 380.0, m) * 0.60);
-  c = mix(c, rock * 1.05, smoothstep(540.0, 660.0, m) * 0.55);
-  c = mix(c, sand, 1.0 - smoothstep(1.5, 7.0, m));           // the beach
+  float cliff = smoothstep(0.34, 0.10, n.y);
+  c = mix(c, rock, cliff * smoothstep(120.0, 380.0, m) * 0.75);
+  c = mix(c, rock * 1.05, smoothstep(600.0, 660.0, m) * 0.35);
+  c = mix(c, sand, 1.0 - smoothstep(1.2, 3.2, cr - rad));    // the beach: ~50 m of it
 
   // Ara Tapu: one road, and it is always the same distance in from the coast.
   float road = 1.0 - smoothstep(2.0, 5.5, abs(rad - (cr - 15.0)));
-  c = mix(c, vec3(0.72,0.69,0.62), road * 0.85 * smoothstep(3.0, 9.0, m));
+  c = mix(c, vec3(0.72,0.69,0.62), road * 0.85 * smoothstep(2.0, 6.0, m));
 
   // The villages sit on the flat between road and beach: roofs as bright
   // flecks, which at any real viewing distance is exactly what they are.
+  // Coconut palms and plantation over the whole flat: crown-sized dark blotches.
+  float palms = smoothstep(0.55, 0.75, fbm(p.xz * 1.35 + 23.0));
+  float onMotu = step(cr, rad);
+  c = mix(c, vec3(0.13,0.30,0.12), palms * 0.55 * (1.0 - smoothstep(4.0, 30.0, m)) * max(smoothstep(3.5, 6.0, cr - rad), onMotu * smoothstep(1.0, 4.0, m)));
   float strip = smoothstep(60.0, 8.0, abs(rad - (cr - 26.0)));
-  float roofs = step(0.86, hash21(floor(p.xz * 0.55)));
-  vec3 roofc = mix(vec3(0.55,0.22,0.18), vec3(0.30,0.34,0.42),
-                   hash21(floor(p.xz * 0.55) + 3.7));
-  c = mix(c, roofc, strip * roofs * 0.75 * smoothstep(4.0, 10.0, m) *
+  // Villages cluster: Avarua, Arorangi, Muri, Titikaveka, Matavera... not an even sprinkle.
+  float settle = smoothstep(0.42, 0.62, fbm(p.xz * 0.035 + 61.0)) * (0.5 + 0.5 * smoothstep(20.0, 3.0, abs(rad - (cr - 18.0))));
+  vec2 cell = floor(p.xz * 0.95);                      // ~19 m cells, a roof in some
+  vec2 inCell = fract(p.xz * 0.95);
+  float roofHere = step(1.0 - settle * 0.5, hash21(cell)) * step(0.25, inCell.x) * step(inCell.x, 0.8) * step(0.3, inCell.y) * step(inCell.y, 0.75);
+  float roofKind = hash21(cell + 3.7);
+  vec3 roofc = roofKind < 0.45 ? vec3(0.86,0.85,0.80) : roofKind < 0.75 ? vec3(0.62,0.26,0.20) : vec3(0.36,0.46,0.40);
+  c = mix(c, roofc, strip * roofHere * 0.95 * smoothstep(2.0, 6.0, m) *
                     (1.0 - smoothstep(0.75, 0.5, n.y)));
+  // Papua stream and Wigmore's Waterfall: a thread of water down the valley at 205°,
+  // white where it drops over the rock step.
+  float dAng = abs(mod(deg - 205.0 + 540.0, 360.0) - 180.0) * rad * 0.01745;
+  float stream = (1.0 - smoothstep(0.35, 0.9, dAng)) * smoothstep(150.0, 165.0, rad) * (1.0 - smoothstep(cr - 20.0, cr - 8.0, rad));
+  float drop = stream * smoothstep(0.9, 0.55, n.y);
+  c = mix(c, vec3(0.55,0.75,0.80), stream * 0.7);
+  c = mix(c, vec3(0.97), drop);
   c *= 0.88 + 0.24 * broad;
   return c;
 }
@@ -1077,6 +1161,7 @@ void main(){
   vec2 uv = vUV;
   vec3 rd = normalize(uFwd + uRight * uv.x * uFov * uAspect + uUp * uv.y * uFov);
   vec3 ro = uEye;
+  ro.y = max(ro.y, groundY(ro.xz) + 1.5);   // never start a ray underground
 
   float tG = trace(ro, rd);
   float tW = (rd.y < -0.0001 && ro.y > 0.0) ? -ro.y / rd.y : -1.0;
@@ -1097,25 +1182,30 @@ void main(){
     float fres = pow(1.0 - max(dot(wn, V), 0.0), 4.0);
     vec3 refl = skyCol(reflect(rd, wn));
     // Depth is what makes tropical water read: pale over sand, ink offshore.
-    vec3 shallow = vec3(0.42,0.90,0.84), midw = vec3(0.05,0.52,0.68), deep = vec3(0.01,0.08,0.19);
+    vec3 shallow = vec3(0.50,0.96,0.88), midw = vec3(0.06,0.62,0.80), deep = vec3(0.02,0.14,0.34);
     vec3 body = mix(shallow, midw, smoothstep(0.5, 14.0, depthM));
     body = mix(body, deep, smoothstep(14.0, 70.0, depthM));
     // the seabed shows through where it is shallow enough
     float show = 1.0 - smoothstep(0.0, 11.0, depthM);
-    body = mix(body, vec3(0.78,0.74,0.58), show * 0.45);
+    body = mix(body, vec3(0.80,0.84,0.66), show * 0.32);
+    // coral heads: dark patches on the sand where the lagoon is a few metres deep
+    float coral = smoothstep(0.62, 0.78, fbm(wp.xz * 0.22 + 5.0)) * smoothstep(1.0, 4.0, depthM) * (1.0 - smoothstep(9.0, 16.0, depthM));
+    body = mix(body, vec3(0.10,0.30,0.28), coral * 0.7);
 
     vec3 H = normalize(uSun + V);
     float spec = pow(max(dot(wn, H), 0.0), 320.0) * 1.5;
 
     // Surf: the swell stands up and breaks on the reef crest.
     float deg = bearing(wp.xz), cr = coastR(deg), reef = cr + lagoonW(deg);
-    float onReef = 1.0 - smoothstep(0.0, 5.0, abs(length(wp.xz) - reef));
-    float shoreW = 1.0 - smoothstep(0.0, 3.0, abs(length(wp.xz) - cr));
-    float foam = max(onReef, shoreW * 0.75) * (0.55 + 0.45 * fbm(wp.xz * 0.5 + uTime * 0.15));
+    float onReef = 1.0 - smoothstep(0.0, 4.5, abs(length(wp.xz) - reef - 1.5));
+    float shoreW = 1.0 - smoothstep(0.0, 3.5, abs(length(wp.xz) - cr));
+    float breakup = fbm(wp.xz * 0.35 + uTime * 0.12);
+    float foam = max(onReef * smoothstep(0.30, 0.62, breakup + 0.15), shoreW * 0.7 * smoothstep(0.35, 0.6, breakup));
 
-    col = mix(pow(body, vec3(2.2)), pow(refl, vec3(2.2)), fres * 0.72) + spec;
+    float wsh = cloudShadow(wp);
+    col = (mix(pow(body, vec3(2.2)), pow(refl, vec3(2.2)), fres * 0.72) + spec) * (0.55 + 0.45 * wsh);
     col = mix(col, vec3(0.92), clamp(foam, 0.0, 1.0) * 0.85);
-    col = mix(col, pow(skyCol(rd), vec3(2.2)), smoothstep(900.0, 3000.0, tW) * 0.85);
+    col = mix(col, pow(skyCol(rd), vec3(2.2)), smoothstep(1400.0, 5000.0, tW) * 0.7);
   } else if (tG > 0.0){
     vec3 p = ro + rd * tG;
     float e = max(0.35, tG * 0.0016);
@@ -1130,6 +1220,15 @@ void main(){
     float nx = fbm(g + vec2(0.7,0.0)) - fbm(g - vec2(0.7,0.0));
     float nz = fbm(g + vec2(0.0,0.7)) - fbm(g - vec2(0.0,0.7));
     n = normalize(n + vec3(nx, 0.0, nz) * canopy * 2.6 * clamp(420.0 / tG, 0.15, 1.0));
+    // individual crowns, only when the camera is close enough to resolve them
+    float closeUp = 1.0 - smoothstep(90.0, 260.0, tG);
+    if (closeUp > 0.0){
+      vec2 g2 = p.xz * 11.0;
+      float cx = vnoise(g2 + vec2(0.5,0.0)) - vnoise(g2 - vec2(0.5,0.0));
+      float cz = vnoise(g2 + vec2(0.0,0.5)) - vnoise(g2 - vec2(0.0,0.5));
+      float crowns = max(canopy, smoothstep(2.0, 6.0, m) * 0.7);
+      n = normalize(n + vec3(cx, 0.0, cz) * crowns * closeUp * 1.4);
+    }
 
     // Light in linear space or the colours turn to milk: albedos are authored
     // the way they look, so they have to be de-gamma'd before anything is
@@ -1137,20 +1236,34 @@ void main(){
     vec3 albedo = pow(landColour(p, n, m, deg, rad, cr), vec3(2.2));
     float sh = shadow(p + n * 0.6, uSun);
     float ao = occlusion(p, n);
-    float key = max(dot(n, uSun), 0.0) * sh;
+    float key = max(dot(n, uSun), 0.0) * sh * cloudShadow(p);
     float sky = 0.5 + 0.5 * n.y;
     float bounce = max(dot(n, normalize(vec3(-uSun.x, 0.25, -uSun.z))), 0.0) * 0.20;
-    vec3 lit = albedo * (vec3(2.05,1.88,1.58) * key
-                       + vec3(0.38,0.50,0.70) * sky * ao
-                       + vec3(0.26,0.24,0.16) * bounce * ao);
+    // sunlit canopy goes lime; shaded canopy stays deep — that two-tone is what
+    // a forest looks like from a plane at noon
+    vec3 sunCol = vec3(2.5,2.3,1.85) * mix(vec3(1.0), vec3(1.08,1.12,0.85), canopy);
+    vec3 lit = albedo * (sunCol * key
+                       + vec3(0.42,0.56,0.82) * sky * ao
+                       + vec3(0.28,0.26,0.16) * bounce * ao);
     lit *= mix(0.72, 1.0, smoothstep(1.0, 4.0, m));      // wet sand at the waterline
     col = mix(lit, pow(skyCol(rd), vec3(2.2)), smoothstep(650.0, 2400.0, tG) * 0.9);
   } else {
     col = pow(skyCol(rd), vec3(2.2));
   }
 
-  col = max(col, 0.0) * 1.45;                       // exposure
-  col = col / (col + vec3(0.95));                   // filmic shoulder
+  // the cloud plane: composited over whatever the ray hit below it
+  float tC = (rd.y > 0.0001 && ro.y < CLOUD_Y) ? (CLOUD_Y - ro.y) / rd.y
+           : (rd.y < -0.0001 && ro.y > CLOUD_Y) ? (CLOUD_Y - ro.y) / rd.y : -1.0;
+  float tHit = water ? tW : (tG > 0.0 ? tG : 1e9);
+  if (tC > 0.0 && tC < tHit){
+    vec3 cp = ro + rd * tC;
+    float cd = cloudAt(cp.xz);
+    float lift = fbm(cp.xz * 0.05 + 3.0);
+    vec3 cc = mix(vec3(0.55,0.62,0.75), vec3(1.4,1.38,1.32), lift) ;
+    col = mix(col, cc, cd * 0.92);
+  }
+  col = max(col, 0.0) * 1.7;                        // exposure: noon, not dusk
+  col = col / (col + vec3(0.85));                   // filmic shoulder
   col = pow(col, vec3(0.4545));                     // back to display gamma
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -1189,7 +1302,7 @@ for (let i = 0; i < 8; i++){
   const v = VALLEYS[i];
   gl.uniform2f(gl.getUniformLocation(prog, `uValley[${i}]`), v.deg, v.w);
 }
-const SUN = norm3([-0.55, 0.62, 0.40]);
+const SUN = norm3([-0.42, 0.80, 0.34]);
 gl.uniform3f(U.uSun, SUN[0], SUN[1], SUN[2]);
 
 function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
@@ -1235,9 +1348,9 @@ function drawScene(){
   }
   gl.viewport(0, 0, w, h);
 
-  const r = cam.dist * Math.cos(cam.el);
-  const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
-  const fwd = norm3([cam.tx - eye[0], -eye[1], cam.tz - eye[2]]);
+  // the same eye and target placeCamera settled on, terrain clearance included
+  const eye = camEye;
+  const fwd = norm3([camTgt[0] - eye[0], camTgt[1] - eye[1], camTgt[2] - eye[2]]);
   const right = norm3(cross3(fwd, [0,1,0]));
   const up = cross3(right, fwd);
 
@@ -1263,19 +1376,30 @@ function drawScene(){
 /* =========================================================================
    CAMERA — orbit, tilt, dolly, written here so touch and mouse behave alike
    ========================================================================= */
-const cam = { az:-0.55, el:0.50, dist:880, tx:0, tz:-10 };
+const cam = { az:-0.6, el:0.74, dist:760, tx:0, tz:-10 };
 const CAM_HOME = { ...cam };
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
-let camDirty = true, viewProj = null, camEye = [0, 500, 800];
+let camDirty = true, viewProj = null, camEye = [0, 500, 800], camTgt = [0, 0, 0];
 
 function placeCamera(){
   cam.el = clamp(cam.el, 0.14, 1.5);
-  cam.dist = clamp(cam.dist, 240, 1600);
+  cam.dist = clamp(cam.dist, 70, 1600);
   const r = cam.dist * Math.cos(cam.el);
   const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
-  camEye = eye;
+  // The camera looks at the ground under the target, and the eye is lifted until
+  // the whole line of sight clears the terrain: a low orbit rides up over the
+  // ridges instead of burying itself in one.
+  const ty = Math.max(0, heightAt(cam.tx + CX, cam.tz + CY)) * VSCALE;
+  let ey = eye[1];
+  for (let k = 0.55; k <= 1.0001; k += 0.05){   // the half of the sightline nearest the eye
+    const gx = cam.tx + (eye[0] - cam.tx) * k, gz = cam.tz + (eye[2] - cam.tz) * k;
+    const g = Math.max(0, heightAt(gx + CX, gz + CY)) * VSCALE + 10;
+    ey = Math.max(ey, ty + (g - ty) / k);
+  }
+  eye[1] = ey;
+  camEye = eye; camTgt = [cam.tx, ty, cam.tz];
   const proj = mPerspective(46 * Math.PI/180, innerWidth / innerHeight || 1, 4, 5200);
-  viewProj = mMul(proj, mLookAt(eye, [cam.tx, 0, cam.tz], [0,1,0]));
+  viewProj = mMul(proj, mLookAt(eye, [cam.tx, ty, cam.tz], [0,1,0]));
   camDirty = true;
 }
 function resize(){ placeCamera(); }
@@ -1363,7 +1487,7 @@ let flat = false;
 document.getElementById("tiltBtn").onclick = () => {
   flat = !flat;
   document.querySelector("#tiltBtn .lbl").textContent = flat ? "3D" : "2D";
-  animateCam(flat ? { el:1.47, az:0, dist:980, tx:0, tz:0 } : { el:0.50, dist:880, tx:0, tz:-10 });
+  animateCam(flat ? { el:1.47, az:0, dist:900, tx:0, tz:0 } : { el:0.74, dist:760, tx:0, tz:-10 });
 };
 
 /* =========================================================================
