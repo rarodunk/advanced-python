@@ -880,15 +880,324 @@ function heightAt(x, z){
 }
 
 /* =========================================================================
-   THE RENDERER — raw WebGL, no library.
-   A 3D library would be ~600 KB for one lit mesh, and this app has to work with
-   no signal, so the whole renderer is here: two shaders, the island, a water
-   sheet, the reef surf and the road.
+   THE RENDERER — a raymarched heightfield, not a mesh.
+
+   The mesh version had a hard ceiling: detail could never be finer than a
+   triangle, and vegetation made of little triangles always reads as origami.
+   This throws that away. Every pixel casts a ray into the island's height
+   function and shades what it hits, so the terrain resolves to whatever the
+   screen can show, the forest is surface texture rather than geometry, and
+   shadows and occlusion are traced rather than baked. It is the technique
+   landscape renderers actually use.
    ========================================================================= */
 const canvas = document.getElementById("gl");
-const gl = canvas.getContext("webgl", { antialias:true, alpha:true })
-        || canvas.getContext("experimental-webgl", { alpha:true });
+const gl = canvas.getContext("webgl", { antialias:false, alpha:false, depth:false })
+        || canvas.getContext("experimental-webgl", { alpha:false, depth:false });
 
+const VS_SRC = `
+attribute vec2 aP;
+varying vec2 vUV;
+void main(){ vUV = aP; gl_Position = vec4(aP, 0.0, 1.0); }`;
+
+const FS_SRC = `
+precision highp float;
+varying vec2 vUV;
+
+uniform vec2  uRes;
+uniform vec3  uEye, uFwd, uRight, uUp;
+uniform float uFov, uAspect, uOct, uTime;
+uniform vec3  uSun;
+uniform vec4  uPeak[6];      // world x, world z, amplitude in metres, spread
+uniform vec2  uValley[8];    // bearing, angular width
+
+const float VS = 0.185;                       // world units per metre of relief
+const float A_UNITS = 291.1, B_UNITS = 232.7; // the island's real semi-axes, scaled
+
+float hash21(vec2 p){
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash21(i), hash21(i + vec2(1,0)), f.x),
+             mix(hash21(i + vec2(0,1)), hash21(i + vec2(1,1)), f.x), f.y);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++){ s += a * vnoise(p); p *= 2.11; a *= 0.5; }
+  return s;
+}
+// Ridged multifractal: sharp crests instead of dunes, which is what a young
+// volcanic island erodes into and why Rarotonga looks the way it does.
+float ridged(vec2 p){
+  float sum = 0.0, amp = 0.5, nrm = 0.0, fq = 1.0;
+  for (int i = 0; i < 5; i++){
+    if (float(i) >= uOct) break;
+    float n = 1.0 - abs(vnoise(p * fq) * 2.0 - 1.0);
+    sum += n * n * amp; nrm += amp;
+    amp *= 0.52; fq *= 2.07;
+  }
+  return sum / max(nrm, 0.001);
+}
+float bmp(float d, float c, float w, float a){
+  float x = mod(d - c + 540.0, 360.0) - 180.0;
+  return a * exp(-(x * x) / (2.0 * w * w));
+}
+float bearing(vec2 p){
+  float d = degrees(atan(p.x, -p.y));
+  return d < 0.0 ? d + 360.0 : d;
+}
+float coastR(float deg){
+  float t = radians(deg);
+  float ell = (A_UNITS * B_UNITS) /
+              sqrt(pow(B_UNITS * sin(t), 2.0) + pow(A_UNITS * cos(t), 2.0));
+  return ell + bmp(deg,313.0,8.0,14.0) - bmp(deg,103.0,10.0,26.0)
+             - bmp(deg,126.0,16.0,13.0) + bmp(deg,236.0,20.0,8.0)
+             - bmp(deg,352.0,24.0,10.0)
+             + sin(deg * 0.118) * 5.0 + sin(deg * 0.207 + 1.4) * 3.4;
+}
+float lagoonW(float deg){
+  return 11.0 + bmp(deg,120.0,26.0,52.0) + bmp(deg,182.0,34.0,34.0)
+              + bmp(deg,236.0,24.0,17.0) + bmp(deg,60.0,20.0,9.0);
+}
+float landM(vec2 p, float deg, float rad, float cr){
+  float t = 1.0 - rad / cr;
+  float h = 88.0 * pow(max(t, 0.0), 1.3);
+  for (int i = 0; i < 6; i++){
+    vec2 d = p - uPeak[i].xy;
+    h += uPeak[i].z * exp(-dot(d, d) / (2.0 * uPeak[i].w * uPeak[i].w));
+  }
+  float belt = smoothstep(0.05, 0.34, t);
+  h += (ridged(p * 0.0152) - 0.40) * 425.0 * belt * min(1.0, 0.28 + h / 430.0);
+  float cut = 0.0;
+  for (int i = 0; i < 8; i++){
+    float dd = mod(deg - uValley[i].x + 540.0, 360.0) - 180.0;
+    cut = max(cut, exp(-(dd * dd) / (2.0 * uValley[i].y * uValley[i].y)));
+  }
+  h *= 1.0 - 0.52 * cut * smoothstep(0.02, 0.5, t);
+  return max(5.5, h);
+}
+float seabedM(float deg, float rad, float cr){
+  float lw = lagoonW(deg), reef = cr + lw;
+  if (rad < reef){ float u = (rad - cr) / lw; return -(1.5 + 22.0 * pow(u, 1.7)); }
+  float u = min(1.0, (rad - reef) / 110.0);
+  return -(4.0 + 330.0 * pow(u, 1.4));
+}
+float groundM(vec2 p){                       // metres, land or seabed
+  float rad = length(p), deg = bearing(p), cr = coastR(deg);
+  return rad < cr ? landM(p, deg, rad, cr) : seabedM(deg, rad, cr);
+}
+float groundY(vec2 p){ return groundM(p) * VS; }
+
+vec3 normalAt(vec2 p, float e){
+  return normalize(vec3(groundY(p - vec2(e,0.0)) - groundY(p + vec2(e,0.0)),
+                        2.0 * e,
+                        groundY(p - vec2(0.0,e)) - groundY(p + vec2(0.0,e))));
+}
+float trace(vec3 ro, vec3 rd){
+  float t = 1.0;
+  for (int i = 0; i < 190; i++){
+    vec3 p = ro + rd * t;
+    float d = p.y - groundY(p.xz);
+    if (d < 0.12) return t;
+    t += max(1.1, d * 0.55);
+    if (t > 3600.0) break;
+  }
+  return -1.0;
+}
+// Traced shadows, softened by how near the ray passes to the ridge that casts
+// them. A landscape without these reads as coloured in rather than lit.
+float shadow(vec3 p, vec3 L){
+  float res = 1.0, t = 4.0;
+  for (int i = 0; i < 44; i++){
+    vec3 q = p + L * t;
+    float d = q.y - groundY(q.xz);
+    res = min(res, 14.0 * d / t);
+    if (res < 0.02 || t > 1000.0) break;
+    t += max(2.5, d * 0.85);
+  }
+  return clamp(res, 0.0, 1.0);
+}
+float occlusion(vec3 p, vec3 n){
+  float o = 0.0, sc = 1.0;
+  for (int i = 0; i < 5; i++){
+    float d = 2.5 + 7.0 * float(i);
+    vec3 q = p + n * d;
+    o += (d - (q.y - groundY(q.xz))) * sc;
+    sc *= 0.68;
+  }
+  return clamp(1.0 - 0.09 * o, 0.0, 1.0);
+}
+
+vec3 skyCol(vec3 rd){
+  float h = max(rd.y, 0.0);
+  vec3 c = mix(vec3(0.74,0.85,0.93), vec3(0.13,0.36,0.66), pow(h, 0.48));
+  c += vec3(1.0,0.93,0.78) * pow(max(dot(rd, uSun), 0.0), 700.0) * 1.4;
+  c += vec3(1.0,0.88,0.70) * pow(max(dot(rd, uSun), 0.0), 6.0) * 0.10;
+  return c;
+}
+
+// The road, the beach and the reef are drawn as surface, not as geometry:
+// each is simply a distance from a radius the island already defines.
+vec3 landColour(vec3 p, vec3 n, float m, float deg, float rad, float cr){
+  float grain = fbm(p.xz * 1.9);
+  float mid   = fbm(p.xz * 0.30 + 41.0);
+  float broad = fbm(p.xz * 0.055 + 11.0);
+
+  vec3 jungle = mix(vec3(0.19,0.34,0.14), vec3(0.10,0.23,0.10), mid);
+  vec3 lowland = mix(vec3(0.36,0.50,0.20), vec3(0.24,0.40,0.16), grain);
+  vec3 rock    = mix(vec3(0.40,0.36,0.31), vec3(0.29,0.26,0.23), grain);
+  vec3 sand    = vec3(0.86,0.80,0.64);
+
+  vec3 c = mix(lowland, jungle, smoothstep(30.0, 130.0, m));
+  float steep = smoothstep(0.55, 0.16, n.y);
+  c = mix(c, rock, steep * smoothstep(120.0, 380.0, m) * 0.60);
+  c = mix(c, rock * 1.05, smoothstep(540.0, 660.0, m) * 0.55);
+  c = mix(c, sand, 1.0 - smoothstep(1.5, 7.0, m));           // the beach
+
+  // Ara Tapu: one road, and it is always the same distance in from the coast.
+  float road = 1.0 - smoothstep(2.0, 5.5, abs(rad - (cr - 15.0)));
+  c = mix(c, vec3(0.72,0.69,0.62), road * 0.85 * smoothstep(3.0, 9.0, m));
+
+  // The villages sit on the flat between road and beach: roofs as bright
+  // flecks, which at any real viewing distance is exactly what they are.
+  float strip = smoothstep(60.0, 8.0, abs(rad - (cr - 26.0)));
+  float roofs = step(0.86, hash21(floor(p.xz * 0.55)));
+  vec3 roofc = mix(vec3(0.55,0.22,0.18), vec3(0.30,0.34,0.42),
+                   hash21(floor(p.xz * 0.55) + 3.7));
+  c = mix(c, roofc, strip * roofs * 0.75 * smoothstep(4.0, 10.0, m) *
+                    (1.0 - smoothstep(0.75, 0.5, n.y)));
+  c *= 0.88 + 0.24 * broad;
+  return c;
+}
+
+void main(){
+  vec2 uv = vUV;
+  vec3 rd = normalize(uFwd + uRight * uv.x * uFov * uAspect + uUp * uv.y * uFov);
+  vec3 ro = uEye;
+
+  float tG = trace(ro, rd);
+  float tW = (rd.y < -0.0001 && ro.y > 0.0) ? -ro.y / rd.y : -1.0;
+
+  vec3 col;
+  bool water = tW > 0.0 && (tG < 0.0 || tW < tG);
+
+  if (water){
+    vec3 wp = ro + rd * tW;
+    float depthM = max(0.0, -groundM(wp.xz));
+    // Ripples perturb the normal; without them water is a mirror sheet.
+    vec2 q = wp.xz * 0.09;
+    float r1 = fbm(q + vec2(uTime * 0.03, 0.0));
+    float r2 = fbm(q * 2.3 - vec2(0.0, uTime * 0.045));
+    vec3 wn = normalize(vec3((r1 - r2) * 0.22, 1.0, (r2 - r1) * 0.22));
+
+    vec3 V = -rd;
+    float fres = pow(1.0 - max(dot(wn, V), 0.0), 4.0);
+    vec3 refl = skyCol(reflect(rd, wn));
+    // Depth is what makes tropical water read: pale over sand, ink offshore.
+    vec3 shallow = vec3(0.42,0.90,0.84), midw = vec3(0.05,0.52,0.68), deep = vec3(0.01,0.08,0.19);
+    vec3 body = mix(shallow, midw, smoothstep(0.5, 14.0, depthM));
+    body = mix(body, deep, smoothstep(14.0, 70.0, depthM));
+    // the seabed shows through where it is shallow enough
+    float show = 1.0 - smoothstep(0.0, 11.0, depthM);
+    body = mix(body, vec3(0.78,0.74,0.58), show * 0.45);
+
+    vec3 H = normalize(uSun + V);
+    float spec = pow(max(dot(wn, H), 0.0), 320.0) * 1.5;
+
+    // Surf: the swell stands up and breaks on the reef crest.
+    float deg = bearing(wp.xz), cr = coastR(deg), reef = cr + lagoonW(deg);
+    float onReef = 1.0 - smoothstep(0.0, 5.0, abs(length(wp.xz) - reef));
+    float shoreW = 1.0 - smoothstep(0.0, 3.0, abs(length(wp.xz) - cr));
+    float foam = max(onReef, shoreW * 0.75) * (0.55 + 0.45 * fbm(wp.xz * 0.5 + uTime * 0.15));
+
+    col = mix(pow(body, vec3(2.2)), pow(refl, vec3(2.2)), fres * 0.72) + spec;
+    col = mix(col, vec3(0.92), clamp(foam, 0.0, 1.0) * 0.85);
+    col = mix(col, pow(skyCol(rd), vec3(2.2)), smoothstep(900.0, 3000.0, tW) * 0.85);
+  } else if (tG > 0.0){
+    vec3 p = ro + rd * tG;
+    float e = max(0.35, tG * 0.0016);
+    vec3 n = normalAt(p.xz, e);
+    float m = groundM(p.xz);
+    float deg = bearing(p.xz), rad = length(p.xz), cr = coastR(deg);
+
+    // Canopy relief: perturbing the normal with fine noise is what turns a
+    // smooth green slope into forest. It costs nothing and does most of the work.
+    float canopy = smoothstep(18.0, 60.0, m) * (1.0 - smoothstep(430.0, 560.0, m));
+    vec2 g = p.xz * 2.6;
+    float nx = fbm(g + vec2(0.7,0.0)) - fbm(g - vec2(0.7,0.0));
+    float nz = fbm(g + vec2(0.0,0.7)) - fbm(g - vec2(0.0,0.7));
+    n = normalize(n + vec3(nx, 0.0, nz) * canopy * 2.6 * clamp(420.0 / tG, 0.15, 1.0));
+
+    // Light in linear space or the colours turn to milk: albedos are authored
+    // the way they look, so they have to be de-gamma'd before anything is
+    // multiplied by them, and re-gamma'd at the very end.
+    vec3 albedo = pow(landColour(p, n, m, deg, rad, cr), vec3(2.2));
+    float sh = shadow(p + n * 0.6, uSun);
+    float ao = occlusion(p, n);
+    float key = max(dot(n, uSun), 0.0) * sh;
+    float sky = 0.5 + 0.5 * n.y;
+    float bounce = max(dot(n, normalize(vec3(-uSun.x, 0.25, -uSun.z))), 0.0) * 0.20;
+    vec3 lit = albedo * (vec3(2.05,1.88,1.58) * key
+                       + vec3(0.38,0.50,0.70) * sky * ao
+                       + vec3(0.26,0.24,0.16) * bounce * ao);
+    lit *= mix(0.72, 1.0, smoothstep(1.0, 4.0, m));      // wet sand at the waterline
+    col = mix(lit, pow(skyCol(rd), vec3(2.2)), smoothstep(650.0, 2400.0, tG) * 0.9);
+  } else {
+    col = pow(skyCol(rd), vec3(2.2));
+  }
+
+  col = max(col, 0.0) * 1.45;                       // exposure
+  col = col / (col + vec3(0.95));                   // filmic shoulder
+  col = pow(col, vec3(0.4545));                     // back to display gamma
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+function compile(type, src){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src); gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS_SRC));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS_SRC));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+
+const quad = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+const aP = gl.getAttribLocation(prog, "aP");
+gl.enableVertexAttribArray(aP);
+gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+
+const U = {};
+for (const k of ["uRes","uEye","uFwd","uRight","uUp","uFov","uAspect","uOct","uTime","uSun"])
+  U[k] = gl.getUniformLocation(prog, k);
+// The island's peaks and valleys go to the shader as data, from the same
+// surveyed table the rest of the app uses.
+for (let i = 0; i < 6; i++){
+  const pk = PEAKS[i];
+  gl.uniform4f(gl.getUniformLocation(prog, `uPeak[${i}]`),
+               pk.x - CX, pk.y - CY, pk.m * 0.95, pk.spread);
+}
+for (let i = 0; i < 8; i++){
+  const v = VALLEYS[i];
+  gl.uniform2f(gl.getUniformLocation(prog, `uValley[${i}]`), v.deg, v.w);
+}
+const SUN = norm3([-0.55, 0.62, 0.40]);
+gl.uniform3f(U.uSun, SUN[0], SUN[1], SUN[2]);
+
+function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
+const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+
+// The picture is raymarched, but the markers are still HTML that has to sit on
+// the right pixel, so the same camera is also expressed as a matrix for them.
 function mPerspective(fovy, aspect, near, far){
   const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
   return [f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0];
@@ -907,483 +1216,48 @@ function mMul(a, b){
   }
   return o;
 }
-const cross3 = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
-const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-function norm3(a){ const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; }
 
-const VS = `
-attribute vec3 aPos; attribute vec3 aNorm; attribute vec3 aCol;
-uniform mat4 uMVP;
-varying vec3 vCol; varying vec3 vN; varying vec3 vWorld; varying float vDepth;
-void main(){
-  vec4 clip = uMVP * vec4(aPos, 1.0);
-  gl_Position = clip;
-  vCol = aCol;                 // base colour, with occlusion and sun shadow baked in
-  vN = aNorm;
-  vWorld = aPos;
-  vDepth = clip.w;
-}`;
-const FS = `
-precision highp float;
-varying vec3 vCol; varying vec3 vN; varying vec3 vWorld; varying float vDepth;
-uniform float uAlpha; uniform vec3 uFog; uniform vec3 uLight; uniform vec3 uEye;
-uniform float uWater; uniform float uDetail;
-
-// Value noise, cheap enough to run per pixel. This is what gives the ground
-// texture at every zoom: vertex colours can only be as fine as the mesh, and
-// a 340-grid mesh is nowhere near fine enough to stop looking moulded.
-float hsh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
-float n2(vec2 p){
-  vec2 i = floor(p), f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hsh(i), hsh(i + vec2(1,0)), f.x),
-             mix(hsh(i + vec2(0,1)), hsh(i + vec2(1,1)), f.x), f.y);
-}
-float fbm(vec2 p){
-  float s = 0.0, a = 0.5;
-  for (int i = 0; i < 4; i++){ s += a * n2(p); p *= 2.07; a *= 0.5; }
-  return s;
-}
-
-void main(){
-  vec3 n = normalize(vN);
-  vec3 L = normalize(uLight);
-  vec3 V = normalize(uEye - vWorld);
-  vec3 col = vCol;
-
-  if (uWater > 0.5){
-    // Water: a grazing angle reflects the sky, straight down shows the bottom,
-    // and the sun leaves a specular streak. A flat translucent sheet is the
-    // giveaway that you are looking at a diagram rather than an ocean.
-    float fres = pow(1.0 - max(dot(n, V), 0.0), 3.0);
-    vec3 H = normalize(L + V);
-    float spec = pow(max(dot(n, H), 0.0), 220.0);
-    float ripple = fbm(vWorld.xz * 0.30) * 0.06;
-    col = mix(col, vec3(0.42, 0.68, 0.80), fres * 0.85) + spec * 0.9 + ripple;
-    float a = uAlpha + fres * 0.34;
-    float fog = clamp((vDepth - 700.0) / 1500.0, 0.0, 0.66);
-    gl_FragColor = vec4(mix(col, uFog, fog), min(0.96, a));
-    return;
-  }
-
-  if (uDetail > 0.5){
-    // Ground texture at three scales: canopy grain, the patchwork of
-    // plantation and fern, and a broad tonal drift across the island.
-    float grain = fbm(vWorld.xz * 1.35);
-    float mid   = fbm(vWorld.xz * 0.28 + 31.0);
-    float broad = fbm(vWorld.xz * 0.055 + 7.0);
-    float t = (grain - 0.5) * 0.30 + (mid - 0.5) * 0.34 + (broad - 0.5) * 0.26;
-    col *= 1.0 + t;
-    // steep ground shows rock and bare earth through the vegetation
-    float steep = smoothstep(0.42, 0.10, n.y);
-    col = mix(col, vec3(0.38, 0.34, 0.29) * (0.75 + grain * 0.5), steep * 0.30);
-    col = max(col, vec3(0.0));
-  }
-
-  float key = abs(dot(n, L));
-  float sky = 0.5 + 0.5 * n.y;
-  float shade = 0.30 + 0.30 * sky + 0.56 * key;
-  col *= shade;
-
-  float fog = clamp((vDepth - 700.0) / 1500.0, 0.0, 0.66);
-  gl_FragColor = vec4(mix(col, uFog, fog), uAlpha);
-}`;
-function compile(type, src){
-  const sh = gl.createShader(type);
-  gl.shaderSource(sh, src); gl.compileShader(sh);
-  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
-  return sh;
-}
-// 16-bit indices cap a mesh at 65,536 vertices, which caps the terrain at a
-// 240 grid. Nearly every device made this decade supports 32-bit indices; where
-// it does, the island is built at nearly double the resolution.
-const UINT32 = !!gl.getExtension("OES_element_index_uint");
-const prog = gl.createProgram();
-gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
-gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
-gl.linkProgram(prog);
-if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-gl.useProgram(prog);
-const A = { pos:gl.getAttribLocation(prog,"aPos"), norm:gl.getAttribLocation(prog,"aNorm"),
-            col:gl.getAttribLocation(prog,"aCol") };
-const U = { mvp:gl.getUniformLocation(prog,"uMVP"), light:gl.getUniformLocation(prog,"uLight"),
-            alpha:gl.getUniformLocation(prog,"uAlpha"), fog:gl.getUniformLocation(prog,"uFog"),
-            eye:gl.getUniformLocation(prog,"uEye"), water:gl.getUniformLocation(prog,"uWater"),
-            detail:gl.getUniformLocation(prog,"uDetail") };
-
-function makeMesh(pos, norm, col, idx){
-  const buf = data => { const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
-  const ib = gl.createBuffer();
-  const big = UINT32 && idx.length > 0 && pos.length / 3 > 65535;
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-                big ? new Uint32Array(idx) : new Uint16Array(idx), gl.STATIC_DRAW);
-  return { pos:buf(pos), norm:buf(norm), col:buf(col), idx:ib, count:idx.length,
-           type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT };
-}
-// Triangle soup: no index buffer, so no 65,536-vertex ceiling. The scenery is
-// tens of thousands of independent triangles, which is exactly this case.
-function makeSoup(pos, norm, col){
-  const buf = data => { const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return b; };
-  return { pos:buf(pos), norm:buf(norm), col:buf(col), soup:true, count:pos.length / 3 };
-}
-function drawMesh(m, alpha, opts){
-  gl.uniform1f(U.alpha, alpha);
-  gl.uniform1f(U.water,  opts === "water"  ? 1 : 0);
-  gl.uniform1f(U.detail, opts === "ground" ? 1 : 0);
-  for (const [b, loc] of [[m.pos, A.pos], [m.norm, A.norm], [m.col, A.col]]){
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
-  }
-  if (m.soup){ gl.drawArrays(gl.TRIANGLES, 0, m.count); return; }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.idx);
-  gl.drawElements(gl.TRIANGLES, m.count, m.type || gl.UNSIGNED_SHORT, 0);
-}
-
-/* ---------- the island ---------- */
-// 241x241 keeps the vertex count under the 65,536 that 16-bit indices allow,
-// which is what lets the ridges resolve without an extension.
-const GRID = (typeof UINT32 !== "undefined" && UINT32) ? 340 : 240, SPAN = 980;
-const lerp3 = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
-const rgb = h => [(h>>16&255)/255, (h>>8&255)/255, (h&255)/255];
-
-// Colour by what the ground IS — height for the zone, then steepness, because
-// on Rarotonga the flat land is planted and the near-vertical faces are bare
-// rock and fern. That single rule is most of what makes it read as real.
-function groundColour(m, flatness){
-  let c;
-  if (m <= -60)      c = rgb(0x0a2036);
-  else if (m <= -18) c = lerp3(rgb(0x0d3a55), rgb(0x1a6f88), (m + 60) / 42);
-  else if (m < -1.5) c = lerp3(rgb(0x2e9099), rgb(0x77c8bd), (m + 18) / 16.5);
-  else if (m < 3)    c = rgb(0xdfd2ae);                       // beach, not butter
-  else if (m < 45)   c = lerp3(rgb(0x5f8a4a), rgb(0x4a7540), m / 42);
-  else if (m < 200)  c = lerp3(rgb(0x4a7540), rgb(0x365c33), (m - 45) / 155);
-  else if (m < 540)  c = lerp3(rgb(0x365c33), rgb(0x2e4d2d), (m - 200) / 340);
-  else               c = lerp3(rgb(0x2e4d2d), rgb(0x63594b), Math.min(1, (m - 540) / 160));
-  if (m > 6){
-    const steep = 1 - flatness;
-    c = lerp3(c, rgb(0x6e6253), Math.pow(steep, 2.6) * 0.38);
-    c = lerp3(c, rgb(0x6f9349), Math.pow(flatness, 3) * 0.22);
-  }
-  return c;
-}
-
-const islandMesh = (() => {
-  const t0 = performance.now();
-  const n = GRID + 1, pos = [], col = [], norm = [], idx = [];
-  const H = new Float32Array(n * n);
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
-    const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
-    H[j*n+i] = heightAt(x + CX, z + CY);
-  }
-  const at = (i, j) => H[Math.min(n-1, Math.max(0, j)) * n + Math.min(n-1, Math.max(0, i))];
-
-  // Ambient occlusion, read straight off the height grid: a point sitting lower
-  // than the land around it is in a valley and gets less sky. This is the single
-  // thing that makes generated terrain stop looking like moulded plastic — the
-  // gorges go dark and the ridges catch the light.
-  const AO = new Float32Array(n * n);
-  const OFF = [];                                  // ring offsets, computed once
-  for (const r of [2, 6, 14, 26]){
-    for (let a = 0; a < 8; a++){
-      const th = a / 8 * Math.PI * 2;
-      OFF.push([Math.round(Math.cos(th) * r), Math.round(Math.sin(th) * r),
-                1 / (r * (SPAN / GRID) * M_PER_UNIT)]);
-    }
-  }
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
-    const h = at(i, j);
-    let occ = 0;
-    for (let k = 0; k < OFF.length; k++){
-      const o = OFF[k], d = at(i + o[0], j + o[1]) - h;
-      if (d > 0) occ += d * o[2];
-    }
-    AO[j*n+i] = 1 / (1 + (occ / OFF.length) * 5.5);
-  }
-
-  // Cast shadows. For each point, walk toward the sun across the height grid;
-  // if anything stands above the ray, the point is in shadow. Ridges throwing
-  // shade into the valleys behind them is most of what makes a landscape read
-  // as lit rather than coloured in.
-  const SUN = norm3([-0.55, 0.62, 0.40]);
-  const cell = SPAN / GRID;
-  const sunStepI = -SUN[0] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]));
-  const sunStepJ = -SUN[2] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]));
-  const risePerStep = (SUN[1] / Math.max(Math.abs(SUN[0]), Math.abs(SUN[2]))) * cell * M_PER_UNIT;
-  const SH = new Float32Array(n * n);
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
-    let hit = 0, ray = at(i, j) + 4;
-    for (let k = 1; k <= 60; k++){
-      const ii = Math.round(i + sunStepI * k), jj = Math.round(j + sunStepJ * k);
-      if (ii < 0 || jj < 0 || ii >= n || jj >= n) break;
-      ray += risePerStep;
-      const d = at(ii, jj) - ray;
-      if (d > 0){ hit = Math.min(1, d / 60); break; }
-    }
-    SH[j*n+i] = 1 - hit * 0.78;
-  }
-
-  const step = SPAN / GRID;
-  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++){
-    const x = -SPAN/2 + SPAN * i / GRID, z = -SPAN/2 + SPAN * j / GRID;
-    const m = H[j*n+i];
-    pos.push(x, m * VSCALE, z);
-
-    const hl = at(i-1, j), hr = at(i+1, j), hd = at(i, j-1), hu = at(i, j+1);
-    const v = norm3([(hl - hr) * VSCALE, 2 * step, (hd - hu) * VSCALE]);
-    norm.push(v[0], v[1], v[2]);
-
-    let c = groundColour(m, v[1]);
-    if (m > 2){
-      const lit = (0.44 + 0.56 * AO[j*n+i]) * SH[j*n+i];
-      c = [c[0] * lit, c[1] * lit, c[2] * lit];
-    }
-    col.push(Math.min(1, c[0]), Math.min(1, c[1]), Math.min(1, c[2]));
-  }
-  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++){
-    const a = j*n+i; idx.push(a, a+n, a+1, a+1, a+n, a+n+1);
-  }
-  console.info(`terrain: ${GRID}x${GRID} grid, built in ${Math.round(performance.now() - t0)} ms, ${(pos.length/3).toLocaleString()} vertices`);
-  return makeMesh(pos, norm, col, idx);
-})();
-
-const abyssMesh = (() => {                    // hides the mesh's own edge
-  const S = 3200, c = rgb(0x03131f);
-  return makeMesh([-S,-72,-S, S,-72,-S, S,-72,S, -S,-72,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
-                  [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
-})();
-const waterMesh = (() => {
-  const S = 2100, c = rgb(0x0d4a63);
-  return makeMesh([-S,0.30,-S, S,0.30,-S, S,0.30,S, -S,0.30,S], [0,1,0, 0,1,0, 0,1,0, 0,1,0],
-                  [...c, ...c, ...c, ...c], [0,1,2, 0,2,3]);
-})();
-
-// A ribbon that follows the ground it sits on: used for the road, and for the
-// band of white water where the swell stands up on the reef.
-function ribbon(radiusFn, yLift, halfWidth, colour, jitter){
-  const pos = [], col = [], norm = [], idx = [], N = 460;
-  for (let i = 0; i <= N; i++){
-    const deg = i / N * 360;
-    const hw = halfWidth * (jitter ? 0.55 + 0.9 * vnoise(deg * 0.9, 3.7) : 1);
-    const r = radiusFn(deg);
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const tx = Math.cos(deg * Math.PI/180), tz = Math.sin(deg * Math.PI/180);
-    const y = Math.max(0, heightAt(x + CX, z + CY)) * VSCALE + yLift;
-    pos.push(x - tx*hw, y, z - tz*hw, x + tx*hw, y, z + tz*hw);
-    norm.push(0,1,0, 0,1,0); col.push(...colour, ...colour);
-    if (i < N){ const a = i*2; idx.push(a, a+1, a+2, a+1, a+3, a+2); }
-  }
-  return makeMesh(pos, norm, col, idx);
-}
-const roadMesh = ribbon(d => coastR(d) - 15, 1.3, 2.4, rgb(0xf7eed6), false);
-const surfMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 1, 0.9, 7, rgb(0xf2fdfb), true);
-const foamMesh = ribbon(d => coastR(d) + lagoonWidth(d) + 12, 0.7, 4, rgb(0xcdeee9), true);
-
-/* =========================================================================
-   SCENERY — what you find when you come in close.
-   Everything below is placed by rule against the terrain itself: palms where
-   the ground is low, flat and near the water; houses along the coastal strip
-   the ring road actually runs through; boats inside the reef. It is generated
-   from a fixed seed, so the island looks the same every time it loads, and it
-   is built once into two meshes so the whole lot costs two draw calls.
-   ========================================================================= */
-function rand(seed){                       // deterministic, so the island is stable
-  let s = seed >>> 0;
-  return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
-}
-// Slope from the height field. Heights are metres and distances are world
-// units, and one unit is 17.8 m — so the two have to be reconciled before the
-// gradient means anything. Missing that put palms on cliff faces.
-function flatnessAt(x, z){
-  const d = 4;
-  const gx = (heightAt(x + d, z) - heightAt(x - d, z)) / (2 * d * M_PER_UNIT);
-  const gz = (heightAt(x, z + d) - heightAt(x, z - d)) / (2 * d * M_PER_UNIT);
-  return 1 / (1 + Math.hypot(gx, gz) * 3.2);   // 1 = flat, ~0.24 at 45 degrees
-}
-
-const SceneryBuilder = () => {
-  const pos = [], norm = [], col = [], idx = [];
-  let base = 0;
-  const tri = (a, b, c, colour) => {
-    const n = norm3(cross3([b[0]-a[0], b[1]-a[1], b[2]-a[2]], [c[0]-a[0], c[1]-a[1], c[2]-a[2]]));
-    for (const v of [a, b, c]){ pos.push(v[0], v[1], v[2]); norm.push(n[0], n[1], n[2]); col.push(...colour); }
-    idx.push(base, base + 1, base + 2); base += 3;
-  };
-  const quad = (a, b, c, d, colour) => { tri(a, b, c, colour); tri(a, c, d, colour); };
-  return { pos, norm, col, idx, tri, quad, count: () => base,
-           mesh: () => makeSoup(pos, norm, col) };
-};
-
-// A coconut palm: a leaning trunk and six fronds. Ten triangles, which is all
-// it needs to be at the size these are seen.
-function addPalm(S, x, y, z, h, lean, rnd){
-  const trunk = [0x6b5136, 0x7a5c3e][rnd() > 0.5 ? 1 : 0];
-  const tc = [(trunk>>16&255)/255, (trunk>>8&255)/255, (trunk&255)/255];
-  const lx = Math.cos(lean) * h * 0.16, lz = Math.sin(lean) * h * 0.16;
-  const r = h * 0.035;
-  const top = [x + lx, y + h, z + lz];
-  S.quad([x-r, y, z], [x+r, y, z], [top[0]+r*0.5, top[1], top[2]], [top[0]-r*0.5, top[1], top[2]], tc);
-  S.quad([x, y, z-r], [x, y, z+r], [top[0], top[1], top[2]+r*0.5], [top[0], top[1], top[2]-r*0.5], tc);
-  const green = rnd() > 0.5 ? [0.13, 0.42, 0.20] : [0.17, 0.50, 0.24];
-  const spread = h * 0.42, droop = h * 0.17;
-  for (let i = 0; i < 6; i++){
-    const a = (i / 6) * Math.PI * 2 + rnd() * 0.4;
-    const ex = top[0] + Math.cos(a) * spread, ez = top[2] + Math.sin(a) * spread;
-    S.tri([top[0], top[1] + h * 0.06, top[2]],
-          [ex, top[1] - droop, ez],
-          [top[0] + Math.cos(a + 0.5) * spread * 0.5, top[1] - droop * 0.4,
-           top[2] + Math.sin(a + 0.5) * spread * 0.5], green);
-  }
-}
-
-// A house: walls and a pitched roof, in the colours these actually are —
-// pale walls, and roofs in the reds, blues and greens of painted corrugate.
-const ROOFS = [[0.72,0.24,0.20],[0.20,0.36,0.58],[0.24,0.46,0.32],[0.62,0.60,0.56],[0.78,0.56,0.24]];
-function addHouse(S, x, y, z, w, d, hh, rot, rnd){
-  const wall = rnd() > 0.35 ? [0.90,0.88,0.82] : [0.80,0.78,0.72];
-  const roof = ROOFS[(rnd() * ROOFS.length) | 0];
-  const c = Math.cos(rot), s = Math.sin(rot);
-  const P = (dx, dy, dz) => [x + dx * c - dz * s, y + dy, z + dx * s + dz * c];
-  const a = P(-w,0,-d), b = P(w,0,-d), e = P(w,0,d), f = P(-w,0,d);
-  const a2 = P(-w,hh,-d), b2 = P(w,hh,-d), e2 = P(w,hh,d), f2 = P(-w,hh,d);
-  S.quad(a, b, b2, a2, wall); S.quad(b, e, e2, b2, wall);
-  S.quad(e, f, f2, e2, wall); S.quad(f, a, a2, f2, wall);
-  const r1 = P(0, hh + hh * 0.65, -d * 1.12), r2 = P(0, hh + hh * 0.65, d * 1.12);
-  const o = 1.16;
-  const a3 = P(-w*o, hh, -d*o), b3 = P(w*o, hh, -d*o), e3 = P(w*o, hh, d*o), f3 = P(-w*o, hh, d*o);
-  S.quad(a3, b3, r1, r1, roof);            // gable ends
-  S.quad(f3, e3, r2, r2, roof);
-  S.quad(a3, r1, r2, f3, roof);            // the two pitches
-  S.quad(b3, e3, r2, r1, roof);
-}
-
-const scenery = (() => {
-  const S = SceneryBuilder(), rnd = rand(20260907);
-  let palms = 0, houses = 0, tufts = 0;
-
-  // Palms: the coastal fringe, where they actually grow — low, flat, near water.
-  for (let i = 0; i < 30000 && palms < 3200; i++){
-    const deg = rnd() * 360;
-    const cr = coastR(deg);
-    const r = cr - Math.pow(rnd(), 1.7) * 78;        // biased hard toward the shore
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const m = heightAt(x + CX, z + CY);
-    if (m < 6 || m > 110) continue;
-    if (flatnessAt(x + CX, z + CY) < 0.45) continue;
-    addPalm(S, x, m * VSCALE, z, 6.5 + rnd() * 5.5, rnd() * Math.PI * 2, rnd);
-    palms++;
-  }
-  // Jungle. The interior of Rarotonga is solid canopy to the ridgeline, and a
-  // bare green hillside is the thing that most gives away a generated island.
-  // These are three-triangle tufts — no detail up close, but from any distance
-  // you actually view the island from, they read as forest.
-  for (let i = 0; i < 40000 && tufts < 5200; i++){
-    const deg = rnd() * 360;
-    const r = coastR(deg) * (0.10 + rnd() * 0.82);
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const m = heightAt(x + CX, z + CY);
-    if (m < 25 || m > 430) continue;
-    const flat = flatnessAt(x + CX, z + CY);
-    if (flat < 0.18) continue;                    // even here, not on bare rock
-    const y = m * VSCALE;
-    const size = 3.0 + rnd() * 4.0;
-    const dark = 0.62 + rnd() * 0.55;
-    const g = [0.13 * dark, 0.36 * dark, 0.16 * dark];
-    // Crowns are wider than they are tall. Making them tall spikes turned the
-    // tropics into a spruce plantation.
-    for (let k = 0; k < 3; k++){
-      const a = rnd() * Math.PI * 2, sp = size * (0.9 + rnd() * 0.7);
-      S.tri([x, y + size * 0.62, z],
-            [x + Math.cos(a) * sp, y + size * 0.12, z + Math.sin(a) * sp],
-            [x + Math.cos(a + 2.4) * sp, y + size * 0.12, z + Math.sin(a + 2.4) * sp], g);
-    }
-    tufts++;
-  }
-
-  // Houses: strung along the ring road, thinning inland up the valleys.
-  for (let i = 0; i < 18000 && houses < 1100; i++){
-    const deg = rnd() * 360;
-    const cr = coastR(deg);
-    const r = cr - 8 - Math.pow(rnd(), 1.5) * 62;
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const m = heightAt(x + CX, z + CY);
-    if (m < 7 || m > 70) continue;
-    if (flatnessAt(x + CX, z + CY) < 0.62) continue;
-    addHouse(S, x, m * VSCALE, z, 2.4 + rnd() * 1.6, 2.0 + rnd() * 1.4,
-             2.2 + rnd() * 1.1, deg * Math.PI / 180 + (rnd() - 0.5), rnd);
-    houses++;
-  }
-  // A few boats inside the reef, because the lagoon is never empty.
-  for (let i = 0; i < 26; i++){
-    const deg = rnd() * 360, cr = coastR(deg), lw = lagoonWidth(deg);
-    if (lw < 26) continue;                            // only where there is room
-    const r = cr + 6 + rnd() * (lw - 12);
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const rot = rnd() * Math.PI * 2, c = Math.cos(rot), s = Math.sin(rot), L = 3.4, W = 0.9;
-    const P = (dx, dz) => [x + dx * c - dz * s, 0.9, z + dx * s + dz * c];
-    S.tri(P(L, 0), P(-L * 0.6, W), P(-L * 0.6, -W), [0.94, 0.94, 0.92]);
-  }
-  console.info(`scenery: ${palms} palms, ${tufts} canopy tufts, ${houses} buildings, ${S.count().toLocaleString()} vertices`);
-  return S.mesh();
-})();
-
-// Cloud. On Rarotonga it sits on the ridge most mornings and burns off by ten,
-// and it is half of why the island looks the way it does in photographs. These
-// are soft horizontal sheets over the interior rather than volumetric puffs —
-// from any angle you actually orbit at, that is what cloud on a ridge looks like.
-const cloudMesh = (() => {
-  const S = SceneryBuilder(), rnd = rand(77123);
-  for (let c = 0; c < 16; c++){
-    const deg = rnd() * 360, r = coastR(deg) * (0.05 + rnd() * 0.5);
-    const x = px(deg, r) - CX, z = py(deg, r) - CY;
-    const ground = heightAt(x + CX, z + CY);
-    if (ground < 150) continue;
-    const y = (ground + 60 + rnd() * 140) * VSCALE;
-    const R = 16 + rnd() * 26, lobes = 4 + (rnd() * 3 | 0);
-    const white = [1, 1, 1];
-    for (let l = 0; l < lobes; l++){
-      const a = (l / lobes) * Math.PI * 2 + rnd() * 0.5;
-      const cx2 = x + Math.cos(a) * R * 0.55, cz2 = z + Math.sin(a) * R * 0.55;
-      const rr = R * (0.45 + rnd() * 0.45);
-      for (let t = 0; t < 7; t++){                       // a flat fan per lobe
-        const a0 = t / 7 * Math.PI * 2, a1 = (t + 1) / 7 * Math.PI * 2;
-        S.tri([cx2, y, cz2],
-              [cx2 + Math.cos(a0) * rr, y, cz2 + Math.sin(a0) * rr],
-              [cx2 + Math.cos(a1) * rr, y, cz2 + Math.sin(a1) * rr], white);
-      }
-    }
-  }
-  return S.mesh();
-})();
+// Raymarching costs per pixel, so the pixel count adapts: full detail when the
+// island is still, coarser while you are moving it. This is how every renderer
+// of this kind stays usable on a phone.
+let renderScale = 1, frameMs = 16, octaves = 5;
+const T0 = performance.now();
 
 function drawScene(){
-  gl.clearColor(0, 0, 0, 0);                    // the sky is painted in CSS behind
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  gl.enable(gl.DEPTH_TEST);
-  gl.uniformMatrix4fv(U.mvp, false, new Float32Array(viewProj));
-  gl.uniform3f(U.light, -0.55, 0.62, 0.40);     // late afternoon, from the west
-  gl.uniform3f(U.fog, 0.07, 0.22, 0.32);
-  gl.uniform3f(U.eye, camEye[0], camEye[1], camEye[2]);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-  gl.depthMask(true);
-  drawMesh(abyssMesh, 1);
-  drawMesh(islandMesh, 1, "ground");
-  drawMesh(roadMesh, 1);
-  // Detail earns its place only when you are near it: from orbit it is noise,
-  // and skipping it keeps the far view cheap.
-  if (cam.dist < 820) drawMesh(scenery, 1);
-  gl.depthMask(false);
-  drawMesh(waterMesh, 0.50, "water");
-  drawMesh(surfMesh, 0.92);
-  drawMesh(foamMesh, 0.45);
-  if (cam.dist > 380) drawMesh(cloudMesh, 0.18);   // from underneath it just fogs the view
-  gl.depthMask(true);
+  const moving = ptrs.size > 0 || glide !== 0;   // a live gesture or a running animation
+  const target = moving ? Math.min(renderScale, 0.62) : renderScale;
+  const dpr = Math.min(devicePixelRatio || 1, 2) * target;
+  const w = Math.max(2, Math.floor(innerWidth * dpr)), h = Math.max(2, Math.floor(innerHeight * dpr));
+  if (canvas.width !== w || canvas.height !== h){
+    canvas.width = w; canvas.height = h;
+    canvas.style.width = innerWidth + "px";
+    canvas.style.height = innerHeight + "px";
+  }
+  gl.viewport(0, 0, w, h);
+
+  const r = cam.dist * Math.cos(cam.el);
+  const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
+  const fwd = norm3([cam.tx - eye[0], -eye[1], cam.tz - eye[2]]);
+  const right = norm3(cross3(fwd, [0,1,0]));
+  const up = cross3(right, fwd);
+
+  const t = performance.now();
+  gl.uniform2f(U.uRes, w, h);
+  gl.uniform3f(U.uEye, eye[0], eye[1], eye[2]);
+  gl.uniform3f(U.uFwd, fwd[0], fwd[1], fwd[2]);
+  gl.uniform3f(U.uRight, right[0], right[1], right[2]);
+  gl.uniform3f(U.uUp, up[0], up[1], up[2]);
+  gl.uniform1f(U.uFov, Math.tan(46 * Math.PI / 360));
+  gl.uniform1f(U.uAspect, w / h);
+  gl.uniform1f(U.uOct, moving ? Math.max(3, octaves - 1) : octaves);
+  gl.uniform1f(U.uTime, (t - T0) / 1000);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // Measure and settle on a resolution this device can actually hold.
+  gl.finish();
+  frameMs = frameMs * 0.8 + (performance.now() - t) * 0.2;
+  if (frameMs > 55 && renderScale > 0.4) renderScale = Math.max(0.4, renderScale - 0.06);
+  else if (frameMs < 18 && renderScale < 1) renderScale = Math.min(1, renderScale + 0.04);
 }
 
 /* =========================================================================
@@ -1400,19 +1274,11 @@ function placeCamera(){
   const r = cam.dist * Math.cos(cam.el);
   const eye = [cam.tx + r * Math.sin(cam.az), cam.dist * Math.sin(cam.el), cam.tz + r * Math.cos(cam.az)];
   camEye = eye;
-  const proj = mPerspective(46 * Math.PI/180, canvas.width / canvas.height || 1, 4, 5200);
+  const proj = mPerspective(46 * Math.PI/180, innerWidth / innerHeight || 1, 4, 5200);
   viewProj = mMul(proj, mLookAt(eye, [cam.tx, 0, cam.tz], [0,1,0]));
   camDirty = true;
 }
-function resize(){
-  const dpr = Math.min(devicePixelRatio || 1, 2);
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  canvas.style.width = innerWidth + "px";
-  canvas.style.height = innerHeight + "px";
-  gl.viewport(0, 0, canvas.width, canvas.height);
-  placeCamera();
-}
+function resize(){ placeCamera(); }
 addEventListener("resize", resize);
 
 /* ---------- gestures ---------- */
