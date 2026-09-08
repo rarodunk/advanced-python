@@ -64,7 +64,7 @@ LL = {
     # The south: Vaimaanga and Titikaveka
     "wigmores":      (-21.2600, -159.7770),
     "sheraton":      (-21.2755, -159.7900),
-    "vaima":         (-21.2725, -159.8035),
+    "vaima":         (-21.2640, -159.7935),   # published GPS, Vaimaanga beachfront
     "nustall":       (-21.2790, -159.7800),
     "titikavekacicc":(-21.2790, -159.7640),
     "matutu":        (-21.2745, -159.7690),

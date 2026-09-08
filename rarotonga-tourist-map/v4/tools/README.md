@@ -26,9 +26,30 @@ embeds it as a data URI and an artifact may not exceed 16 MB. `--max-px` and
 `--quality` adjust that; the script prints the embedded size and warns if it
 is close to the limit.
 
-`python3 tools/test_fetch_imagery.py` runs the whole fetch against a local tile
-server and checks that tiles land in the right place and that the recorded
-bounding box georeferences the mosaic exactly. It needs no network.
+Three tests, none of which need a network:
+
+    python3 tools/test_fetch_imagery.py   # tile placement and georeferencing
+    python3 tools/test_tiles.py           # live tile layer, both on and off
+    python3 tools/test_pin_editor.py      # drag-to-correct, persistence, reset
+
+## Zooming past the mosaic
+
+The mosaic is one image at roughly 3 m per pixel, so on its own it can only be
+magnified, not resolved. Where the page can reach the tile service it draws
+Esri tiles at the level matching the current view and goes to street level;
+where it cannot — the artifact host blocks third-party images — a probe fails,
+the layer stays off and the mosaic carries the map exactly as before. Point it
+at another provider by setting `window.RARO_TILE_URL` before the page script,
+using `{z}` `{x}` `{y}` placeholders.
+
+## Correcting a pin
+
+Coordinates for small island businesses are not reliably published, so some
+pins start off by a block or two. Press `e` (or the crosshair in the rail) and
+drag any pin onto the right spot; the panel gives you the corrected values as
+a snippet to paste into `tools/geo.py`, which every version is built from.
+Edits are kept in the browser until you paste them back, and "Reset all"
+restores the built-in coordinates.
 
 ## What is committed
 

@@ -29,7 +29,7 @@ function toImg(deg, r){ const g = latLonOfModel(deg, r); return llToImg(g.lat, g
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const ISLAND_PX = llToImg(-21.242, -159.780);           // the island's centre in the mosaic
 const cam = { x: ISLAND_PX.x, y: ISLAND_PX.y, zoom: 0.4 };
-let camDirty = true, minZoom = 0.2, MAX_ZOOM = 2.2;
+let camDirty = true, minZoom = 0.2, MAX_ZOOM = 2.2;   // raised once live tiles answer
 const ISLAND_SPAN = llToImg(-21.242, -159.723).x - llToImg(-21.242, -159.837).x;   // ~12 km in image px
 function fitZoom(){ return Math.min(innerWidth, innerHeight * 1.25) / ISLAND_SPAN * 0.84; }
 // Home view: the island fills the width. In portrait that means bleeding a
@@ -134,6 +134,93 @@ document.getElementById("zout").onclick  = () => animateCam({ zoom: cam.zoom / 1
 document.getElementById("reset").onclick = () => animateCam(CAM_HOME());
 
 /* =========================================================================
+   LIVE TILES — the baked mosaic is a floor, not a ceiling.
+
+   The mosaic is one image at roughly 3 m per pixel, so zooming past it only
+   magnifies pixels. Where the page can reach the tile service (a local file,
+   your own hosting, the iOS build) it draws Esri tiles at the zoom level that
+   matches the current view, which is the same imagery your phone's Maps shows
+   and goes to street level. Where it cannot — the artifact host blocks
+   third-party images — the probe below fails, the layer stays off and the
+   mosaic carries the map exactly as before.
+   ========================================================================= */
+// Overridable so a different provider (or a test server) can be pointed at it.
+const TILE_URL = (typeof window !== "undefined" && window.RARO_TILE_URL) ||
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const TILE_ZMAX = 18;                       // Esri's deepest reliable level here
+let tilesOn = false;
+
+const tileLayer = document.createElement("div");
+Object.assign(tileLayer.style, { position:"absolute", left:"0", top:"0", width:IMG_W + "px",
+                                 height:IMG_H + "px", pointerEvents:"none" });
+world.appendChild(tileLayer);
+const tileNodes = new Map();
+
+// cam.zoom at which one tile pixel equals one screen pixel for a given level
+const camZoomForLevel = z => Math.pow(2, z) * 256 * (MX1 - MX0) / IMG_W;
+function levelForCam(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const z = Math.log2(cam.zoom * dpr * IMG_W / ((MX1 - MX0) * 256));
+  return clamp(Math.round(z), 10, TILE_ZMAX);
+}
+// a tile's box in mosaic-image pixels, which is the space #world is drawn in
+function tileBox(z, tx, ty){
+  const n = Math.pow(2, z);
+  return { x: (tx / n - MX0) / (MX1 - MX0) * IMG_W,
+           y: (ty / n - MY0) / (MY1 - MY0) * IMG_H,
+           w: (1 / n) / (MX1 - MX0) * IMG_W,
+           h: (1 / n) / (MY1 - MY0) * IMG_H };
+}
+function drawTiles(){
+  if (!tilesOn) return;
+  const z = levelForCam(), n = Math.pow(2, z);
+  const hw = innerWidth / 2 / cam.zoom, hh = innerHeight / 2 / cam.zoom;
+  const toMercX = ix => MX0 + ix / IMG_W * (MX1 - MX0);
+  const toMercY = iy => MY0 + iy / IMG_H * (MY1 - MY0);
+  const x0 = Math.floor(toMercX(Math.max(0, cam.x - hw)) * n);
+  const x1 = Math.floor(toMercX(Math.min(IMG_W, cam.x + hw)) * n);
+  const y0 = Math.floor(toMercY(Math.max(0, cam.y - hh)) * n);
+  const y1 = Math.floor(toMercY(Math.min(IMG_H, cam.y + hh)) * n);
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > 240) return;      // never flood the network
+  const want = new Set();
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++){
+    const key = z + "/" + tx + "/" + ty;
+    want.add(key);
+    if (tileNodes.has(key)) continue;
+    const b = tileBox(z, tx, ty), img = new Image();
+    Object.assign(img.style, { position:"absolute", left:b.x + "px", top:b.y + "px",
+      width:Math.ceil(b.w + 1) + "px", height:Math.ceil(b.h + 1) + "px",
+      maxWidth:"none", maxHeight:"none", opacity:"0", transition:"opacity .18s" });
+    img.decoding = "async"; img.loading = "eager";
+    img.onload = () => { img.style.opacity = "1"; };
+    img.onerror = () => { img.remove(); tileNodes.delete(key); };
+    img.src = TILE_URL.replace("{z}", z).replace("{x}", tx).replace("{y}", ty);
+    tileLayer.appendChild(img);
+    tileNodes.set(key, img);
+  }
+  // keep the level below as a backdrop while this one loads, drop the rest
+  for (const [key, img] of tileNodes){
+    if (want.has(key)) continue;
+    if (+key.split("/")[0] === z - 1) continue;
+    img.remove(); tileNodes.delete(key);
+  }
+}
+// Probe one tile over the island. Success is the only thing that turns the
+// layer on, so a blocked or offline page simply keeps the mosaic.
+(function probeTiles(){
+  const z = 12, n = Math.pow(2, z);
+  const tx = Math.floor(mercX(-159.78) * n), ty = Math.floor(mercY(-21.24) * n);
+  const probe = new Image();
+  probe.onload = () => {
+    tilesOn = true;
+    MAX_ZOOM = camZoomForLevel(TILE_ZMAX) * 2;          // a little upscaling past the deepest level
+    camDirty = true;
+  };
+  probe.onerror = () => { tilesOn = false; };
+  probe.src = TILE_URL.replace("{z}", z).replace("{x}", tx).replace("{y}", ty);
+})();
+
+/* =========================================================================
    MARKERS — HTML pins placed over the painting. Screen-space, so they stay
    the same size at every zoom and never blur with the image.
    ========================================================================= */
@@ -163,6 +250,105 @@ PLACES.forEach(p => {
   p.latlon = latLonOf(p); p.img = llToImg(p.latlon.lat, p.latlon.lon);
 });
 
+/* =========================================================================
+   ADJUST PINS — correct a coordinate against the imagery you are looking at.
+
+   Coordinates for small island businesses are not reliably published, so some
+   pins start off by a block or two. Rather than guess from a desk, this lets
+   whoever is looking at the map drag a pin onto the right roof and hands the
+   corrected numbers back as a snippet for tools/geo.py, which is the single
+   source every version of the guide is built from.
+
+   Press "e", or the ✥ button, to turn it on. Edits are kept in this browser
+   until you paste them back.
+   ========================================================================= */
+const FIX_KEY = "raro4.pinfix";
+let editing = false;
+const fixes = new Map(Object.entries(load(FIX_KEY, {})));
+
+// anything corrected in a previous session applies before the first draw
+for (const [id, ll] of fixes){
+  const p = PLACES.find(q => q.id === id);
+  if (p){ p.latlon = { lat: ll[0], lon: ll[1] }; p.img = llToImg(ll[0], ll[1]); }
+}
+
+const screenToImg = (sx, sy) => ({ x: (sx - innerWidth / 2) / cam.zoom + cam.x,
+                                   y: (sy - innerHeight / 2) / cam.zoom + cam.y });
+
+const fixPanel = document.createElement("div");
+fixPanel.id = "fixPanel"; fixPanel.hidden = true;
+document.body.appendChild(fixPanel);
+
+function renderFixPanel(){
+  if (!editing){ fixPanel.hidden = true; return; }
+  fixPanel.hidden = false;
+  const rows = [...fixes].map(([id, ll]) =>
+    `    "${id}": (${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}),`).join("\n");
+  fixPanel.innerHTML = `
+    <b>Adjust pins</b>
+    <p>Drag any pin onto the right spot. Paste the result into
+       <code>tools/geo.py</code> and rebuild.</p>
+    ${fixes.size ? `<pre>${rows}</pre>
+      <div class="fixbtns"><button id="fixCopy">Copy</button>
+      <button id="fixClear">Reset all</button></div>`
+     : `<p class="muted">Nothing moved yet.</p>`}
+    <div class="fixbtns"><button id="fixDone">Done</button></div>`;
+  const c = document.getElementById("fixCopy");
+  if (c) c.onclick = () => {
+    navigator.clipboard?.writeText(rows + "\n").then(() => toast("Copied"), () => toast("Copy failed"));
+  };
+  const r = document.getElementById("fixClear");
+  if (r) r.onclick = () => {
+    for (const id of [...fixes.keys()]){
+      const p = PLACES.find(q => q.id === id);
+      if (p && p.ll){ p.latlon = { lat: p.ll[0], lon: p.ll[1] }; p.img = llToImg(p.ll[0], p.ll[1]); }
+    }
+    fixes.clear(); save(FIX_KEY, {}); camDirty = true; renderFixPanel();
+  };
+  document.getElementById("fixDone").onclick = () => setEditing(false);
+}
+function setEditing(on){
+  editing = on;
+  document.body.classList.toggle("editing", on);
+  renderFixPanel();
+  if (on) toast("Drag a pin to correct it");
+}
+document.getElementById("editBtn").onclick = () => setEditing(!editing);
+addEventListener("keydown", e => {
+  if (e.key === "e" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || "")) setEditing(!editing);
+  if (e.key === "Escape" && editing) setEditing(false);
+});
+
+// Dragging is wired per pin in drawMarkers' creation loop below via this helper.
+function makeDraggable(el, p){
+  el.addEventListener("pointerdown", ev => {
+    if (!editing) return;
+    ev.preventDefault(); ev.stopPropagation();
+    el.setPointerCapture(ev.pointerId);
+    const start = screenToImg(ev.clientX, ev.clientY);
+    const grab = { dx: p.img.x - start.x, dy: p.img.y - start.y };
+    let dragged = false;
+    const move = m => {
+      const q = screenToImg(m.clientX, m.clientY);
+      p.img = { x: q.x + grab.dx, y: q.y + grab.dy };
+      const ll = imgToLL(p.img.x, p.img.y);
+      p.latlon = ll;
+      dragged = true;
+      camDirty = true;
+    };
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      if (!dragged) return;
+      fixes.set(p.id, [p.latlon.lat, p.latlon.lon]);
+      save(FIX_KEY, Object.fromEntries(fixes));
+      renderFixPanel();
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+  });
+}
+
 const layer = document.getElementById("markers");
 const nodes = new Map();
 PLACES.forEach(p => {
@@ -170,7 +356,8 @@ PLACES.forEach(p => {
   el.className = "mk";
   el.innerHTML = `<span class="dot" style="background:${CATS[p.group].color}">
       <span>${CATS[p.group].icon}</span></span><span class="cap">${p.name}</span>`;
-  el.onclick = ev => { ev.stopPropagation(); openPlace(p.id); };
+  el.onclick = ev => { ev.stopPropagation(); if (!editing) openPlace(p.id); };
+  makeDraggable(el, p);
   layer.appendChild(el);
   nodes.set(p.id, el);
 });
@@ -207,7 +394,7 @@ function drawMarkers(){
   }
 }
 function render(){
-  if (camDirty){ drawMarkers(); camDirty = false; }
+  if (camDirty){ drawTiles(); drawMarkers(); camDirty = false; }
   requestAnimationFrame(render);
 }
 

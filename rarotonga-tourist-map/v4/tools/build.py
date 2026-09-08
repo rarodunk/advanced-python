@@ -21,7 +21,27 @@ head = head.replace("background:linear-gradient(#5aa4dc 0%,#1e5f98 40%,#0f4a7a 6
 assert "#5aa4dc" not in head
 head = head.replace('  <canvas id="gl"></canvas>\n', '  <div id="world"><img id="island" alt="Rarotonga, painted from the south-west"></div>\n')
 head = head.replace('<b>Rarotonga</b><small>Building the island</small>', '<b>Rarotonga</b><small>Loading the island</small>')
-head = head.replace('  <button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>\n', '')
+# the 3D tilt has no meaning on a north-up photo; the slot becomes "adjust pins"
+head = head.replace('<button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>',
+                    '<button class="iconbtn" id="editBtn" title="Adjust pins (press e)">\u2725</button>')
+head = head.replace('#world svg{', '''#fixPanel{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;
+  width:min(350px,calc(100vw - 28px));background:#101d2b;border:1px solid #24384c;border-radius:14px;
+  padding:14px 15px;color:#eaf4f5;font-size:12.5px;line-height:1.5;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#fixPanel b{display:block;font-size:13.5px;margin-bottom:5px}
+#fixPanel p{margin:0 0 9px;color:#9fb8c2}
+#fixPanel p.muted{font-style:italic}
+#fixPanel code{background:#08131d;padding:1px 5px;border-radius:4px}
+#fixPanel pre{margin:0 0 10px;padding:9px 10px;background:#08131d;border-radius:9px;overflow:auto;
+  max-height:190px;font-size:11.5px;color:#bfe4d8;white-space:pre;-webkit-overflow-scrolling:touch}
+#fixPanel .fixbtns{display:flex;gap:7px;margin-top:7px}
+#fixPanel button{flex:1;padding:8px;border-radius:9px;background:#1d3247;color:#eaf4f5;
+  font:inherit;font-weight:600;border:0;cursor:pointer}
+#fixPanel button:hover{background:#26415c}
+body.editing .mk{cursor:grab}
+body.editing .mk:active{cursor:grabbing}
+body.editing .mk .dot{box-shadow:0 0 0 3px rgba(255,210,90,.75)}
+#world svg{''')
+assert "editBtn" in head and "fixPanel" in head
 head = head.replace('<div class="modal" id="modal">', '<div class="credit" id="credit"></div>\n<div class="modal" id="modal">')
 head = head.replace('#world svg{', '.credit{position:fixed;left:8px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;font-size:10px;color:#cfd8e3;background:rgba(6,20,36,.55);padding:3px 7px;border-radius:6px;pointer-events:none;max-width:70vw}\n#world svg{')
 assert '#world' in head and 'id="island"' in head and 'tiltBtn' not in head
