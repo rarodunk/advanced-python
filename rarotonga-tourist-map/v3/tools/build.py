@@ -41,5 +41,5 @@ assert 'p.img.x' in tail and 'CAM_HOME()' in tail
 for bad in ["tiltBtn", "p.world", "drawScene", "viewProj"]: assert bad not in tail, bad
 jpg = base64.b64encode((VER / "island.jpg").read_bytes()).decode()
 out = head + "\n" + 'const ISLAND_JPG = "data:image/jpeg;base64,' + jpg + '";\n' + mid + "\n" + tail
-(VER / "index.html").write_text(out)
+(VER / "index.html").write_text('<meta charset="utf-8">\n' + out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")

@@ -17,6 +17,7 @@
 
     pip3 install pillow
     python3 tools/fetch_imagery.py        # ~775 tiles at zoom 16, a few minutes
+    python3 tools/fetch_terrain.py        # the elevation the 3D setting drapes
     python3 v4/tools/build.py
 
 Then open `v4/index.html` in a browser. Every path in these scripts is derived
@@ -32,11 +33,36 @@ embeds it as a data URI and an artifact may not exceed 16 MB. `--max-px` and
 `--quality` adjust that; the script prints the embedded size and warns if it
 is close to the limit.
 
-Three tests, none of which need a network:
+Four tests, none of which need a network:
 
     python3 tools/test_fetch_imagery.py   # tile placement and georeferencing
     python3 tools/test_tiles.py           # live tile layer, both on and off
     python3 tools/test_pin_editor.py      # drag-to-correct, persistence, reset
+    python3 tools/test_3d.py              # the 3D setting: mesh, drape, pins
+
+## The 3D setting
+
+Press `3`, or the 3D button in the rail, and the same map becomes terrain. It
+is lifelike for the same reason the flat map is accurate: both halves are real.
+`tools/fetch_terrain.py` fetches the AWS Open Data elevation tiles (Terrarium
+encoding, no key) into `v4/terrain.png`, the page builds a draped mesh from
+them, and the satellite mosaic is the texture. Nothing is shaded procedurally
+and nothing is painted by hand; the light in the picture is the light that was
+there when the satellite passed.
+
+Drag to orbit, wheel or pinch to move in and out, and the map hands the view
+back to 2D over the same ground. Pins are lifted onto the terrain, so the ones
+on Te Manga stand at 653 m and the ones in Muri sit on the water.
+
+Two constants in `v4/tools/globe.js` are worth knowing about. `VEX` is the
+vertical exaggeration and ships at `1.0`, life-size; raise it to about `1.4` if
+you want the interior to read more dramatically than it does from a plane. The
+draped texture is the baked mosaic, not the live tile layer, so the deepest
+zoom detail is a 2D feature.
+
+If `v4/terrain.png` is missing, `build_all.py` draws a stand-in from the six
+surveyed summits (`tools/standin_terrain.py`) so the setting works before any
+fetch. It never overwrites a fetched grid.
 
 ## Zooming past the mosaic
 
@@ -61,7 +87,8 @@ restores the built-in coordinates.
 
 `imagery.jpg` here is a synthetic stand-in drawn from the island model by
 `standin.js`, so the page builds and tests offline; the page labels itself as
-such. Running the fetch replaces it.
+such. Running the fetch replaces it. `terrain.png` is the stand-in elevation
+grid, on the same terms.
 
 ## For the App Store build
 

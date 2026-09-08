@@ -13,5 +13,18 @@
   "edge": {
     "top": "#082748",
     "bottom": "#082748"
+  },
+  "terrain": {
+    "bbox": [
+      -159.87,
+      -21.3,
+      -159.705,
+      -21.17
+    ],
+    "width": 768,
+    "height": 768,
+    "zoom": null,
+    "encoding": "terrarium",
+    "source": "synthetic stand-in from the surveyed summits"
   }
 }

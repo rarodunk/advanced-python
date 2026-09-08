@@ -368,10 +368,15 @@ function drawMarkers(){
   // Zoomed in, every pin carries its name; zoomed out only the heroes do, so
   // the island reads at a glance instead of arriving as a wall of labels.
   const zi = cam.zoom * ISLAND_SPAN / 2000;             // 1 = island 2000 px wide, whatever the mosaic's resolution
-  const near = zi > 0.9, mid = zi > 0.45, tiny = zi < 0.33;
+  const near = window.mode3d ? false : zi > 0.9,
+        mid  = window.mode3d ? true  : zi > 0.45,
+        tiny = window.mode3d ? false : zi < 0.33;
   for (const p of PLACES){
-    const el = nodes.get(p.id), s = project(p.img);
-    if (s.x < -80 || s.x > w + 80 || s.y < -60 || s.y > h + 60){ el.style.display = "none"; continue; }
+    const el = nodes.get(p.id);
+    // in the 3D setting a place sits on the terrain, so it projects through
+    // that camera instead of the plan view's flat transform
+    const s = (window.mode3d && window.project3D) ? project3D(p) : project(p.img);
+    if (!s || s.x < -80 || s.x > w + 80 || s.y < -60 || s.y > h + 60){ el.style.display = "none"; continue; }
     el.style.display = "";
     el.style.transform = `translate(${s.x}px,${s.y}px) translate(-50%,-100%)`;
     el.style.zIndex = String(1000 + Math.round(s.y));      // lower on screen draws on top, like depth
@@ -394,7 +399,10 @@ function drawMarkers(){
   }
 }
 function render(){
-  if (camDirty){ drawTiles(); drawMarkers(); camDirty = false; }
+  if (camDirty){
+    if (window.mode3d) draw3D(); else drawTiles();
+    drawMarkers(); camDirty = false;
+  }
   requestAnimationFrame(render);
 }
 

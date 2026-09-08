@@ -23,7 +23,8 @@ head = head.replace('  <canvas id="gl"></canvas>\n', '  <div id="world"><img id=
 head = head.replace('<b>Rarotonga</b><small>Building the island</small>', '<b>Rarotonga</b><small>Loading the island</small>')
 # the 3D tilt has no meaning on a north-up photo; the slot becomes "adjust pins"
 head = head.replace('<button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>',
-                    '<button class="iconbtn" id="editBtn" title="Adjust pins (press e)">\u2725</button>')
+                    '<button class="iconbtn" id="d3Btn" title="3D setting (press 3)" disabled><span class="lbl">3D</span></button>\n'
+                    '  <button class="iconbtn" id="editBtn" title="Adjust pins (press e)">\u2725</button>')
 head = head.replace('#world svg{', '''#fixPanel{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;
   width:min(350px,calc(100vw - 28px));background:#101d2b;border:1px solid #24384c;border-radius:14px;
   padding:14px 15px;color:#eaf4f5;font-size:12.5px;line-height:1.5;box-shadow:0 18px 50px rgba(0,0,0,.5)}
@@ -40,6 +41,9 @@ head = head.replace('#world svg{', '''#fixPanel{position:fixed;right:14px;bottom
 body.editing .mk{cursor:grab}
 body.editing .mk:active{cursor:grabbing}
 body.editing .mk .dot{box-shadow:0 0 0 3px rgba(255,210,90,.75)}
+#globe{display:block}
+.iconbtn:disabled{opacity:.4;cursor:default}
+.iconbtn.on{background:#1d6fd0;color:#fff}
 #world svg{''')
 assert "editBtn" in head and "fixPanel" in head
 head = head.replace('<div class="modal" id="modal">', '<div class="credit" id="credit"></div>\n<div class="modal" id="modal">')
@@ -67,6 +71,13 @@ tail = tail.replace('setTimeout(() => document.getElementById("loading").classLi
 assert 'p.img.x' in tail and 'CAM_HOME()' in tail
 for bad in ["tiltBtn", "p.world", "drawScene", "viewProj"]: assert bad not in tail, bad
 jpg = base64.b64encode((V4 / "imagery.jpg").read_bytes()).decode()
-out = head + "\n" + 'const ISLAND_JPG = "data:image/jpeg;base64,' + jpg + '";\nconst IMAGERY = ' + json.dumps(meta) + ';\n' + mid + "\n" + tail
-(VER / "index.html").write_text(out)
+terr = base64.b64encode((VER / "terrain.png").read_bytes()).decode()
+globe = (HERE / "globe.js").read_text()
+out = (head + "\n"
+       + 'const ISLAND_JPG = "data:image/jpeg;base64,' + jpg + '";\n'
+       + 'const TERRAIN_PNG = "data:image/png;base64,' + terr + '";\n'
+       + 'const IMAGERY = ' + json.dumps(meta) + ';\n'
+       + 'const TERRAIN = IMAGERY.terrain;\n'
+       + mid + "\n" + globe + "\n" + tail)
+(VER / "index.html").write_text('<meta charset="utf-8">\n' + out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")
