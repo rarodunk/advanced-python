@@ -40,6 +40,28 @@ Four tests, none of which need a network:
     python3 tools/test_pin_editor.py      # drag-to-correct, persistence, reset
     python3 tools/test_3d.py              # the 3D setting: mesh, drape, pins
 
+## Using painted art as the base map
+
+A painting has palms, rooftops and surf where a satellite photograph has a
+green smudge, so it makes a better surface — but a painter's island is never
+the real island's shape, and every pin here is placed by latitude and
+longitude. `tools/fit_art.py` settles that: it warps the painting onto the
+real coastline before it is used.
+
+    python3 tools/fit_art.py ~/Downloads/rarotonga-art.png
+    python3 build_all.py
+
+The art has to be straight overhead, north-up, with the whole island and its
+reef in frame, and with no text, pins or borders drawn on it — the app adds
+those itself. The coastline comes from the elevation grid, where the sea is
+0 m; the painting's own coastline comes from its colours. They are matched by
+centre, then by scale and rotation from the shapes' own moments, then sector
+by sector around the island. The script prints how far apart the two shores
+end up; under about 150 m and the pins land where they belong.
+
+`python3 tools/test_fit_art.py` checks that on a deliberately distorted copy
+of the stand-in base, with no network.
+
 ## The 3D setting
 
 Press `3`, or the 3D button in the rail, and the same map becomes terrain. It
