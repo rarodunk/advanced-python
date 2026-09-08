@@ -1,1 +1,11 @@
 __pycache__/
+
+# Scratch wrappers written by the browser tests
+_*.html
+
+# Generated pages. Every version is rebuilt from its inputs by its own
+# build.py, and the mosaic you fetch is yours, so committing the output only
+# guarantees a merge conflict on the next pull. app/ is the exception: the
+# Pages workflow serves it and checks it is in sync.
+v3/index.html
+v4/index.html
