@@ -205,9 +205,15 @@ function drawTiles(){
     img.remove(); tileNodes.delete(key);
   }
 }
+// An illustrated base is a whole picture with its own style; satellite tiles
+// drawn over the top of it at close zoom would break that, so the layer stays
+// off unless the page is pointed at a tile service on purpose.
+const PAINTED = /painted/i.test(IMAGERY.source || "");
+
 // Probe one tile over the island. Success is the only thing that turns the
 // layer on, so a blocked or offline page simply keeps the mosaic.
 (function probeTiles(){
+  if (PAINTED && !(typeof window !== "undefined" && window.RARO_TILE_URL)) return;
   const z = 12, n = Math.pow(2, z);
   const tx = Math.floor(mercX(-159.7776) * n), ty = Math.floor(mercY(-21.2349) * n);
   const probe = new Image();

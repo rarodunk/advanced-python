@@ -41,6 +41,12 @@ const SEA_FAR = SEA_NEAR.map((v, i) => v * [0.82, 0.92, 1.06][i]);   // deep oce
 const SKY_TOP  = [0.086, 0.396, 0.729];
 const SKY_HAZE = [0.741, 0.867, 0.945];                // the pale band at the horizon
 const CLOUDS = 11;
+// A painted base map arrives already lit: the artist has put the shadows in
+// the picture. Shading it again as hard as a satellite photograph would
+// double every valley. So the sun keeps its direction and loses most of its
+// strength when the surface is a painting.
+const PAINTED = /painted/i.test(IMAGERY.source || "");
+const SHADE_MIX = PAINTED ? [0.34, 0.38] : [0.75, 0.85];   // sun, occlusion
 
 // heights are exaggerated more the higher they are, so the beach stays a beach
 function lift(m){
@@ -115,6 +121,7 @@ precision highp float;
 uniform sampler2D uTex;      // the satellite mosaic
 uniform sampler2D uShade;    // r: the sun's shadows, g: ambient occlusion
 uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec2 uFog;
+uniform vec2 uShadeMix; uniform float uGrade;
 varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
   vec3 c = texture2D(uTex, vUV).rgb;
@@ -124,10 +131,10 @@ void main(){
   // Saturation and a push towards the palette of the place: the greens warm,
   // the water towards turquoise. Satellite colour is honest but washed out.
   float l = dot(c, vec3(0.299, 0.587, 0.114));
-  c = mix(vec3(l), c, mix(1.20, 1.34, land));
+  c = mix(vec3(l), c, mix(1.0, mix(1.20, 1.34, land), uGrade));
   // water towards turquoise, land towards a deeper jungle green rather than
   // the yellow-green a saturation push alone gives you
-  c *= mix(vec3(0.86, 1.03, 1.18), vec3(0.88, 1.06, 0.86), land);
+  c *= mix(vec3(1.0), mix(vec3(0.86, 1.03, 1.18), vec3(0.88, 1.06, 0.86), land), uGrade);
 
   vec3 n = normalize(vNrm);
   float lam = clamp(dot(n, uSun), 0.0, 1.0);
@@ -135,10 +142,10 @@ void main(){
   // texture already carries flat daylight, so this is shape, not exposure:
   // it stays near 1.0 on average and swings either side of it.
   float lit = 0.62 + 0.85 * lam * mix(0.30, 1.0, sh.r);
-  c *= mix(1.0, lit, 0.75 * land);
-  c *= mix(1.0, 0.70 + 0.30 * sh.g, 0.85 * land);
+  c *= mix(1.0, lit, uShadeMix.x * land);
+  c *= mix(1.0, 0.70 + 0.30 * sh.g, uShadeMix.y * land);
   // sunlit ridge tops, which is what actually reads as height
-  c += vec3(0.11, 0.12, 0.08) * land * pow(lam, 2.5) * sh.r;
+  c += vec3(0.11, 0.12, 0.08) * land * pow(lam, 2.5) * sh.r * uShadeMix.x;
 
   // sun glitter on the water
   vec3 V = normalize(uEye - vPos);
@@ -206,7 +213,9 @@ const T = {
   mvp: gl.getUniformLocation(terrainProg, "uMVP"), tex: gl.getUniformLocation(terrainProg, "uTex"),
   shade: gl.getUniformLocation(terrainProg, "uShade"), sun: gl.getUniformLocation(terrainProg, "uSun"),
   eye: gl.getUniformLocation(terrainProg, "uEye"), haze: gl.getUniformLocation(terrainProg, "uHaze"),
-  fog: gl.getUniformLocation(terrainProg, "uFog") };
+  fog: gl.getUniformLocation(terrainProg, "uFog"),
+  shadeMix: gl.getUniformLocation(terrainProg, "uShadeMix"),
+  grade: gl.getUniformLocation(terrainProg, "uGrade") };
 const S = { p: gl.getAttribLocation(skyProg, "aP"), top: gl.getUniformLocation(skyProg, "uTop"),
             haze: gl.getUniformLocation(skyProg, "uHazeSky"),
             horizon: gl.getUniformLocation(skyProg, "uHorizon") };
@@ -550,6 +559,8 @@ function draw(){
   gl.uniform3f(T.eye, e[0], e[1], e[2]);
   gl.uniform3fv(T.haze, SEA_NEAR);
   gl.uniform2f(T.fog, view.dist * 2.0, view.dist * 4.5);
+  gl.uniform2f(T.shadeMix, SHADE_MIX[0], SHADE_MIX[1]);
+  gl.uniform1f(T.grade, PAINTED ? 0.35 : 1.0);
   gl.drawElements(gl.TRIANGLES, indexCount, uint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
 
   // clouds last, facing the camera, drifting west to east
