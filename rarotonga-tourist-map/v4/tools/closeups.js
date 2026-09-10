@@ -21,8 +21,13 @@ const FADE_FROM = 0.34, FADE_TO = 0.62;   // fraction of the screen it covers
 
 const local = (() => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); }
                        catch(e){ return {}; } })();
+// A record with a bbox is a top-down painting of a patch of ground and goes
+// on the map. A record without one is card art — a scene, drawn from eye
+// level, with signage in it — and belongs at the top of the place's card and
+// nowhere near the terrain.
 const boxes = {};                          // id -> {bbox, rot}
-for (const id of Object.keys(ART)) boxes[id] = { bbox: ART[id].bbox.slice(), rot: ART[id].rot || 0 };
+for (const id of Object.keys(ART))
+  if (ART[id].bbox) boxes[id] = { bbox: ART[id].bbox.slice(), rot: ART[id].rot || 0 };
 for (const id of Object.keys(local)) if (boxes[id]) Object.assign(boxes[id], local[id]);
 
 const layer = document.createElement("div");
@@ -113,7 +118,7 @@ function save(){
 }
 
 function startEdit(id){
-  if (!ART[id]) return;
+  if (!boxes[id]) return;        // card art has no place on the map to adjust
   mode = id; panel.hidden = false; document.body.classList.add("placing");
   save(); camDirty = true;
 }
@@ -160,7 +165,7 @@ stage.addEventListener("wheel", ev => {
 
 // The painted base runs out of detail long before a close-up would fill the
 // screen, so the zoom ceiling has to make room for the closest one.
-if (Object.keys(ART).length){
+if (Object.keys(boxes).length){
   let need = MAX_ZOOM;
   for (const id of Object.keys(boxes)){
     const r = rectOf(id);

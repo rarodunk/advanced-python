@@ -192,7 +192,7 @@ if cu_manifest.exists():
         raw = f.read_bytes()
         cu_bytes += len(raw)
         mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
-        closeups[pid] = { "file": rec["file"], "bbox": rec["bbox"], "rot": rec.get("rot", 0),
+        closeups[pid] = { "file": rec["file"], "bbox": rec.get("bbox"), "rot": rec.get("rot", 0),
                           "src": "data:" + mime + ";base64," + base64.b64encode(raw).decode() }
     if closeups:
         print(f"  {len(closeups)} close-ups embedded ({cu_bytes / 1e6:.1f} MB before encoding)")
