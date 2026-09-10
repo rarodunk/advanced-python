@@ -12,3 +12,9 @@ v4/index.html
 
 # The folder the deploy is assembled into, rebuilt on demand.
 dist/
+
+# Working files: art dropped in for import, and the zip make_site.py's output
+# is packed into for a drag-and-drop deploy. Both are rebuilt or re-supplied,
+# neither is an input the build reads.
+scratchpad/
+rarotonga-netlify.zip
