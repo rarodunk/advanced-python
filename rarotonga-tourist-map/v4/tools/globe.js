@@ -122,6 +122,18 @@ uniform sampler2D uTex;      // the satellite mosaic
 uniform sampler2D uShade;    // r: the sun's shadows, g: ambient occlusion
 uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec3 uAir; uniform vec2 uFog;
 uniform vec2 uShadeMix; uniform float uGrade; uniform float uClose;
+float hash21(vec2 p){
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
+  float c1 = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c1, d, f.x), f.y);
+}
 varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
   vec3 c = texture2D(uTex, vUV).rgb;
@@ -182,7 +194,13 @@ void main(){
   vec3 ground = mix(vec3(0.85, 0.79, 0.63), vec3(0.42, 0.54, 0.31),
                     smoothstep(1.0, 7.0, vH));
   ground = mix(vec3(0.16, 0.42, 0.55), ground, step(0.5, vH));
-  c = mix(c, ground, uClose * 0.8);
+  c = mix(c, ground, uClose * 0.82);
+  // and it is a surface, not an airbrush: two octaves of grain at a metre and
+  // at three, which is the difference between grass and a green gradient
+  float g1 = vnoise(vPos.xz * 0.75), g2 = vnoise(vPos.xz * 2.9);
+  float grain = (g1 * 0.62 + g2 * 0.38) - 0.5;
+  c *= 1.0 + grain * 0.22 * uClose * land;
+  c += vec3(0.05, 0.06, 0.01) * grain * uClose * land;
 
   // a little contrast, the way a photograph is graded
   c = clamp((c - 0.5) * 1.12 + 0.5, 0.0, 1.4);
@@ -589,58 +607,197 @@ const BP = { pos: gl.getAttribLocation(bldProg, "aPos"), nrm: gl.getAttribLocati
              fog: gl.getUniformLocation(bldProg, "uFog"), eye: gl.getUniformLocation(bldProg, "uEye"),
              alpha: gl.getUniformLocation(bldProg, "uAlpha") };
 let bldCount = 0, bldGroups = [];
+// the bush is rebuilt around where you are, so it gets its own buffers
+let vegGroups = [], vegAt = null, vegBusy = false;
+
+/* ---------- geometry, gathered per material ----------
+   Everything drawn on the ground goes through these: a bin per material,
+   because each one wants its own tiling texture and its own draw. The bin is
+   swappable so the same builders can fill the island's own static geometry
+   and, separately, the bush that is rebuilt around wherever you are standing.
+   MATS plus the imported island's three, which fade in on their own. */
+const BINS = MATS.concat(["osmroad", "osmwall", "osmroof"]);
+function newBin(){
+  const b = {};
+  for (const m of BINS) b[m] = { pos: [], nrm: [], col: [], uv: [] };
+  return b;
+}
+let bin = newBin();
+const SCALE = { roof: 1.15, wall: 2.4, timber: 1.5, thatch: 1.6,
+                glass: 2.6, ground: 5.0, leaf: 1.6,
+                osmroad: 6.0, osmwall: 2.4, osmroof: 1.6 };
+
+// a face may carry its own painted elevation instead of a material
+const pushUV = (a, b, c, uvs, colour, key) => {
+  const B = (bin[key] = bin[key] || { pos: [], nrm: [], col: [], uv: [] });
+  const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+  const n = norm(cross(u, v));
+  [a, b, c].forEach((p, i) => {
+    B.pos.push(p[0], p[1], p[2]);
+    B.nrm.push(n[0], n[1], n[2]);
+    B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+    B.uv.push(uvs[i][0], uvs[i][1]);
+  });
+};
+const quadUV = (a, b, c, d, uv, colour, key) => {
+  pushUV(a, b, c, [uv[0], uv[1], uv[2]], colour, key);
+  pushUV(a, c, d, [uv[0], uv[2], uv[3]], colour, key);
+};
+
+const push = (a, b, c, colour, mat) => {
+  mat = mat || "wall";
+  const B = bin[mat], k = SCALE[mat];
+  const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+  const n = norm(cross(u, v));
+  // the texture is laid on whichever pair of axes the face most faces, so
+  // a wall gets upright boards and a roof gets ribs running down it
+  const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
+  const uvOf = p => ay >= ax && ay >= az ? [p[0] / k, p[2] / k]
+                  : ax >= az            ? [p[2] / k, p[1] / k]
+                                        : [p[0] / k, p[1] / k];
+  for (const p of [a, b, c]){
+    B.pos.push(p[0], p[1], p[2]);
+    B.nrm.push(n[0], n[1], n[2]);
+    B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+    const t = uvOf(p);
+    B.uv.push(t[0], t[1]);
+  }
+};
+const quad = (a, b, c, d, colour, mat) => { push(a, b, c, colour, mat); push(a, c, d, colour, mat); };
+
+/* ---------- the bush between the buildings ----------------------------
+   Rarotonga is not a green lawn with houses on it: the coastal strip is
+   palms and breadfruit all the way to the reef, and the valleys behind are
+   forest. The painting says that at eight metres a pixel and says nothing
+   up close, so the close view grows its own.
+
+   Sowing the whole island at a believable density came to a million
+   triangles, most of them behind you or ten kilometres away. So the bush is
+   grown around wherever you are standing and resown when you have moved far
+   enough to notice — dense where you can see it, absent where you cannot.
+
+   An occupancy grid at twelve metres keeps it out of the buildings and off
+   the roads, which is the whole difference between planting and litter. */
+// one colour, a shade lighter or darker
+const shadeOf = (c, k) => c.map(v => Math.max(0, Math.min(255, Math.round(v * k))));
+
+const CELL = 12;
+let occ = null, occW = 0, occH = 0;
+function occupancy(){
+  if (occ) return occ;
+  occW = Math.ceil((TB_E - TB_W) * M_LON / CELL);
+  occH = Math.ceil((TB_N - TB_S) * KM_LAT_M / CELL);
+  occ = new Uint8Array(occW * occH);
+  const mark = (lat, lon, spread) => {
+    const cx = Math.floor((lon - TB_W) * M_LON / CELL);
+    const cy = Math.floor((TB_N - lat) * KM_LAT_M / CELL);
+    for (let j = -spread; j <= spread; j++) for (let i = -spread; i <= spread; i++){
+      const x = cx + i, y = cy + j;
+      if (x >= 0 && y >= 0 && x < occW && y < occH) occ[y * occW + x] = 1;
+    }
+  };
+  const G = (typeof GROUND !== "undefined" && GROUND) || null;
+  if (G){
+    const [gw, gs] = G.bbox, q = G.q || 1e-5;
+    for (const b of G.buildings){
+      let x = b[1], y = b[2];
+      mark(gs + y * q, gw + x * q, 1);
+      for (let i = 3; i < b.length; i += 2){
+        x += b[i]; y += b[i + 1];
+        mark(gs + y * q, gw + x * q, 1);
+      }
+    }
+    for (const r of G.roads){
+      let x = r[1], y = r[2];
+      let plat = gs + y * q, plon = gw + x * q;
+      mark(plat, plon, 1);
+      for (let i = 3; i < r.length; i += 2){
+        x += r[i]; y += r[i + 1];
+        const lat = gs + y * q, lon = gw + x * q;
+        // walk the segment, so a long straight does not leave gaps
+        const len = Math.hypot((lat - plat) * KM_LAT_M, (lon - plon) * M_LON);
+        const n = Math.min(60, Math.max(1, Math.round(len / CELL)));
+        for (let k = 1; k <= n; k++)
+          mark(plat + (lat - plat) * k / n, plon + (lon - plon) * k / n, 1);
+        plat = lat; plon = lon;
+      }
+    }
+  }
+  // the hand-built places keep their own gardens, so leave those alone
+  for (const p of PLACES) if (MODELS[p.id] && p.latlon)
+    mark(p.latlon.lat, p.latlon.lon, 3);
+  return occ;
+}
+
+// sow the ground within `radius` metres of a point, into whichever bin is
+// current. Returns how many plants went in.
+function plantNear(cLat, cLon, radius){
+  occupancy();
+  const STEP = 8;                                   // one candidate per 64 m2
+  const half = Math.ceil(radius / STEP);
+  let planted = 0;
+  const PALM = [[62, 112, 52], [78, 138, 60]], BUSH = [[58, 104, 48], [86, 132, 56]];
+  for (let j = -half; j <= half; j++){
+    for (let i = -half; i <= half; i++){
+      if (i * i + j * j > half * half) continue;
+      // a hash of the cell, so the same ground grows the same trees however
+      // often you fly past it
+      let seed = ((i + 4096) * 7919 + (j + 4096) * 104729) >>> 0;
+      const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+      rnd();
+      const lat = cLat + (j * STEP + (rnd() - 0.5) * STEP) / KM_LAT_M;
+      const lon = cLon + (i * STEP + (rnd() - 0.5) * STEP) / M_LON;
+      const cx = Math.floor((lon - TB_W) * M_LON / CELL);
+      const cy = Math.floor((TB_N - lat) * KM_LAT_M / CELL);
+      if (cx < 0 || cy < 0 || cx >= occW || cy >= occH || occ[cy * occW + cx]) continue;
+      const hgt = heightAtLL(lat, lon);
+      if (hgt < 1.2) continue;                      // sea, lagoon, sand flat
+      // the coast is planted, the valleys are forest, the ridges are thin
+      const want = hgt < 90 ? 0.62 : hgt < 260 ? 0.5 : hgt < 420 ? 0.34 : 0.2;
+      if (rnd() > want) continue;
+      const base = worldY(lat, lon);
+      const ox = toWorldX(lon), oz = toWorldZ(lat);
+      const P = (x, y, z) => [ox + x, base + y, oz + z];
+      const pick = rnd();
+      if (hgt < 70 && pick > 0.55){
+        // a coconut palm: a leaning trunk and a crown of four fronds
+        const ht = 8 + rnd() * 7, lean = (rnd() - 0.5) * 1.4, tone = PALM[pick > 0.78 ? 1 : 0];
+        quad(P(-0.28, 0, 0), P(0.28, 0, 0), P(lean + 0.2, ht, 0), P(lean - 0.2, ht, 0),
+             [92, 72, 52], "timber");
+        for (let k = 0; k < 4; k++){
+          const a = (k / 4) * Math.PI * 2 + rnd(), fl = 3.2 + rnd() * 1.6;
+          push(P(lean - 0.3, ht - 0.2, 0), P(lean + 0.3, ht - 0.2, 0),
+               P(lean + Math.cos(a) * fl, ht - 1.4 - rnd(), Math.sin(a) * fl),
+               k % 2 ? tone : shadeOf(tone, 0.84), "leaf");
+        }
+      } else {
+        // forest: a crown on a short trunk, which is all that reads from here
+        const ht = 4 + rnd() * (hgt > 200 ? 5 : 8), r = 1.6 + rnd() * 2.2;
+        const tone = BUSH[pick > 0.5 ? 1 : 0];
+        quad(P(-0.22, 0, 0), P(0.22, 0, 0), P(0.22, ht * 0.6, 0), P(-0.22, ht * 0.6, 0),
+             [86, 68, 50], "timber");
+        for (let k = 0; k < 2; k++){
+          const a = k ? Math.PI / 2.2 : 0, dx = Math.cos(a) * r, dz = Math.sin(a) * r;
+          quad(P(-dx, ht * 0.42, -dz), P(dx, ht * 0.42, dz),
+               P(dx * 0.55, ht, dz * 0.55), P(-dx * 0.55, ht, -dz * 0.55),
+               k ? shadeOf(tone, 0.88) : tone, "leaf");
+        }
+      }
+      planted++;
+    }
+  }
+  return planted;
+}
 
 function buildBuildings(){
   // geometry is gathered per material, because each one wants its own tiling
   // texture and its own draw
-  const bin = {};
-  for (const m of MATS) bin[m] = { pos: [], nrm: [], col: [], uv: [] };
-  const SCALE = { roof: 1.15, wall: 2.4, timber: 1.5, thatch: 1.6,
-                  glass: 2.6, ground: 5.0, leaf: 1.6 };
-
-  // a face may carry its own painted elevation instead of a material
-  const pushUV = (a, b, c, uvs, colour, key) => {
-    const B = (bin[key] = bin[key] || { pos: [], nrm: [], col: [], uv: [] });
-    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
-    const n = norm(cross(u, v));
-    [a, b, c].forEach((p, i) => {
-      B.pos.push(p[0], p[1], p[2]);
-      B.nrm.push(n[0], n[1], n[2]);
-      B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
-      B.uv.push(uvs[i][0], uvs[i][1]);
-    });
-  };
-  const quadUV = (a, b, c, d, uv, colour, key) => {
-    pushUV(a, b, c, [uv[0], uv[1], uv[2]], colour, key);
-    pushUV(a, c, d, [uv[0], uv[2], uv[3]], colour, key);
-  };
-
-  const push = (a, b, c, colour, mat) => {
-    mat = mat || "wall";
-    const B = bin[mat], k = SCALE[mat];
-    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
-    const n = norm(cross(u, v));
-    // the texture is laid on whichever pair of axes the face most faces, so
-    // a wall gets upright boards and a roof gets ribs running down it
-    const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
-    const uvOf = p => ay >= ax && ay >= az ? [p[0] / k, p[2] / k]
-                    : ax >= az            ? [p[2] / k, p[1] / k]
-                                          : [p[0] / k, p[1] / k];
-    for (const p of [a, b, c]){
-      B.pos.push(p[0], p[1], p[2]);
-      B.nrm.push(n[0], n[1], n[2]);
-      B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
-      const t = uvOf(p);
-      B.uv.push(t[0], t[1]);
-    }
-  };
-  const quad = (a, b, c, d, colour, mat) => { push(a, b, c, colour, mat); push(a, c, d, colour, mat); };
+  bin = newBin();
 
   // deterministic wobble, so a place looks the same every time you visit it
   const seedOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++){
     h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
-  const shadeOf = (c, k) => c.map(v => Math.max(0, Math.min(255, Math.round(v * k))));
   // Three upright panels crossed through each other: from any angle that is a
   // mound of leaves, and it costs eight triangles. Flat blades laid from the
   // ground to a point read as splashes of paint instead.
@@ -680,6 +837,114 @@ function buildBuildings(){
            i % 2 ? tone : shadeOf(tone, 0.86), "leaf");
     }
   }
+  /* ---------- the island as it is actually built ----------------------
+     The base map is a painting at about eight metres a pixel: lovely from a
+     hillside, mush from a rooftop, and no amount of sharpening invents a road
+     that was never painted. So the close view stops leaning on it. These are
+     Overture's own footprints and roads — seven thousand buildings and the
+     roads between them, the real ones — drawn as massing, and faded in as you
+     come down so the far view stays the painting. */
+  function buildGround(){
+    const G = (typeof GROUND !== "undefined" && GROUND) || null;
+    if (!G || !G.roads) return;
+    const [gw, gs] = G.bbox, q = G.q || 1e-5;
+    const ll = (x, y) => [gs + y * q, gw + x * q];          // back to degrees
+    // where the hand-built places stand, so the two never sit inside each other
+    const taken = [];
+    for (const p of PLACES) if (MODELS[p.id] && p.latlon)
+      taken.push([p.latlon.lat, p.latlon.lon, Math.max(...MODELS[p.id].size) * 0.6 + 6]);
+
+    const world = (lat, lon, up) => [toWorldX(lon), worldY(lat, lon) + up, toWorldZ(lat)];
+    // Roads ride the ground with a little clearance: the terrain grid is
+    // twenty metres across, so a ribbon laid exactly on it dips through the
+    // surface between posts.
+    const ROAD = [
+      { w: 7.0, c: [78, 76, 74] }, { w: 6.0, c: [80, 78, 76] },
+      { w: 5.0, c: [84, 82, 79] }, { w: 4.2, c: [88, 85, 81] },
+      { w: 3.6, c: [96, 92, 86] }, { w: 3.0, c: [122, 114, 102] },
+      { w: 2.4, c: [156, 142, 120] }, { w: 1.4, c: [168, 156, 134] }
+    ];
+    for (const r of G.roads){
+      const spec = ROAD[r[0]] || ROAD[4];
+      const hw2 = spec.w / 2;
+      let x = r[1], y = r[2];
+      const pts = [ll(x, y)];
+      for (let i = 3; i < r.length; i += 2){ x += r[i]; y += r[i + 1]; pts.push(ll(x, y)); }
+      for (let i = 0; i + 1 < pts.length; i++){
+        const a = pts[i], b = pts[i + 1];
+        const ax = toWorldX(a[1]), az = toWorldZ(a[0]);
+        const bx = toWorldX(b[1]), bz = toWorldZ(b[0]);
+        const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz);
+        if (len < 0.6 || len > 400) continue;
+        const nx = -dz / len * hw2, nz = dx / len * hw2;
+        const ay = worldY(a[0], a[1]) + 0.9, by = worldY(b[0], b[1]) + 0.9;
+        quad([ax - nx, ay, az - nz], [ax + nx, ay, az + nz],
+             [bx + nx, by, bz + nz], [bx - nx, by, bz - nz], spec.c, "osmroad");
+      }
+    }
+
+    // Roofs on this island are painted tin: red, green, blue, and the pale
+    // grey of new steel. Which one a house gets is fixed by where it stands.
+    const ROOFS = [[176, 66, 54], [58, 104, 74], [62, 96, 132], [150, 150, 146],
+                   [176, 66, 54], [122, 116, 108], [58, 104, 74], [190, 180, 164]];
+    const WALLS = [[236, 232, 222], [222, 214, 198], [206, 202, 196], [232, 224, 206]];
+    for (const b of G.buildings){
+      let x = b[1], y = b[2];
+      const ring = [[x, y]];
+      for (let i = 3; i < b.length; i += 2){ x += b[i]; y += b[i + 1]; ring.push([x, y]); }
+      if (ring.length < 3) continue;
+      const pts = ring.map(([px, py]) => ll(px, py));
+      let lat = 0, lon = 0;
+      for (const p2 of pts){ lat += p2[0]; lon += p2[1]; }
+      lat /= pts.length; lon /= pts.length;
+      if (heightAtLL(lat, lon) < 0.4) continue;             // stray footprint in the lagoon
+      let skip = false;
+      for (const [tlat, tlon, rad] of taken){
+        const d = Math.hypot((lat - tlat) * KM_LAT_M, (lon - tlon) * M_LON);
+        if (d < rad){ skip = true; break; }
+      }
+      if (skip) continue;                                   // a hand-built place stands here
+      // footprint area, so a shed is not given two storeys
+      let area = 0;
+      for (let i = 0; i < pts.length; i++){
+        const a = pts[i], c2 = pts[(i + 1) % pts.length];
+        area += (toWorldX(a[1]) * toWorldZ(c2[0]) - toWorldX(c2[1]) * toWorldZ(a[0]));
+      }
+      area = Math.abs(area) / 2;
+      if (area < 9) continue;
+      const seed2 = seedOf(String(b[1]) + "," + String(b[2]));
+      let h = b[0] / 10;
+      if (!h) h = area > 400 ? 6.5 : area > 120 ? 4.2 : 3.1;
+      // On a slope the ground under one corner is metres below another, so a
+      // box hung from the middle floats at the bottom end. The walls start at
+      // the lowest corner and the floor line sits at the highest.
+      let lo = 1e9, hi = -1e9;
+      for (const [plat, plon] of pts){
+        const gy = worldY(plat, plon);
+        if (gy < lo) lo = gy;
+        if (gy > hi) hi = gy;
+      }
+      const base = hi;
+      const roof = ROOFS[seed2 % ROOFS.length], wall = WALLS[(seed2 >>> 5) % WALLS.length];
+      const eave = base + h, ridge = eave + Math.min(2.4, Math.sqrt(area) * 0.22);
+      const P3 = [];
+      for (const [plat, plon] of pts) P3.push([toWorldX(plon), 0, toWorldZ(plat)]);
+      for (let i = 0; i < P3.length; i++){
+        const a = P3[i], c2 = P3[(i + 1) % P3.length];
+        quad([a[0], lo - 0.8, a[2]], [c2[0], lo - 0.8, c2[2]],
+             [c2[0], eave, c2[2]], [a[0], eave, a[2]], wall, "osmwall");
+      }
+      // a low pyramid for a roof: at this size it is the pitch that reads,
+      // not the shape, and it costs one triangle a side
+      const cx = P3.reduce((t, p2) => t + p2[0], 0) / P3.length;
+      const cz = P3.reduce((t, p2) => t + p2[2], 0) / P3.length;
+      for (let i = 0; i < P3.length; i++){
+        const a = P3[i], c2 = P3[(i + 1) % P3.length];
+        push([a[0], eave, a[2]], [c2[0], eave, c2[2]], [cx, ridge, cz], roof, "osmroof");
+      }
+    }
+  }
+
   // A place with no building — a summit, a lagoon, a beach, a stretch of road —
   // still stands in something. Without this the pin hovers over bare paint.
   // shift a local frame up or down onto the ground under that spot
@@ -1137,24 +1402,67 @@ function buildBuildings(){
       for (let i = 0; i < 3; i++) scooter(-hw + 1 + i * 2.2, front);
     }
   }
-  bldGroups = [];
-  for (const name of Object.keys(bin)){
-    const B = bin[name];
+  buildGround();
+
+  bldGroups = upload(bin);
+  bldCount = bldGroups.reduce((n, g) => n + g.count, 0);
+}
+
+// hand a bin to the card
+function upload(b){
+  const out = [];
+  for (const name of Object.keys(b)){
+    const B = b[name];
     if (!B || !B.pos.length) continue;
     const mk = data => {
-      const b = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-      return b;
+      return buf;
     };
-    bldGroups.push({ name, count: B.pos.length / 3,
-                     pos: mk(B.pos), nrm: mk(B.nrm), col: mk(B.col), uv: mk(B.uv) });
+    out.push({ name, count: B.pos.length / 3,
+               pos: mk(B.pos), nrm: mk(B.nrm), col: mk(B.col), uv: mk(B.uv) });
   }
-  bldCount = bldGroups.reduce((n, g) => n + g.count, 0);
+  return out;
+}
+
+/* ---------- the bush around where you are ----------
+   Rebuilt when you have moved a quarter of the radius, and thrown away
+   entirely once you are far enough out that the painting reads better than
+   ten thousand little trees would. */
+const VEG_R = 780;
+function tendVegetation(){
+  if (!ready) return;
+  if (view.dist > 2200){
+    if (vegGroups.length){
+      for (const g of vegGroups) for (const k of ["pos", "nrm", "col", "uv"]) gl.deleteBuffer(g[k]);
+      vegGroups = []; vegAt = null;
+    }
+    return;
+  }
+  if (vegAt){
+    const moved = Math.hypot((view.lat - vegAt[0]) * KM_LAT_M, (view.lon - vegAt[1]) * M_LON);
+    if (moved < VEG_R * 0.38) return;     // resowing costs a frame, so not often
+  }
+  if (vegBusy) return;
+  vegBusy = true;
+  const keep = bin;
+  bin = newBin();
+  try {
+    plantNear(view.lat, view.lon, VEG_R);
+    const fresh = upload(bin);
+    for (const g of vegGroups) for (const k of ["pos", "nrm", "col", "uv"]) gl.deleteBuffer(g[k]);
+    vegGroups = fresh;
+    vegAt = [view.lat, view.lon];
+  } finally {
+    bin = keep;
+    vegBusy = false;
+  }
 }
 
 function drawBuildings(mvp, e, sun){
   if (!bldCount) return;
+  tendVegetation();
   const a = 1 - Math.max(0, Math.min(1, (view.dist - B_NEAR) / (B_FAR - B_NEAR)));
   if (a <= 0.01) return;
   gl.useProgram(bldProg);
@@ -1173,8 +1481,16 @@ function drawBuildings(mvp, e, sun){
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
   };
-  for (const g of bldGroups){
-    gl.bindTexture(gl.TEXTURE_2D, matTex[g.name] || facadeTex[g.name] || matTex.wall);
+  // The imported footprints and roads are for the close view: they arrive as
+  // you come down and are gone by the time the island is a whole shape, where
+  // the painting says it better than seven thousand grey boxes would.
+  const osmA = a * (1 - Math.max(0, Math.min(1, (view.dist - 900) / 1800)));
+  const OSMTEX = { osmroad: "ground", osmwall: "wall", osmroof: "roof" };
+  for (const g of bldGroups.concat(vegGroups)){
+    const isOsm = OSMTEX[g.name] !== undefined;
+    if (isOsm && osmA <= 0.01) continue;
+    gl.uniform1f(BP.alpha, isOsm ? osmA : a);
+    gl.bindTexture(gl.TEXTURE_2D, matTex[OSMTEX[g.name]] || matTex[g.name] || facadeTex[g.name] || matTex.wall);
     bindTo(g.pos, BP.pos, 3); bindTo(g.nrm, BP.nrm, 3);
     bindTo(g.col, BP.col, 3); bindTo(g.uv, BP.uv, 2);
     gl.drawArrays(gl.TRIANGLES, 0, g.count);
@@ -1399,7 +1715,9 @@ function draw(){
   gl.uniform2f(T.shadeMix, SHADE_MIX[0], SHADE_MIX[1]);
   gl.uniform1f(T.grade, PAINTED ? 0.35 : 1.0);
   // fully painted ground below 220 m, fully the base map above 700
-  gl.uniform1f(T.close, 1 - Math.max(0, Math.min(1, (view.dist - 220) / 480)));
+  // the painting hands over to real ground earlier now that there is real
+  // ground to hand over to: roads, footprints and bush all arrive by 2.2 km
+  gl.uniform1f(T.close, 1 - Math.max(0, Math.min(1, (view.dist - 420) / 1300)));
   gl.drawElements(gl.TRIANGLES, indexCount, uint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
 
   drawBuildings(mvp, e, sun);

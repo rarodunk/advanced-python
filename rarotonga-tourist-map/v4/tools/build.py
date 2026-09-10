@@ -313,6 +313,13 @@ if (VER / "facades.json").exists():
         print(f"  {len(facades)} painted elevations")
 
 # The massing models the 3D setting stands on the ground up close.
+# the real island under the painting: Overture's footprints and roads, which
+# is what the close view draws instead of magnified brushwork
+ground = {}
+gpath = VER / "ground.json"
+if gpath.exists():
+    ground = json.loads(gpath.read_text())
+
 models = {}
 if (VER / "models.json").exists():
     models = json.loads((VER / "models.json").read_text())
@@ -345,6 +352,7 @@ out = (head + "\n"
        + 'const CLOSEUP_ART = ' + json.dumps(closeups) + ';\n'
        + 'const BUILDINGS = ' + json.dumps(models) + ';\n'
        + 'const FACADE_ART = ' + json.dumps(facades) + ';\n'
+       + 'const GROUND = ' + json.dumps(ground, separators=(",", ":")) + ';\n'
        + mid + "\n" + tail          # tail closes the page's <script>
        + "\n<script>\n" + CLOSEUPS_JS + "\n</script>\n"
        + "\n<script>\n" + TOUR_JS + "\n</script>\n"

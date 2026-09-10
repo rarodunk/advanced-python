@@ -116,6 +116,14 @@ with sync_playwright() as pw:
     print(f"scene: {tri:.0f} triangles")
     assert tri > 30000, "the planting is missing"
 
+    # The real island is in there: Overture's roads and footprints, and the
+    # bush sown around wherever the camera is. Without them the close view is
+    # a magnified painting, which is what this whole layer exists to replace.
+    g = pg.evaluate("""()=>({roads: (typeof GROUND!=='undefined'&&GROUND.roads||[]).length,
+                             builds: (typeof GROUND!=='undefined'&&GROUND.buildings||[]).length})""")
+    print(f"imported ground: {g['roads']} roads, {g['builds']} footprints")
+    assert g["roads"] > 500 and g["builds"] > 3000, "the imported island is missing"
+
     # A drag that is never released must not carry on with the pointer: a
     # mouse moving with no button down is not a drag, whatever we last heard.
     pg.mouse.move(500, 400); pg.mouse.down(); pg.mouse.move(560, 430, steps=4)
@@ -152,7 +160,11 @@ with sync_playwright() as pw:
     assert opened, "pins do not open in the 3D setting"
     pg.evaluate("closeSheet()"); pg.wait_for_timeout(400)
 
-    # and hovering one says what it is, even when it is too small to carry a label
+    # and hovering one says what it is, even when it is too small to carry a label.
+    # Standing among the buildings every pin is named already, so back off until
+    # the labels drop out, which is when the hover earns its keep.
+    pg.evaluate("()=>{const v=raro3d.view; v.dist=7000; window.pan3D(0.0001,0);}")
+    pg.wait_for_timeout(700)
     hov = pg.evaluate("""()=>{const m = [...document.querySelectorAll('.mk')].find(m => {
           const r = m.getBoundingClientRect();
           return m.style.display !== 'none' && r.top > 90 && r.bottom < innerHeight - 90
