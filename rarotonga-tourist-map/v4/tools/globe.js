@@ -466,11 +466,16 @@ function buildBuildings(){
   };
   const quad = (a, b, c, d, colour) => { push(a, b, c, colour); push(a, c, d, colour); };
 
+  // deterministic wobble, so a place looks the same every time you visit it
+  const seedOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+
   for (const p of PLACES){
     const m = MODELS[p.id];
     if (!m || !p.latlon) continue;
     const [w, d, h] = m.size;
     const e = m.eave || 1.0;
+    const storeys = Math.max(1, m.storeys || 1);
     const base = worldY(p.latlon.lat, p.latlon.lon);
     const ox = toWorldX(p.latlon.lon), oz = toWorldZ(p.latlon.lat);
     const th = (m.face || 0) * Math.PI / 180;
@@ -478,64 +483,135 @@ function buildBuildings(){
     // local x runs along the front, local z away from it; the front looks
     // down the bearing the tool worked out from the coastline
     const P = (x, y, z) => [ox + x * ct + z * st, base + y, oz - x * st + z * ct];
-    const C = m.colour, wall = C.wall, roof = C.roof, trim = C.trim;
-    const hw = w / 2, hd = d / 2, eaveY = h * (m.roof === "flat" ? 1 : 0.58);
+    const C = m.colour;
+    const wall = C.wall, roof = C.roof, trim = C.trim;
+    const shade = (c, k) => c.map(v => Math.max(0, Math.min(255, Math.round(v * k))));
+    const glass = [38, 54, 66], water = [64, 190, 200], sand = shade(trim, 0.9);
+    const bark = [92, 72, 52], frond = [58, 110, 48];
+    let seed = seedOf(p.id);
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 
-    // a footing, so the model sits on the ground instead of hovering in the
-    // blur of a painting that was never drawn at this scale
-    const pw = hw + e + 2.5, pd = hd + e + 2.5;
-    quad(P(-pw, 0.12, -pd), P(pw, 0.12, -pd), P(pw, 0.12, pd), P(-pw, 0.12, pd),
-         [Math.round(C.trim[0] * 0.86), Math.round(C.trim[1] * 0.86), Math.round(C.trim[2] * 0.82)]);
+    const hw = w / 2, hd = d / 2;
+    const eaveY = m.roof === "flat" ? h : h * 0.74;
+    const fh = eaveY / storeys;                       // floor to floor
 
-    // walls
-    const c000 = P(-hw, 0.2, -hd), c100 = P(hw, 0, -hd), c110 = P(hw, 0, hd), c010 = P(-hw, 0, hd);
-    const t000 = P(-hw, eaveY, -hd), t100 = P(hw, eaveY, -hd),
-          t110 = P(hw, eaveY, hd), t010 = P(-hw, eaveY, hd);
-    quad(c000, c100, t100, t000, wall);
-    quad(c100, c110, t110, t100, wall);
-    quad(c110, c010, t010, t110, wall);
-    quad(c010, c000, t000, t010, wall);
+    // a box, given in local coordinates
+    const solid = (x0, x1, y0, y1, z0, z1, colour) => {
+      const a = P(x0,y0,z0), b = P(x1,y0,z0), c = P(x1,y0,z1), dd = P(x0,y0,z1);
+      const A = P(x0,y1,z0), B = P(x1,y1,z0), Cc = P(x1,y1,z1), D = P(x0,y1,z1);
+      quad(a, b, B, A, colour); quad(b, c, Cc, B, colour);
+      quad(c, dd, D, Cc, colour); quad(dd, a, A, D, colour);
+      quad(A, B, Cc, D, shade(colour, 1.06));
+    };
 
-    // roof, out over the eaves
-    const ew = hw + e, ed = hd + e;
-    const r00 = P(-ew, eaveY, -ed), r10 = P(ew, eaveY, -ed),
-          r11 = P(ew, eaveY, ed), r01 = P(-ew, eaveY, ed);
+    // the plot: a mown apron with a path to the front
+    const pw = hw + e + 3.5, pd = hd + e + 3.5;
+    quad(P(-pw, 0.10, -pd), P(pw, 0.10, -pd), P(pw, 0.10, pd), P(-pw, 0.10, pd), sand);
+
+    // walls, floor by floor, with a band between them
+    for (let k = 0; k < storeys; k++){
+      const y0 = 0.2 + k * fh, y1 = 0.2 + (k + 1) * fh - 0.35;
+      solid(-hw, hw, y0, y1, -hd, hd, k ? shade(wall, 1.04) : wall);
+      solid(-hw - 0.25, hw + 0.25, y1, y1 + 0.35, -hd - 0.25, hd + 0.25, trim);
+      // windows: a row front and back, shutters closed on the ends
+      const n = Math.max(2, Math.round(w / 4.2));
+      for (let i = 0; i < n; i++){
+        const cx = -hw + w * (i + 0.5) / n, ww = Math.min(2.2, w / n * 0.55);
+        const wy0 = y0 + fh * 0.28, wy1 = y0 + fh * 0.72;
+        quad(P(cx - ww/2, wy0, -hd - 0.06), P(cx + ww/2, wy0, -hd - 0.06),
+             P(cx + ww/2, wy1, -hd - 0.06), P(cx - ww/2, wy1, -hd - 0.06), glass);
+        quad(P(cx + ww/2, wy0, hd + 0.06), P(cx - ww/2, wy0, hd + 0.06),
+             P(cx - ww/2, wy1, hd + 0.06), P(cx + ww/2, wy1, hd + 0.06), glass);
+      }
+      // an upstairs balcony along the front, which is what these places have
+      if (k > 0){
+        const bz = -hd - 1.9;
+        solid(-hw, hw, y0 - 0.25, y0, bz, -hd, trim);
+        solid(-hw, hw, y0 + 0.95, y0 + 1.1, bz - 0.05, bz + 0.05, trim);
+        const posts = Math.max(3, Math.round(w / 2.4));
+        for (let i = 0; i <= posts; i++){
+          const x = -hw + w * i / posts;
+          solid(x - 0.06, x + 0.06, y0, y0 + 1.05, bz - 0.06, bz + 0.06, trim);
+        }
+      }
+    }
+
+    // roof
+    const ew = hw + e, ed = hd + e, ry = 0.2 + eaveY;
+    const r00 = P(-ew, ry, -ed), r10 = P(ew, ry, -ed),
+          r11 = P(ew, ry, ed), r01 = P(-ew, ry, ed);
+    solid(-ew, ew, ry - 0.3, ry, -ed, ed, shade(roof, 0.8));      // fascia
     if (m.roof === "flat"){
       quad(r00, r10, r11, r01, roof);
     } else if (m.roof === "gable"){
-      const a1 = P(-ew, h, 0), a2 = P(ew, h, 0);
+      const a1 = P(-ew, 0.2 + h, 0), a2 = P(ew, 0.2 + h, 0);
       quad(r00, r10, a2, a1, roof);
-      quad(r01, r11, a2, a1, roof);
-      push(r00, a1, r01, trim);
-      push(r10, r11, a2, trim);
-    } else {                                    // hip
-      const rl = w * 0.22;
-      const a1 = P(-rl, h, 0), a2 = P(rl, h, 0);
-      quad(r00, r10, a2, a1, roof);             // front pitch
-      quad(r11, r01, a1, a2, roof);             // back pitch
-      push(r00, a1, r01, roof);                 // the two hipped ends
-      push(r10, r11, a2, roof);
+      quad(r01, r11, a2, a1, shade(roof, 0.88));
+      push(r00, a1, r01, shade(wall, 0.96)); push(r10, r11, a2, shade(wall, 0.96));
+    } else {
+      const rl = w * 0.2, top = 0.2 + h;
+      const a1 = P(-rl, top, 0), a2 = P(rl, top, 0);
+      quad(r00, r10, a2, a1, roof);
+      quad(r11, r01, a1, a2, shade(roof, 0.86));
+      push(r00, a1, r01, shade(roof, 0.93));
+      push(r10, r11, a2, shade(roof, 0.93));
     }
     if (m.spire){
-      const s = 0.9, tip = P(0, m.spire, -hd * 0.55);
-      const b1 = P(-s, h * 0.95, -hd * 0.55 - s), b2 = P(s, h * 0.95, -hd * 0.55 - s);
-      const b3 = P(s, h * 0.95, -hd * 0.55 + s), b4 = P(-s, h * 0.95, -hd * 0.55 + s);
+      const sw = 0.9, tip = P(0, 0.2 + m.spire, -hd * 0.55);
+      const b = z => [P(-sw, 0.2 + h * 0.95, -hd * 0.55 + z), P(sw, 0.2 + h * 0.95, -hd * 0.55 + z)];
+      const [b1, b2] = b(-sw), [b4, b3] = b(sw);
       push(b1, b2, tip, trim); push(b2, b3, tip, trim);
       push(b3, b4, tip, trim); push(b4, b1, tip, trim);
     }
+
+    // veranda along the ground floor
     if (m.veranda){
-      // a deck along the front, and posts holding the eave up over it
-      const dy = 0.35, dz = -hd - e * 0.8;
-      quad(P(-hw, dy, -hd), P(hw, dy, -hd), P(hw, dy, dz), P(-hw, dy, dz), trim);
+      const dz = -hd - e * 0.8;
+      quad(P(-hw, 0.35, -hd), P(hw, 0.35, -hd), P(hw, 0.35, dz), P(-hw, 0.35, dz), trim);
       const n = Math.max(3, Math.round(w / 3.2));
       for (let i = 0; i <= n; i++){
-        const x = -hw + (w * i / n), t = 0.16;
-        const q0 = P(x - t, dy, dz - t), q1 = P(x + t, dy, dz - t),
-              q2 = P(x + t, dy, dz + t), q3 = P(x - t, dy, dz + t);
-        const u0 = P(x - t, eaveY, dz - t), u1 = P(x + t, eaveY, dz - t),
-              u2 = P(x + t, eaveY, dz + t), u3 = P(x - t, eaveY, dz + t);
-        quad(q0, q1, u1, u0, trim); quad(q1, q2, u2, u1, trim);
-        quad(q2, q3, u3, u2, trim); quad(q3, q0, u0, u3, trim);
+        const x = -hw + (w * i / n);
+        solid(x - 0.14, x + 0.14, 0.35, 0.2 + fh - 0.3, dz - 0.14, dz + 0.14, trim);
+      }
+    }
+
+    // a pool in front, for the places people swim at
+    if (m.pool){
+      const px0 = -hw * 0.1, px1 = px0 + Math.min(10, w * 0.55);
+      const pz0 = -hd - 9.0, pz1 = pz0 + 5.0;      // clear of the veranda
+      quad(P(px0 - 0.5, 0.16, pz0 - 0.5), P(px1 + 0.5, 0.16, pz0 - 0.5),
+           P(px1 + 0.5, 0.16, pz1 + 0.5), P(px0 - 0.5, 0.16, pz1 + 0.5), trim);
+      quad(P(px0, 0.2, pz0), P(px1, 0.2, pz0), P(px1, 0.2, pz1), P(px0, 0.2, pz1), water);
+    }
+
+    // palms around the plot, never through the building
+    const palms = m.palms || 4;
+    for (let i = 0; i < palms; i++){
+      const a = (i / palms) * Math.PI * 2 + rnd() * 0.8;
+      const r = Math.max(hw, hd) + 2.5 + rnd() * 5;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.8;
+      if (Math.abs(x) < hw + 1.2 && Math.abs(z) < hd + 1.2) continue;
+      const th2 = 7 + rnd() * 5, lean = (rnd() - 0.5) * 1.6;
+      const t = 0.2;
+      // trunk: a tapered four-sided post
+      const foot = [[-t,-t],[t,-t],[t,t],[-t,t]];
+      for (let k = 0; k < 4; k++){
+        const [ax, az] = foot[k], [bx, bz] = foot[(k + 1) % 4];
+        quad(P(x + ax, 0.2, z + az), P(x + bx, 0.2, z + bz),
+             P(x + bx * 0.45 + lean, th2, z + bz * 0.45),
+             P(x + ax * 0.45 + lean, th2, z + az * 0.45), bark);
+      }
+      // a crown of fronds, each a long thin wedge that dips at its tip, in
+      // two greens so the canopy has some depth to it from below
+      const FR = 10;
+      for (let k = 0; k < FR; k++){
+        const fa = (k / FR) * Math.PI * 2 + rnd() * 0.25;
+        const fl = 3.0 + rnd() * 1.8, dip = th2 - 0.8 - rnd() * 1.4;
+        const tone = k % 2 ? frond : [78, 138, 60];
+        const tipX = x + lean + Math.cos(fa) * fl, tipZ = z + Math.sin(fa) * fl;
+        const midX = x + lean + Math.cos(fa) * fl * 0.5, midZ = z + Math.sin(fa) * fl * 0.5;
+        push(P(x + lean - 0.3, th2 + 0.2, z), P(midX, th2 + 0.35, midZ), P(tipX, dip, tipZ), tone);
+        push(P(x + lean + 0.3, th2 + 0.2, z), P(tipX, dip, tipZ), P(midX, th2 + 0.35, midZ), tone);
       }
     }
   }

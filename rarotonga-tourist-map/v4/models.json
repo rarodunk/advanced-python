@@ -19,12 +19,15 @@
   },
   "eave": 1.4,
   "face": 270,
+  "palms": 5,
+  "pool": false,
   "roof": "hip",
   "size": [
    8,
    6,
-   3.0
+   3.2
   ],
+  "storeys": 1,
   "veranda": false
  },
  "airport": {
@@ -47,12 +50,15 @@
   },
   "eave": 1.4,
   "face": 294,
+  "palms": 8,
+  "pool": false,
   "roof": "flat",
   "size": [
    46,
    16,
-   6.0
+   6.5
   ],
+  "storeys": 1,
   "veranda": false
  },
  "albertos": {
@@ -75,12 +81,15 @@
   },
   "eave": 1.6,
   "face": 246,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "avatiu": {
@@ -103,12 +112,15 @@
   },
   "eave": 0.8,
   "face": 252,
+  "palms": 3,
+  "pool": false,
   "roof": "flat",
   "size": [
    30,
    14,
    5.5
   ],
+  "storeys": 1,
   "veranda": false
  },
  "charlies": {
@@ -131,12 +143,15 @@
   },
   "eave": 1.6,
   "face": 144,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "cicc": {
@@ -159,6 +174,8 @@
   },
   "eave": 0.6,
   "face": 0,
+  "palms": 4,
+  "pool": false,
   "roof": "gable",
   "size": [
    17,
@@ -166,6 +183,7 @@
    8.5
   ],
   "spire": 11.0,
+  "storeys": 1,
   "veranda": false
  },
  "diveraro": {
@@ -188,12 +206,15 @@
   },
   "eave": 1.4,
   "face": 240,
+  "palms": 5,
+  "pool": false,
   "roof": "hip",
   "size": [
    8,
    6,
-   3.0
+   3.2
   ],
+  "storeys": 1,
   "veranda": false
  },
  "fishingclub": {
@@ -216,12 +237,15 @@
   },
   "eave": 1.8,
   "face": 0,
+  "palms": 7,
+  "pool": false,
   "roof": "hip",
   "size": [
    15,
    9,
-   4.2
+   4.6
   ],
+  "storeys": 1,
   "veranda": true
  },
  "highland": {
@@ -244,12 +268,15 @@
   },
   "eave": 1.8,
   "face": 234,
+  "palms": 10,
+  "pool": false,
   "roof": "gable",
   "size": [
    18,
    11,
-   5.0
+   5.4
   ],
+  "storeys": 1,
   "veranda": true
  },
  "hospital": {
@@ -272,12 +299,15 @@
   },
   "eave": 1.0,
   "face": 300,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    38,
    18,
-   7.5
+   8.5
   ],
+  "storeys": 2,
   "veranda": false
  },
  "kikau": {
@@ -300,12 +330,15 @@
   },
   "eave": 1.6,
   "face": 294,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "lbv": {
@@ -328,12 +361,15 @@
   },
   "eave": 1.6,
   "face": 108,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "licence": {
@@ -356,12 +392,15 @@
   },
   "eave": 0.8,
   "face": 228,
+  "palms": 3,
+  "pool": false,
   "roof": "flat",
   "size": [
    12,
    8,
-   3.8
+   4.0
   ],
+  "storeys": 1,
   "veranda": false
  },
  "mairenui": {
@@ -384,12 +423,15 @@
   },
   "eave": 0.9,
   "face": 162,
+  "palms": 4,
+  "pool": false,
   "roof": "gable",
   "size": [
    15,
    9,
-   5.4
+   6.0
   ],
+  "storeys": 1,
   "veranda": false
  },
  "matavera": {
@@ -412,6 +454,8 @@
   },
   "eave": 0.6,
   "face": 60,
+  "palms": 4,
+  "pool": false,
   "roof": "gable",
   "size": [
    14,
@@ -419,6 +463,7 @@
    7.0
   ],
   "spire": 9.0,
+  "storeys": 1,
   "veranda": false
  },
  "mooring": {
@@ -441,12 +486,15 @@
   },
   "eave": 1.6,
   "face": 96,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "murimarket": {
@@ -469,12 +517,15 @@
   },
   "eave": 2.4,
   "face": 96,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    26,
    12,
    3.8
   ],
+  "storeys": 1,
   "veranda": false
  },
  "museum": {
@@ -497,12 +548,15 @@
   },
   "eave": 0.9,
   "face": 342,
+  "palms": 4,
+  "pool": false,
   "roof": "gable",
   "size": [
    15,
    9,
-   5.4
+   6.0
   ],
+  "storeys": 1,
   "veranda": false
  },
  "nustall": {
@@ -525,12 +579,15 @@
   },
   "eave": 1.6,
   "face": 150,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "otb": {
@@ -553,12 +610,15 @@
   },
   "eave": 1.6,
   "face": 240,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "palace": {
@@ -581,12 +641,15 @@
   },
   "eave": 1.6,
   "face": 0,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "punanganui": {
@@ -609,12 +672,15 @@
   },
   "eave": 2.6,
   "face": 0,
+  "palms": 4,
+  "pool": false,
   "roof": "hip",
   "size": [
    34,
    16,
    4.4
   ],
+  "storeys": 1,
   "veranda": false
  },
  "rickshaw": {
@@ -637,12 +703,15 @@
   },
   "eave": 1.6,
   "face": 228,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "sails": {
@@ -665,12 +734,15 @@
   },
   "eave": 1.6,
   "face": 66,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "sheraton": {
@@ -693,13 +765,78 @@
   },
   "eave": 0.4,
   "face": 138,
+  "palms": 12,
+  "pool": false,
   "roof": "flat",
   "size": [
    40,
    18,
-   9.0
+   9.5
   ],
+  "storeys": 3,
   "veranda": false
+ },
+ "stay-arorangi": {
+  "colour": {
+   "roof": [
+    117,
+    138,
+    113
+   ],
+   "trim": [
+    253,
+    249,
+    238
+   ],
+   "wall": [
+    204,
+    195,
+    167
+   ]
+  },
+  "eave": 1.4,
+  "face": 258,
+  "palms": 10,
+  "pool": true,
+  "roof": "hip",
+  "size": [
+   20,
+   11,
+   8.5
+  ],
+  "storeys": 2,
+  "veranda": true
+ },
+ "stay-titikaveka": {
+  "colour": {
+   "roof": [
+    110,
+    136,
+    109
+   ],
+   "trim": [
+    255,
+    253,
+    243
+   ],
+   "wall": [
+    201,
+    193,
+    161
+   ]
+  },
+  "eave": 1.4,
+  "face": 222,
+  "palms": 10,
+  "pool": true,
+  "roof": "hip",
+  "size": [
+   20,
+   11,
+   8.5
+  ],
+  "storeys": 2,
+  "veranda": true
  },
  "tamarind": {
   "colour": {
@@ -721,12 +858,15 @@
   },
   "eave": 1.6,
   "face": 0,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "tapabar": {
@@ -749,12 +889,15 @@
   },
   "eave": 1.8,
   "face": 96,
+  "palms": 7,
+  "pool": false,
   "roof": "hip",
   "size": [
    15,
    9,
-   4.2
+   4.6
   ],
+  "storeys": 1,
   "veranda": true
  },
  "tevaranui": {
@@ -777,12 +920,15 @@
   },
   "eave": 1.8,
   "face": 144,
+  "palms": 10,
+  "pool": false,
   "roof": "gable",
   "size": [
    20,
    12,
-   5.2
+   5.6
   ],
+  "storeys": 1,
   "veranda": true
  },
  "titikavekacicc": {
@@ -805,6 +951,8 @@
   },
   "eave": 0.6,
   "face": 144,
+  "palms": 4,
+  "pool": false,
   "roof": "gable",
   "size": [
    15,
@@ -812,6 +960,7 @@
    7.5
   ],
   "spire": 9.5,
+  "storeys": 1,
   "veranda": false
  },
  "traderjacks": {
@@ -834,12 +983,15 @@
   },
   "eave": 1.8,
   "face": 228,
+  "palms": 7,
+  "pool": false,
   "roof": "hip",
   "size": [
    15,
    9,
-   4.2
+   4.6
   ],
+  "storeys": 1,
   "veranda": true
  },
  "vaima": {
@@ -862,12 +1014,15 @@
   },
   "eave": 1.6,
   "face": 156,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "waterline": {
@@ -890,12 +1045,15 @@
   },
   "eave": 1.6,
   "face": 252,
+  "palms": 6,
+  "pool": false,
   "roof": "hip",
   "size": [
    17,
    10,
-   4.6
+   5.0
   ],
+  "storeys": 1,
   "veranda": true
  },
  "wilsons": {
@@ -918,12 +1076,15 @@
   },
   "eave": 1.8,
   "face": 186,
+  "palms": 7,
+  "pool": false,
   "roof": "hip",
   "size": [
    15,
    9,
-   4.2
+   4.6
   ],
+  "storeys": 1,
   "veranda": true
  }
 }

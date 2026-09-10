@@ -30,13 +30,13 @@ V4 = ROOT / "v4"
 # footprint in metres, ridge height, roof, and whether it has a veranda along
 # the front. Islands build low and wide; nothing here is taller than the palms.
 BY_CATEGORY = {
-    "eat":       dict(w=17, d=10, h=4.6, roof="hip",   eave=1.6, veranda=True),
-    "drink":     dict(w=15, d=9,  h=4.2, roof="hip",   eave=1.8, veranda=True),
-    "stay":      dict(w=22, d=12, h=6.5, roof="hip",   eave=1.2, veranda=True),
-    "culture":   dict(w=15, d=9,  h=5.4, roof="gable", eave=0.9, veranda=False),
-    "swim":      dict(w=8,  d=6,  h=3.0, roof="hip",   eave=1.4, veranda=False),
-    "adventure": dict(w=10, d=7,  h=3.4, roof="hip",   eave=1.2, veranda=False),
-    "knowhow":   dict(w=12, d=8,  h=3.8, roof="flat",  eave=0.8, veranda=False),
+    "eat":       dict(w=17, d=10, h=5.0, roof="hip",   eave=1.6, veranda=True,  storeys=1, palms=6),
+    "drink":     dict(w=15, d=9,  h=4.6, roof="hip",   eave=1.8, veranda=True,  storeys=1, palms=7),
+    "stay":      dict(w=22, d=12, h=9.0, roof="hip",   eave=1.4, veranda=True,  storeys=2, palms=9, pool=True),
+    "culture":   dict(w=15, d=9,  h=6.0, roof="gable", eave=0.9, veranda=False, storeys=1, palms=4),
+    "swim":      dict(w=8,  d=6,  h=3.2, roof="hip",   eave=1.4, veranda=False, storeys=1, palms=5),
+    "adventure": dict(w=10, d=7,  h=3.6, roof="hip",   eave=1.2, veranda=False, storeys=1, palms=4),
+    "knowhow":   dict(w=12, d=8,  h=4.0, roof="flat",  eave=0.8, veranda=False, storeys=1, palms=3),
 }
 # a few that are plainly not a shed with a tin roof
 OVERRIDES = {
@@ -45,12 +45,18 @@ OVERRIDES = {
     "matavera":       dict(w=14, d=9,  h=7.0, roof="gable", eave=0.6, spire=9.0),
     "punanganui":     dict(w=34, d=16, h=4.4, roof="hip",   eave=2.6, veranda=False),
     "murimarket":     dict(w=26, d=12, h=3.8, roof="hip",   eave=2.4, veranda=False),
-    "airport":        dict(w=46, d=16, h=6.0, roof="flat",  eave=1.4, veranda=False),
-    "hospital":       dict(w=38, d=18, h=7.5, roof="hip",   eave=1.0, veranda=False),
-    "avatiu":         dict(w=30, d=14, h=5.5, roof="flat",  eave=0.8, veranda=False),
-    "highland":       dict(w=18, d=11, h=5.0, roof="gable", eave=1.8, veranda=True),
-    "tevaranui":      dict(w=20, d=12, h=5.2, roof="gable", eave=1.8, veranda=True),
-    "sheraton":       dict(w=40, d=18, h=9.0, roof="flat",  eave=0.4, veranda=False),
+    "airport":        dict(w=46, d=16, h=6.5, roof="flat",  eave=1.4, veranda=False, palms=8),
+    "hospital":       dict(w=38, d=18, h=8.5, roof="hip",   eave=1.0, veranda=False, storeys=2, palms=6),
+    "avatiu":         dict(w=30, d=14, h=5.5, roof="flat",  eave=0.8, veranda=False, palms=3),
+    "highland":       dict(w=18, d=11, h=5.4, roof="gable", eave=1.8, veranda=True,  palms=10),
+    "tevaranui":      dict(w=20, d=12, h=5.6, roof="gable", eave=1.8, veranda=True,  palms=10),
+    "sheraton":       dict(w=40, d=18, h=9.5, roof="flat",  eave=0.4, veranda=False, storeys=3, palms=12),
+    # the four district stay entries are the island's accommodation strips;
+    # a villa with a pool says "this is where you sleep" better than a shed
+    "stay-arorangi":   dict(w=20, d=11, h=8.5, roof="hip", eave=1.4, veranda=True, storeys=2, palms=10, pool=True),
+    "stay-titikaveka": dict(w=20, d=11, h=8.5, roof="hip", eave=1.4, veranda=True, storeys=2, palms=10, pool=True),
+    "stay-muri":       dict(w=20, d=11, h=8.5, roof="hip", eave=1.4, veranda=True, storeys=2, palms=10, pool=True),
+    "stay-avarua":     dict(w=18, d=10, h=7.5, roof="hip", eave=1.4, veranda=True, storeys=2, palms=8),
 }
 # places that are a stretch of water, a track or a habit, not a building
 NO_BUILDING = {
@@ -59,7 +65,6 @@ NO_BUILDING = {
     "pastrek", "arametua", "takitumu", "wigmores", "bus", "honesty", "reefkit",
     "money", "selfcater", "progressive", "fridaynight", "saturdaysport",
     "islandnight", "lagooncruise", "koka", "whalecentre", "shipwreck",
-    "stay-arorangi", "stay-titikaveka", "stay-muri", "stay-avarua",
     "maraearai", "storytellers", "rarosafari", "airraro", "golf", "matutu",
 }
 
@@ -151,6 +156,9 @@ def main():
         rec = {"size": [spec["w"], spec["d"], spec["h"]],
                "roof": spec["roof"], "eave": spec["eave"],
                "veranda": bool(spec.get("veranda")),
+               "storeys": int(spec.get("storeys", 1)),
+               "palms": int(spec.get("palms", 4)),
+               "pool": bool(spec.get("pool")),
                "face": round(sea_bearing(hgt, TW, TH, t["bbox"], lat, lon), 1)}
         if spec.get("spire"):
             rec["spire"] = spec["spire"]
@@ -160,8 +168,9 @@ def main():
         else:
             rec["colour"] = {"wall": [222, 214, 198], "roof": [96, 84, 74], "trim": [245, 243, 236]}
         out[pid] = rec
-        print(f"  {pid:<16} {name[:28]:<30} {spec['w']}x{spec['d']}m  {spec['roof']:<5} "
-              f"facing {rec['face']:>5.0f}deg  roof {tuple(rec['colour']['roof'])}")
+        print(f"  {pid:<16} {name[:26]:<28} {spec['w']:>2.0f}x{spec['d']:<2.0f}m  "
+              f"{rec['storeys']} storey  {spec['roof']:<5} facing {rec['face']:>5.0f}deg"
+              f"{'  pool' if rec['pool'] else ''}")
 
     (V4 / "models.json").write_text(json.dumps(out, indent=1, sort_keys=True))
     print(f"\n{len(out)} buildings written to v4/models.json "
