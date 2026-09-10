@@ -41,10 +41,9 @@ function go(i){
   show(i);
   const d = DISTRICTS[at];
   held = performance.now() + 1200;          // let the flight finish before following again
-  if (window.mode3d && window.raro3d){
-    raro3d.view.lat = d.lat; raro3d.view.lon = d.lon;
-    raro3d.view.dist = Math.min(raro3d.view.dist, 2600);
-    camDirty = true;
+  if (window.mode3d && window.flyTo3D){
+    // a district reads from the water too, far enough back to hold the coast
+    window.flyTo3D(d.lat, d.lon, Math.min(raro3d.view.dist, 2600), 0.42);
   } else {
     const im = llToImg(d.lat, d.lon);
     animateCam({ x:im.x, y:im.y, zoom: Math.max(cam.zoom, camZoomForIsland(2.6)) });

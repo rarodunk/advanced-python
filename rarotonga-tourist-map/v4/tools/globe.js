@@ -1034,6 +1034,7 @@ let mvp = null;
 const t0 = performance.now();
 function draw(){
   if (!ready) return;
+  stepFlight();
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
@@ -1126,8 +1127,16 @@ function draw(){
 }
 window.draw3D = draw;
 // a handle for the tests, and for anyone poking at the scene from a console
-window.raro3d = { view, get buildings(){ return bldCount / 3; },
-                  get dist(){ return view.dist; } };
+window.raro3d = { view, centre: [C_LAT, C_LON],
+                  get buildings(){ return bldCount / 3; },
+                  get dist(){ return view.dist; },
+                  // where a screen pixel lands on the ground the camera is
+                  // looking at, which is also how the drag is worked out
+                  groundLL(sx, sy){
+                    const { e, t } = eyeAndTarget();
+                    const g = groundAt(sx, sy, e, t);
+                    return g && { lat: C_LAT - g[2] / KM_LAT_M, lon: C_LON + g[0] / M_LON };
+                  } };
 
 /* ---------- the compass ---------- */
 // It turns with the camera in 3D and points north in 2D, and clicking it puts
@@ -1169,6 +1178,89 @@ window.project3D = function(p){
            y: (-cy / cw * 0.5 + 0.5) * innerHeight, w: cw };
 };
 
+/* ---------- arriving at a place ---------- */
+// A place is worth seeing from the water: that is the angle every postcard of
+// this island is taken from, and it puts the mountains behind the roof instead
+// of the roof against a hillside. Still looking down on it, just from the
+// ocean side. Which side that is gets tried rather than assumed: walk the
+// compass round and take the bearing whose viewpoint stands over water.
+function seaSideAz(lat, lon, dist, el){
+  const r0 = dist * Math.cos(el);
+  // A place set back from the beach has no water at arm's length, so look
+  // further out for the sea and then come back in on that bearing.
+  for (const reach of [1, 2.5, 6, 14]){
+    const az = seaSideAtRadius(lat, lon, r0 * reach);
+    if (az != null) return az;
+  }
+  return seaSideAtRadius(lat, lon, r0, true);
+}
+function seaSideAtRadius(lat, lon, r, orDry){
+  const wet = [], dry = [];
+  for (let i = 0; i < 72; i++){
+    const az = i / 72 * Math.PI * 2;
+    const ex = toWorldX(lon) + r * Math.sin(az), ez = toWorldZ(lat) + r * Math.cos(az);
+    const eLat = C_LAT - ez / KM_LAT_M, eLon = C_LON + ex / M_LON;
+    // the viewpoint itself, and the water between it and the place: looking
+    // across a headland is not looking from the sea
+    let land = Math.max(0, heightAtLL(eLat, eLon));
+    for (let k = 0.5; k < 1; k += 0.25){
+      land += Math.max(0, heightAtLL(lat + (eLat - lat) * k, lon + (eLon - lon) * k)) * 0.5;
+    }
+    // among the bearings that work, the one nearest the way you already face,
+    // so opening a second place along the same beach is a small move
+    let turn = Math.abs(((az - view.az + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    (land < 0.6 ? wet : dry).push({ az, land, turn });
+  }
+  if (wet.length){
+    wet.sort((a, b) => a.turn - b.turn);
+    return wet[0].az;
+  }
+  if (!orDry) return null;
+  // nothing round here is water: inland places get the lowest ground instead,
+  // which is the valley rather than the ridge behind them
+  dry.sort((a, b) => (a.land - b.land) || (a.turn - b.turn));
+  return dry[0].az;
+}
+let flight = null;
+function flyTo(to, ms){
+  const from = { lat:view.lat, lon:view.lon, az:view.az, el:view.el, dist:view.dist };
+  let d = to.az - from.az;                      // turn the short way round
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  flight = { from, to, d, t0: performance.now(), ms };
+  camDirty = true;
+}
+function stepFlight(){
+  if (!flight) return;
+  const k = Math.min(1, (performance.now() - flight.t0) / flight.ms);
+  const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;   // ease in and out
+  const f = flight.from, t = flight.to;
+  view.lat = f.lat + (t.lat - f.lat) * e;
+  view.lon = f.lon + (t.lon - f.lon) * e;
+  view.az  = f.az + flight.d * e;
+  view.el  = f.el + (t.el - f.el) * e;
+  // distance moves geometrically, so a long approach does not crawl at the end
+  view.dist = f.dist * Math.pow(t.dist / f.dist, e);
+  camDirty = true;
+  if (k >= 1) flight = null;
+}
+// How far back to stand: a shopfront wants ninety metres, the airport wants
+// three hundred, and a lagoon or a mountain is not a building at all.
+function arrivalDist(id){
+  const m = MODELS[id];
+  if (!m || !m.size) return 260;
+  return Math.max(85, Math.min(420, Math.max(m.size[0], m.size[1]) * 4.2));
+}
+// dist and tilt for arriving somewhere: close enough to read the building,
+// high enough to still be looking down on it
+window.flyTo3D = function(lat, lon, dist, el){
+  if (!window.mode3d) return false;
+  dist = dist || 260;
+  el = el == null ? 0.42 : el;
+  flyTo({ lat, lon, az: seaSideAz(lat, lon, dist, el), el, dist }, 900);
+  return true;
+};
+
 /* ---------- gestures, only while the 3D setting is on ---------- */
 // Dragging moves you across the island, because that is what dragging does on
 // every other map anybody has ever used. Turning is a deliberate act: twist
@@ -1181,27 +1273,73 @@ let pinch = null, twoMid = null, twist = null, orbiting = false, moved3d = 0;
 function groundPerPixel(){
   return (2 * view.dist * Math.tan(46 * Math.PI / 360)) / Math.max(1, innerHeight);
 }
-function panBy(dxPx, dyPx){
-  const mpp = groundPerPixel();
-  const rx = Math.cos(view.az), rz = -Math.sin(view.az);      // screen right
-  const fx = -Math.sin(view.az), fz = -Math.cos(view.az);     // into the screen
-  const wx = -(rx * dxPx + fx * dyPx) * mpp;
-  const wz = -(rz * dxPx + fz * dyPx) * mpp;
-  view.lon += wx / M_LON;
-  view.lat -= wz / KM_LAT_M;
+function moveFocus(dx, dz){
+  flight = null;
+  view.lon += dx / M_LON;
+  view.lat -= dz / KM_LAT_M;
   view.lat = Math.max(TB_S + 0.004, Math.min(TB_N - 0.004, view.lat));
   view.lon = Math.max(TB_W + 0.004, Math.min(TB_E - 0.004, view.lon));
   camDirty = true;
 }
-function orbitBy(dAz, dEl){
-  view.az += dAz; view.el += dEl; camDirty = true;
+// Screen pixels are not metres on a tilted view: the same drag covers a
+// street at the bottom of the screen and a kilometre near the horizon, and
+// the direction depends on where the camera is looking. Guessing at it is
+// what made the drag feel wrong. So aim the actual ray through the pointer
+// at the ground plane the camera is looking at, and move the world so the
+// spot you grabbed stays under your finger.
+function groundAt(sx, sy, e, t){
+  const f = norm(sub(t, e));
+  const right = norm(cross(f, [0, 1, 0]));
+  const up = cross(right, f);
+  const tanY = Math.tan(46 * Math.PI / 360), aspect = innerWidth / Math.max(1, innerHeight);
+  const nx = (2 * sx / Math.max(1, innerWidth) - 1) * tanY * aspect;
+  const ny = (1 - 2 * sy / Math.max(1, innerHeight)) * tanY;
+  const d = norm([f[0] + right[0]*nx + up[0]*ny,
+                  f[1] + right[1]*nx + up[1]*ny,
+                  f[2] + right[2]*nx + up[2]*ny]);
+  if (d[1] > -1e-4) return null;                       // that ray is sky
+  const k = (t[1] - e[1]) / d[1];
+  if (k <= 0 || k > view.dist * 8) return null;        // near the horizon, unusable
+  return [e[0] + d[0]*k, t[1], e[2] + d[2]*k];
 }
+function panBy(dxPx, dyPx, fromX, fromY){
+  const { e, t } = eyeAndTarget();
+  if (fromX != null){
+    const a = groundAt(fromX, fromY, e, t);
+    const b = groundAt(fromX + dxPx, fromY + dyPx, e, t);
+    if (a && b){ moveFocus(a[0] - b[0], a[2] - b[2]); return; }
+  }
+  // fallback for the flat case and for drags that started against the sky
+  const mpp = groundPerPixel();
+  const rx = Math.cos(view.az), rz = -Math.sin(view.az);      // screen right
+  const fx = -Math.sin(view.az), fz = -Math.cos(view.az);     // into the screen
+  moveFocus(-(rx * dxPx + fx * dyPx) * mpp, (rz * dxPx + fz * dyPx) * mpp);
+}
+// A twist turns you around the island, not around your own feet: the island
+// is the thing you are looking at. Down among the buildings that would fling
+// you across the lagoon, so close in the turn becomes a look around instead.
+function turnBy(dAz, dEl){
+  view.az += dAz;
+  const k = Math.max(0, Math.min(1, (view.dist - 800) / 1500));
+  if (k > 0){
+    const cx = toWorldX(view.lon) - toWorldX(C_LON);
+    const cz = toWorldZ(view.lat) - toWorldZ(C_LAT);
+    const a = dAz * k, c = Math.cos(a), sn = Math.sin(a);
+    const nx = cx * c + cz * sn, nz = -cx * sn + cz * c;
+    view.lon = C_LON + nx / M_LON;
+    view.lat = C_LAT - nz / KM_LAT_M;
+  }
+  if (dEl) view.el += dEl;
+  camDirty = true;
+}
+const orbitBy = turnBy;
 window.pan3D = panBy;
 
 stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
 stage.addEventListener("pointerdown", ev => {
   if (!window.mode3d) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+  flight = null;
   orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
   pinch = null; twoMid = null; twist = null; moved3d = 0;
 }, true);
@@ -1217,18 +1355,23 @@ stage.addEventListener("pointermove", ev => {
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
     const mid = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
     if (pinch) view.dist *= pinch / d;                     // pinch: closer or further
-    if (twist != null){                                    // twist: turn the island
+    if (twist != null){                                    // twist: go around the island
       let dt = ang - twist;
       while (dt > Math.PI) dt -= 2 * Math.PI;
       while (dt < -Math.PI) dt += 2 * Math.PI;
-      view.az -= dt;
+      turnBy(-dt, 0);
     }
-    if (twoMid) view.el += (mid.y - twoMid.y) * 0.004;      // two fingers up and down: tilt
+    if (twoMid){
+      // two fingers: sideways moves you, up and down tilts, since one finger
+      // already moves you and the tilt has nowhere else to live on a phone
+      panBy(mid.x - twoMid.x, 0, twoMid.x, twoMid.y);
+      view.el += (mid.y - twoMid.y) * 0.004;
+    }
     pinch = d; twist = ang; twoMid = mid;
   } else if (orbiting){
-    orbitBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
+    turnBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
   } else {
-    panBy(cur.x - prev.x, cur.y - prev.y);
+    panBy(cur.x - prev.x, cur.y - prev.y, prev.x, prev.y);
   }
   camDirty = true;
 }, true);
@@ -1279,7 +1422,7 @@ addEventListener("keydown", ev => {
   if (k){
     ev.preventDefault();
     if (ev.shiftKey) orbitBy(k[0] * 0.004, k[1] * 0.003);
-    else panBy(-k[0], -k[1]);
+    else panBy(-k[0], -k[1], innerWidth / 2, innerHeight / 2);
   }
 });
 
@@ -1355,6 +1498,21 @@ function showHint(){
   hintTimer = setTimeout(() => { hint.classList.remove("on");
     setTimeout(() => { hint.hidden = true; }, 400); }, 5200);
 }
+
+// Opening a place while the island is tilted flies you out to the water and
+// looks back at it. The re-renders that pass fly=false (favouriting, a
+// submission being approved) leave the camera where it is.
+const openBefore = window.openPlace;
+window.openPlace = function(id, fly){
+  const r = openBefore.apply(this, arguments);
+  if (window.mode3d && fly !== false){
+    // PLACES is a script-level const, so it is not a property of window
+    const list = typeof PLACES !== "undefined" ? PLACES : [];
+    const p = list.find(q => q.id === id);
+    if (p && p.ll) window.flyTo3D(p.ll[0], p.ll[1], arrivalDist(p.id), 0.42);
+  }
+  return r;
+};
 
 document.getElementById("d3Btn").onclick = () => setMode3D(!window.mode3d);
 addEventListener("keydown", e => {
