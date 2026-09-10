@@ -280,6 +280,17 @@ function heightAtLL(lat, lon){
 window.terrainHeightAt = heightAtLL;             // true metres, never exaggerated
 const worldY = (lat, lon) => lift(heightAtLL(lat, lon));
 
+// How far the water is, walking the bearing the coastline gave this place.
+// A beachfront bar and a bar up a valley want different gardens.
+function distanceToSea(lat, lon, bearing){
+  const th = bearing * Math.PI / 180;
+  for (let d = 25; d <= 900; d += 25){
+    if (heightAtLL(lat + Math.cos(th) * d / KM_LAT_M,
+                   lon + Math.sin(th) * d / M_LON) <= 0.5) return d;
+  }
+  return 9999;
+}
+
 // height straight off the grid, for the shading pass
 function hGrid(gx, gy){
   const x = Math.max(0, Math.min(TW - 1, gx)), y = Math.max(0, Math.min(TH - 1, gy));
@@ -619,18 +630,90 @@ function buildBuildings(){
   const seedOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++){
     h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 
+  const shadeOf = (c, k) => c.map(v => Math.max(0, Math.min(255, Math.round(v * k))));
+  // Three upright panels crossed through each other: from any angle that is a
+  // mound of leaves, and it costs eight triangles. Flat blades laid from the
+  // ground to a point read as splashes of paint instead.
+  function leafClump(P, rnd, x, z, r, tall, tone){
+    for (let i = 0; i < 3; i++){
+      const a = (i / 3) * Math.PI + rnd() * 0.3;
+      const dx = Math.cos(a) * r, dz = Math.sin(a) * r;
+      const t = shadeOf(tone, 0.86 + i * 0.09);
+      // widest at knee height, narrowing twice on the way up, which rounds the
+      // silhouette off instead of leaving a paper tent
+      quad(P(x - dx, 0.12, z - dz), P(x + dx, 0.12, z + dz),
+           P(x + dx * 0.92, tall * 0.45, z + dz * 0.92),
+           P(x - dx * 0.92, tall * 0.45, z - dz * 0.92), t, "leaf");
+      quad(P(x - dx * 0.92, tall * 0.45, z - dz * 0.92), P(x + dx * 0.92, tall * 0.45, z + dz * 0.92),
+           P(x + dx * 0.5, tall * 0.82, z + dz * 0.5), P(x - dx * 0.5, tall * 0.82, z - dz * 0.5),
+           shadeOf(t, 1.06), "leaf");
+      push(P(x - dx * 0.5, tall * 0.82, z - dz * 0.5), P(x + dx * 0.5, tall * 0.82, z + dz * 0.5),
+           P(x, tall, z), shadeOf(t, 1.1), "leaf");
+    }
+  }
+  // a trunk with a crown: banana and tree fern droop, breadfruit and pandanus
+  // hold their leaves up
+  function leafTree(P, rnd, x, z, ht, spread, tone, droop){
+    const t = 0.16 + ht * 0.02, trunk = [92, 72, 52];
+    const box = (x0, x1, y0, y1, z0, z1, col) => {
+      const a = P(x0,y0,z0), b = P(x1,y0,z0), c = P(x1,y0,z1), d2 = P(x0,y0,z1);
+      const A = P(x0,y1,z0), B = P(x1,y1,z0), C2 = P(x1,y1,z1), D = P(x0,y1,z1);
+      quad(a, b, B, A, col, "timber"); quad(b, c, C2, B, col, "timber");
+      quad(c, d2, D, C2, col, "timber"); quad(d2, a, A, D, col, "timber");
+    };
+    box(x - t, x + t, 0.15, ht, z - t, z + t, trunk);
+    for (let i = 0; i < 6; i++){
+      const a = (i / 6) * Math.PI * 2 + rnd() * 0.5;
+      const dx = Math.cos(a) * spread, dz = Math.sin(a) * spread;
+      push(P(x - 0.25, ht - 0.3, z), P(x + 0.25, ht - 0.3, z),
+           P(x + dx, ht + (droop ? -spread * 0.5 : 0.6), z + dz),
+           i % 2 ? tone : shadeOf(tone, 0.86), "leaf");
+    }
+  }
+  // A place with no building — a summit, a lagoon, a beach, a stretch of road —
+  // still stands in something. Without this the pin hovers over bare paint.
+  // shift a local frame up or down onto the ground under that spot
+  const P2 = (P, dy) => (x, y, z) => P(x, y + dy, z);
+  function scatterWild(p){
+    const h = heightAtLL(p.latlon.lat, p.latlon.lon);
+    const base = worldY(p.latlon.lat, p.latlon.lon);
+    const ox = toWorldX(p.latlon.lon), oz = toWorldZ(p.latlon.lat);
+    const P = (x, y, z) => [ox + x, base + y, oz + z];
+    let seed = seedOf(p.id + ":wild");
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const high = h > 90, shore = h < 6;
+    const tone = high ? [64, 104, 48] : shore ? [104, 148, 76] : [82, 128, 56];
+    // A lagoon or a passage is itself water: the planting goes on whatever
+    // land is within sight of it, which is how a motu gets its palms.
+    for (let i = 0; i < 30; i++){
+      const a = rnd() * Math.PI * 2, r = 14 + rnd() * 86;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const at = heightAtLL(p.latlon.lat - z / KM_LAT_M, p.latlon.lon + x / M_LON);
+      if (at <= 0.6) continue;                  // never plant in the sea
+      const y = lift(at) - base;                // sit it on the ground, not the pin's
+      const pick = rnd();
+      if (pick > 0.72) leafTree(P2(P, y), rnd, x, z, 7 + rnd() * 5, 4.4, tone, high);
+      else if (pick > 0.55 && at < 8) leafTree(P2(P, y), rnd, x, z, 6 + rnd() * 3, 3.6, [96, 140, 70], false);
+      else leafClump(P2(P, y), rnd, x, z, 2.2 + rnd() * 1.6, 2.2 + rnd() * 1.8, tone);
+    }
+  }
+
   for (const p of PLACES){
     const m = MODELS[p.id];
-    if (!m || !p.latlon) continue;
+    if (!p.latlon) continue;
+    if (!m){ scatterWild(p); continue; }
     const [w, d, h] = m.size;
     const e = m.eave || 1.0;
     const storeys = Math.max(1, m.storeys || 1);
     const base = worldY(p.latlon.lat, p.latlon.lon);
     const ox = toWorldX(p.latlon.lon), oz = toWorldZ(p.latlon.lat);
-    const th = (m.face || 0) * Math.PI / 180;
+    // Local -z is the front, and it has to look down the bearing the coastline
+    // gave this place. Rotating by the bearing itself pointed it at 360 minus
+    // that instead, so every building whose water was not due north or south
+    // showed the camera its back: Trader Jack's faced its own car park.
+    const th = -(m.face || 0) * Math.PI / 180;
     const ct = Math.cos(th), st = Math.sin(th);
-    // local x runs along the front, local z away from it; the front looks
-    // down the bearing the tool worked out from the coastline
+    // local x runs along the front, local z away from it
     const P = (x, y, z) => [ox + x * ct + z * st, base + y, oz - x * st + z * ct];
     const C = m.colour;
     const wall = C.wall, roof = C.roof, trim = C.trim;
@@ -655,8 +738,9 @@ function buildBuildings(){
     };
     const ROOFMAT = m.thatch ? "thatch" : "roof";
 
-    // the plot: a mown apron with a path to the front
-    const pw = hw + e + 3.5, pd = hd + e + 3.5;
+    // the plot: paving tight around the walls, no wider than a place actually
+    // paves, with the garden taking everything beyond it
+    const pw = hw + e + 1.2, pd = hd + e + 1.2;
     quad(P(-pw, 0.10, -pd), P(pw, 0.10, -pd), P(pw, 0.10, pd), P(-pw, 0.10, pd), sand, "ground");
 
     if (art){
@@ -684,9 +768,14 @@ function buildBuildings(){
         // standing in front of the building, so the picture would otherwise
         // hang back to front — invisible on a shelf of pies, obvious the
         // moment there is lettering on it
+        // A back with no elevation of its own borrows the front. Hung the same
+        // way round it would show the sign in mirror writing, so the borrowed
+        // picture is flipped: PALACE TAKEAWAYS reads as itself from behind.
+        const borrowed = !art[face];
+        const uv = borrowed ? [[0, v0], [1, v0], [1, 1], [0, 1]]
+                            : [[1, v0], [0, v0], [0, 1], [1, 1]];
         quadUV(P(x0, top, z0), P(x1, top, z1), P(x1, yBase, z1), P(x0, yBase, z0),
-               [[1, v0], [0, v0], [0, 1], [1, 1]], white,
-               p.id + ":" + (art[face] ? face : "front"));
+               uv, white, p.id + ":" + (borrowed ? "front" : face));
         return true;
       };
       faceQuad("front", -hw, hw, -hd, -hd);
@@ -862,6 +951,180 @@ function buildBuildings(){
         push(P(x + lean - 0.3, th2 + 0.2, z), P(midX, th2 + 0.35, midZ), P(tipX, dip, tipZ), tone, "leaf");
         push(P(x + lean + 0.3, th2 + 0.2, z), P(tipX, dip, tipZ), P(midX, th2 + 0.35, midZ), tone, "leaf");
       }
+    }
+
+    /* ---- the garden it stands in ----------------------------------------
+       A building dropped on bare ground reads as a model kit on a table. Every
+       place on this island stands in something: a mown yard with a hibiscus
+       hedge, a sand apron with pandanus and a canoe pulled up, taro and banana
+       up a valley. None of it is invented per place — it is what the setting
+       would carry, chosen from where the place actually is. */
+    const trueH = heightAtLL(p.latlon.lat, p.latlon.lon);
+    const seaM = distanceToSea(p.latlon.lat, p.latlon.lon, m.face || 0);
+    const beach = seaM < 130, hillside = trueH > 55 || seaM > 900;
+    const lawn = hillside ? [84, 116, 56] : [96, 138, 62];
+    const scrub = [74, 110, 54], leafDark = [48, 92, 46], leafMid = [72, 126, 56];
+    const gravel = [150, 145, 134], sandy = [228, 210, 172];
+    const petals = [[214, 58, 52], [246, 236, 198], [206, 72, 140], [242, 190, 70]];
+    // unsigned: a signed shift can land the index the wrong side of zero
+    const petal = petals[(seedOf(p.id) >>> 3) % petals.length];
+    const yard = beach ? sandy : hillside ? scrub : lawn;
+
+    // the garden's own outline: a ragged ring, because nothing on this island
+    // is mown to a rectangle
+    const gr = Math.max(hw, hd) + (beach ? 12 : 9);
+    const N = 16, ring = [];
+    for (let i = 0; i < N; i++){
+      const a = (i / N) * Math.PI * 2;
+      const k = gr * (0.72 + rnd() * 0.5);
+      ring.push([Math.cos(a) * k, Math.sin(a) * k * 0.86]);
+    }
+    for (let i = 0; i < N; i++){
+      const a = ring[i], b = ring[(i + 1) % N];
+      push(P(0, 0.05, 0), P(a[0], 0.05, a[1]), P(b[0], 0.05, b[1]), yard, "ground");
+    }
+    // a second, deeper patch of ground under the planting, so the yard is not
+    // one flat wash of colour
+    for (let i = 0; i < N; i += 2){
+      const a = ring[i], b = ring[(i + 1) % N], c = ring[(i + 2) % N];
+      push(P(a[0] * 0.55, 0.06, a[1] * 0.55), P(b[0] * 0.9, 0.06, b[1] * 0.9),
+           P(c[0] * 0.6, 0.06, c[1] * 0.6), shade(yard, hillside ? 1.12 : 0.88), "ground");
+    }
+    // the way in, from the front of the building out to the road or the beach
+    const path = beach ? sandy : gravel;
+    quad(P(-1.4, 0.08, -hd - e), P(1.4, 0.08, -hd - e),
+         P(1.9, 0.08, -gr - 2), P(-1.9, 0.08, -gr - 2), path, "ground");
+
+    // a clump of leaves: crossed blades, which is all a shrub needs to be at
+    // the distance you ever see one from
+    const clump = (x, z, r, tall, tone) => leafClump(P, rnd, x, z, r, tall, tone);
+    // flowers stand up in the bush rather than lying on the grass, where at
+    // this scale they would never be seen
+    const bloom = (x, z, y) => {
+      const r = 0.42;
+      quad(P(x - r, y - r, z), P(x + r, y - r, z), P(x + r, y + r, z), P(x - r, y + r, z),
+           petal, "leaf");
+    };
+    const tree = (x, z, ht, spread, tone, droop) => leafTree(P, rnd, x, z, ht, spread, tone, droop);
+    // is this spot clear of the building and the path?
+    const clear = (x, z) => Math.abs(x) > hw + 1.4 || Math.abs(z) > hd + e + 1.2;
+
+    // the hedge and the bed along the front, which is where a garden goes
+    if (!hillside){
+      const hz = -hd - e - 2.6;
+      for (let x = -hw - 1; x <= hw + 1; x += 1.5){
+        const hh2 = 1.1 + rnd() * 0.7;
+        clump(x + (rnd() - 0.5) * 0.4, hz + (rnd() - 0.5) * 0.5, 0.9, hh2, leafMid);
+        if (rnd() > 0.45) bloom(x, hz - 0.5, hh2 * 0.85);
+      }
+      quad(P(-hw - 1.4, 0.09, hz - 1.1), P(hw + 1.4, 0.09, hz - 1.1),
+           P(hw + 1.4, 0.09, hz + 1.1), P(-hw - 1.4, 0.09, hz + 1.1), shade(yard, 0.82), "ground");
+    }
+    // and beds down the sides, kept low so they never hide the elevation
+    for (const sx of [-1, 1]){
+      for (let i = 0; i < 4; i++){
+        const x = sx * (hw + 1.9 + rnd() * 1.6), z = (rnd() - 0.5) * d * 0.9;
+        if (!clear(x, z)) continue;
+        const th3 = 1.2 + rnd() * 0.9;
+        clump(x, z, 1.0 + rnd() * 0.5, th3, i % 2 ? leafDark : leafMid);
+        if (rnd() > 0.6) bloom(x, z - 0.6, th3 * 0.8);
+      }
+    }
+
+    // what grows here beyond the plot
+    const wild = beach ? 5 : hillside ? 7 : 4;
+    for (let i = 0; i < wild; i++){
+      const a = rnd() * Math.PI * 2, r = Math.max(hw, hd) + 3 + rnd() * (gr - Math.max(hw, hd) - 2);
+      const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.85;
+      if (!clear(x, z)) continue;
+      const pick = rnd();
+      if (beach){
+        // pandanus and naupaka, which is what actually holds a Rarotongan beach
+        if (pick > 0.6) tree(x, z, 4 + rnd() * 2, 2.6, [86, 132, 62], false);
+        else clump(x, z, 1.6, 1.5 + rnd() * 0.9, [104, 146, 78]);
+      } else if (hillside){
+        if (pick > 0.7) tree(x, z, 5 + rnd() * 3, 3.4, leafDark, true);        // tree fern
+        else if (pick > 0.4) tree(x, z, 3.4 + rnd(), 2.8, [96, 150, 62], true); // banana
+        else clump(x, z, 1.9, 1.8 + rnd() * 1.2, scrub);
+      } else {
+        if (pick > 0.72){ tree(x, z, 6 + rnd() * 2, 3.6, leafMid, false);      // breadfruit
+                          if (rnd() > 0.5) bloom(x + 1, z, 6.4); }
+        else if (pick > 0.45) tree(x, z, 3.6 + rnd(), 2.6, [96, 150, 62], true);
+        else { const t3 = 1.4 + rnd() * 1.0; clump(x, z, 1.3, t3, leafMid);
+               bloom(x, z - 0.5, t3 * 0.8); }
+      }
+    }
+
+    /* ---- what the place itself puts outside ---- */
+    const teak = [138, 100, 64], canvas = [246, 244, 236];
+    const lounger = (x, z) => {
+      solid(x - 0.95, x + 0.95, 0.35, 0.5, z - 0.4, z + 0.4, canvas, "timber");
+      solid(x - 0.95, x - 0.5, 0.5, 1.2, z - 0.4, z + 0.4, canvas, "timber");
+      solid(x - 0.2, x + 0.5, 0.5, 0.56, z - 0.34, z + 0.34, petal, "timber");   // a towel
+      solid(x - 0.12, x + 0.12, 0.15, 0.35, z - 0.34, z + 0.34, teak, "timber");
+    };
+    const parasol = (x, z, tone) => {
+      solid(x - 0.09, x + 0.09, 0.15, 2.6, z - 0.09, z + 0.09, teak, "timber");
+      for (let i = 0; i < 8; i++){
+        const a = (i / 8) * Math.PI * 2, b = ((i + 1) / 8) * Math.PI * 2;
+        push(P(x, 3.2, z), P(x + Math.cos(a) * 2.2, 2.45, z + Math.sin(a) * 2.2),
+             P(x + Math.cos(b) * 2.2, 2.45, z + Math.sin(b) * 2.2),
+             i % 2 ? tone : shade(tone, 0.88), "thatch");
+      }
+    };
+    const table = (x, z) => {
+      solid(x - 0.11, x + 0.11, 0.15, 0.74, z - 0.11, z + 0.11, teak, "timber");
+      solid(x - 0.85, x + 0.85, 0.74, 0.84, z - 0.85, z + 0.85, teak, "timber");
+      for (const [cx, cz] of [[-1.4, 0], [1.4, 0]]){
+        solid(x + cx - 0.3, x + cx + 0.3, 0.15, 0.5, z + cz - 0.3, z + cz + 0.3, teak, "timber");
+        solid(x + cx - 0.3, x + cx - 0.16, 0.5, 1.05, z + cz - 0.3, z + cz + 0.3, teak, "timber");
+      }
+    };
+    const canoe = (x, z, a) => {
+      const c = Math.cos(a), sn = Math.sin(a), L = 4.2;
+      const hull = (ox2, oz2, wdt, col) => {
+        const ax = x + ox2 - c * L / 2, az2 = z + oz2 - sn * L / 2;
+        const bx = x + ox2 + c * L / 2, bz = z + oz2 + sn * L / 2;
+        quad(P(ax - sn * wdt, 0.2, az2 + c * wdt), P(bx - sn * wdt, 0.2, bz + c * wdt),
+             P(bx + sn * wdt, 0.75, bz - c * wdt), P(ax + sn * wdt, 0.75, az2 - c * wdt), col, "timber");
+      };
+      hull(0, 0, 0.42, trim);
+      hull(-sn * 1.8, c * 1.8, 0.16, bark);        // the outrigger float
+    };
+    const scooter = (x, z) => {
+      solid(x - 0.5, x + 0.5, 0.35, 0.7, z - 0.18, z + 0.18, [186, 62, 52], "wall");
+      solid(x - 0.62, x - 0.42, 0.1, 0.5, z - 0.06, z + 0.06, [28, 28, 30], "timber");
+      solid(x + 0.42, x + 0.62, 0.1, 0.5, z - 0.06, z + 0.06, [28, 28, 30], "timber");
+      solid(x + 0.3, x + 0.42, 0.7, 1.05, z - 0.22, z + 0.22, [40, 44, 48], "timber");
+    };
+    const front = -(hd + e + 4.2);      // out on the grass, clear of the paving
+    if (p.cat === "stay"){
+      for (let i = 0; i < 3; i++) lounger(-hw * 0.5 + i * 2.4, front + (rnd() - 0.5));
+      parasol(hw * 0.6, front, petal);
+    } else if (p.cat === "eat" || p.cat === "drink"){
+      for (let i = 0; i < 3; i++){
+        const x = -hw * 0.7 + i * (w * 0.6) / 2;
+        table(x, front + (rnd() - 0.5) * 1.2);
+        if (i !== 1) parasol(x, front - 0.1, i ? petal : shade(petal, 1.25));
+      }
+    } else if (p.cat === "swim" || p.cat === "adventure"){
+      if (beach) canoe(hw + 4, front + 2, 0.4 + rnd());
+      for (let i = 0; i < 2; i++)                       // kayaks on a rack
+        solid(-hw - 3.2, -hw - 0.4, 0.5 + i * 0.55, 0.9 + i * 0.55, 2 + i * 0.2, 2.7 + i * 0.2,
+              i ? [232, 168, 60] : [58, 150, 196], "wall");
+    } else if (p.cat === "culture"){
+      // a low white boundary and, at a church, the headstones that go with it
+      for (let x = -hw - 2; x <= hw + 2; x += 2.4)
+        solid(x - 0.9, x + 0.9, 0.15, 0.55, front - 0.3, front + 0.3, [236, 232, 220], "wall");
+      if (/church|cicc|himene/i.test(p.name + p.id))
+        for (let i = 0; i < 6; i++){
+          const x = hw + 3 + (i % 3) * 1.6, z = -2 + Math.floor(i / 3) * 2.2;
+          solid(x - 0.3, x + 0.3, 0.15, 0.85, z - 0.12, z + 0.12, [232, 228, 216], "wall");
+        }
+    } else if (p.cat === "knowhow"){
+      quad(P(-hw - 2, 0.09, front - 2), P(hw + 2, 0.09, front - 2),
+           P(hw + 2, 0.09, front + 2), P(-hw - 2, 0.09, front + 2), gravel, "ground");
+      for (let i = 0; i < 3; i++) scooter(-hw + 1 + i * 2.2, front);
     }
   }
   bldGroups = [];
@@ -1184,17 +1447,17 @@ window.project3D = function(p){
 // of the roof against a hillside. Still looking down on it, just from the
 // ocean side. Which side that is gets tried rather than assumed: walk the
 // compass round and take the bearing whose viewpoint stands over water.
-function seaSideAz(lat, lon, dist, el){
+function seaSideAz(lat, lon, dist, el, prefer){
   const r0 = dist * Math.cos(el);
   // A place set back from the beach has no water at arm's length, so look
   // further out for the sea and then come back in on that bearing.
   for (const reach of [1, 2.5, 6, 14]){
-    const az = seaSideAtRadius(lat, lon, r0 * reach);
+    const az = seaSideAtRadius(lat, lon, r0 * reach, false, prefer);
     if (az != null) return az;
   }
-  return seaSideAtRadius(lat, lon, r0, true);
+  return seaSideAtRadius(lat, lon, r0, true, prefer);
 }
-function seaSideAtRadius(lat, lon, r, orDry){
+function seaSideAtRadius(lat, lon, r, orDry, prefer){
   const wet = [], dry = [];
   for (let i = 0; i < 72; i++){
     const az = i / 72 * Math.PI * 2;
@@ -1208,7 +1471,10 @@ function seaSideAtRadius(lat, lon, r, orDry){
     }
     // among the bearings that work, the one nearest the way you already face,
     // so opening a second place along the same beach is a small move
-    let turn = Math.abs(((az - view.az + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    // measured from where the building's own front looks, when it has one, so
+    // you arrive facing the painted elevation rather than a corner of it
+    const from = prefer == null ? view.az : prefer;
+    let turn = Math.abs(((az - from + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
     (land < 0.6 ? wet : dry).push({ az, land, turn });
   }
   if (wet.length){
@@ -1253,11 +1519,14 @@ function arrivalDist(id){
 }
 // dist and tilt for arriving somewhere: close enough to read the building,
 // high enough to still be looking down on it
-window.flyTo3D = function(lat, lon, dist, el){
+window.flyTo3D = function(lat, lon, dist, el, faceDeg){
   if (!window.mode3d) return false;
   dist = dist || 260;
   el = el == null ? 0.42 : el;
-  flyTo({ lat, lon, az: seaSideAz(lat, lon, dist, el), el, dist }, 900);
+  // the eye wants to stand where the building is looking: bearing b sits at
+  // an azimuth of pi minus b
+  const prefer = faceDeg == null ? null : Math.PI - faceDeg * Math.PI / 180;
+  flyTo({ lat, lon, az: seaSideAz(lat, lon, dist, el, prefer), el, dist }, 900);
   return true;
 };
 
@@ -1336,15 +1605,30 @@ const orbitBy = turnBy;
 window.pan3D = panBy;
 
 stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
+function endGesture(id){
+  if (id == null) pts.clear(); else pts.delete(id);
+  if (pts.size < 2){ pinch = null; twoMid = null; twist = null; }
+  if (!pts.size) orbiting = false;
+}
 stage.addEventListener("pointerdown", ev => {
   if (!window.mode3d) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+  // hold the pointer, so a mouse released off the window or over another
+  // element still reports the release to us
+  try { stage.setPointerCapture(ev.pointerId); } catch(e){}
   flight = null;
   orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
   pinch = null; twoMid = null; twist = null; moved3d = 0;
 }, true);
 stage.addEventListener("pointermove", ev => {
   if (!window.mode3d) return;
+  // A mouse that is moving with no button down is not dragging, whatever we
+  // think we heard: a pointerup swallowed by another element, a drag that
+  // ended outside the window, an alt-tab mid-drag. Believe the mouse.
+  if (ev.pointerType === "mouse" && ev.buttons === 0 && pts.has(ev.pointerId)){
+    endGesture(ev.pointerId);
+    return;
+  }
   const prev = pts.get(ev.pointerId); if (!prev) return;
   const cur = { x:ev.clientX, y:ev.clientY };
   moved3d += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
@@ -1375,11 +1659,11 @@ stage.addEventListener("pointermove", ev => {
   }
   camDirty = true;
 }, true);
-["pointerup","pointercancel"].forEach(e => stage.addEventListener(e, ev => {
-  pts.delete(ev.pointerId);
-  if (pts.size < 2){ pinch = null; twoMid = null; twist = null; }
-  if (!pts.size) orbiting = false;
-}, true));
+["pointerup","pointercancel","lostpointercapture"].forEach(e =>
+  stage.addEventListener(e, ev => endGesture(ev.pointerId), true));
+// and if the page loses the plot entirely, drop every pointer we are holding
+addEventListener("blur", () => endGesture(null));
+document.addEventListener("visibilitychange", () => { if (document.hidden) endGesture(null); });
 // a drag that began on a pin must not also open that pin when it ends
 stage.addEventListener("click", ev => {
   if (window.mode3d && moved3d > 8){ ev.preventDefault(); ev.stopPropagation(); moved3d = 0; }
@@ -1509,7 +1793,10 @@ window.openPlace = function(id, fly){
     // PLACES is a script-level const, so it is not a property of window
     const list = typeof PLACES !== "undefined" ? PLACES : [];
     const p = list.find(q => q.id === id);
-    if (p && p.ll) window.flyTo3D(p.ll[0], p.ll[1], arrivalDist(p.id), 0.42);
+    if (p && p.ll){
+      const m = MODELS[p.id];
+      window.flyTo3D(p.ll[0], p.ll[1], arrivalDist(p.id), 0.42, m && m.face);
+    }
   }
   return r;
 };

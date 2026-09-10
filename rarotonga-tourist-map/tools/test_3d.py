@@ -109,6 +109,28 @@ with sync_playwright() as pw:
     assert abs(az1 - az0) > 0.5, "the twist did not turn the camera"
     assert abs(r1 - r0) < 60, "the twist span on the spot instead of going round the island"
 
+    # The gardens are real geometry: a bare island of boxes and a planted one
+    # differ by tens of thousands of triangles, and a regression that drops the
+    # planting would otherwise pass every other check here.
+    tri = pg.evaluate("raro3d.buildings")
+    print(f"scene: {tri:.0f} triangles")
+    assert tri > 30000, "the planting is missing"
+
+    # A drag that is never released must not carry on with the pointer: a
+    # mouse moving with no button down is not a drag, whatever we last heard.
+    pg.mouse.move(500, 400); pg.mouse.down(); pg.mouse.move(560, 430, steps=4)
+    held = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    for x in range(620, 860, 40):
+        pg.evaluate("""(x)=>document.getElementById('stage').dispatchEvent(
+            new PointerEvent('pointermove', {pointerId:1, pointerType:'mouse', buttons:0,
+                                             clientX:x, clientY:430, bubbles:true}))""", x)
+    pg.wait_for_timeout(200)
+    slid = pg.evaluate("([a])=>Math.hypot((raro3d.view.lon-a.lon)*103800,(raro3d.view.lat-a.lat)*110570)",
+                       [held])
+    pg.mouse.up()
+    print(f"a lost release left the map {slid:.0f} m adrift")
+    assert slid < 5, "the map kept dragging after the pointer let go"
+
     # Opening a place puts you on the water looking back at it.
     wet = []
     for pid in ("traderjacks", "palace", "sheraton", "murilagoon"):
