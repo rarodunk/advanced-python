@@ -143,10 +143,20 @@ void main(){
   // and the painting only decides what land looks like: where the ground
   // stands well above the sea and the picture insists on water, the water is
   // overruled.
-  float watery = clamp((c.b - c.r) * 2.6, 0.0, 1.0) * clamp((c.b - 0.32) * 4.0, 0.0, 1.0);
-  float onLand = smoothstep(2.0, 12.0, vH);
+  // The overrule is for painted lagoon lying on real land, and lagoon paint is
+  // brilliant: at Muri it is 4,201,220. Mountain shadow in the same painting is
+  // teal too, but dark — Raemaru's flank is 19,92,107 — and treating that as
+  // water turned the peaks into bald green cones. So brightness decides, and
+  // only the coastal shelf and the lower slopes are in scope at all.
+  float lumP = dot(c, vec3(0.299, 0.587, 0.114));
+  float watery = clamp((c.b - c.r) * 2.6, 0.0, 1.0)
+               * clamp((c.b - 0.32) * 4.0, 0.0, 1.0)
+               * smoothstep(0.38, 0.56, lumP);
+  float onLand = smoothstep(2.0, 12.0, vH) * (1.0 - smoothstep(320.0, 480.0, vH));
   vec3 bush = mix(vec3(0.33, 0.45, 0.23), vec3(0.17, 0.30, 0.15),
                   clamp(vH / 420.0, 0.0, 1.0));
+  // and it keeps the painting's own light and shade rather than going flat
+  bush *= 0.72 + 0.62 * lumP;
   c = mix(c, bush, watery * onLand);
 
   vec3 n = normalize(vNrm);
@@ -1271,13 +1281,47 @@ const clampV = () => {
   // at which a building stops being a marker and starts being a building.
   view.dist = Math.max(45, Math.min(40000, view.dist));
 };
-function eyeAndTarget(){
-  const t = [toWorldX(view.lon), worldY(view.lat, view.lon), toWorldZ(view.lat)];
+// The height the camera hangs from. Reading it straight off the ground under
+// the focus makes the whole view jolt every time you cross a ridge or a
+// building's terrace, which is what the bouncing was: at speed the ground
+// under you is a staircase. So the camera rides an average of the ground
+// around it, eased towards rather than snapped to.
+let camY = null, camLift = 0, lastFrame = 0;
+function groundNear(lat, lon){
+  const r = Math.min(90, Math.max(12, view.dist * 0.06));
+  let sum = worldY(lat, lon) * 2, wt = 2;
+  for (let i = 0; i < 6; i++){
+    const a = (i / 6) * Math.PI * 2;
+    sum += worldY(lat + Math.cos(a) * r / KM_LAT_M, lon + Math.sin(a) * r / M_LON);
+    wt += 1;
+  }
+  return sum / wt;
+}
+function settleCamera(now){
+  const dt = lastFrame ? Math.min(0.1, (now - lastFrame) / 1000) : 0.016;
+  lastFrame = now;
+  const raw = groundNear(view.lat, view.lon);
+  // a quarter of a second to catch up, which is quick enough to follow a
+  // hillside and slow enough that a kerb does not throw you
+  const k = 1 - Math.exp(-dt / 0.25);
+  camY = camY == null ? raw : camY + (raw - camY) * k;
+  const t = [toWorldX(view.lon), camY, toWorldZ(view.lat)];
   const r = view.dist * Math.cos(view.el);
-  const e = [t[0] + r * Math.sin(view.az), t[1] + view.dist * Math.sin(view.el),
-             t[2] + r * Math.cos(view.az)];
+  const eY = t[1] + view.dist * Math.sin(view.el);
+  const e = [t[0] + r * Math.sin(view.az), eY, t[2] + r * Math.cos(view.az)];
   const eLat = C_LAT - e[2] / KM_LAT_M, eLon = C_LON + e[0] / M_LON;
-  e[1] = Math.max(e[1], worldY(eLat, eLon) + 12);   // never underground
+  const need = Math.max(0, worldY(eLat, eLon) + 12 - eY);     // never underground
+  camLift += (need - camLift) * (1 - Math.exp(-dt / 0.2));
+  // the pins are only redrawn on a dirty camera, and the camera is still
+  // moving while it settles
+  if (Math.abs(raw - camY) > 0.05 || Math.abs(need - camLift) > 0.05) camDirty = true;
+}
+function eyeAndTarget(){
+  if (camY == null) settleCamera(performance.now());
+  const t = [toWorldX(view.lon), camY, toWorldZ(view.lat)];
+  const r = view.dist * Math.cos(view.el);
+  const e = [t[0] + r * Math.sin(view.az), t[1] + view.dist * Math.sin(view.el) + camLift,
+             t[2] + r * Math.cos(view.az)];
   return { e, t };
 }
 
@@ -1298,6 +1342,7 @@ const t0 = performance.now();
 function draw(){
   if (!ready) return;
   stepFlight();
+  settleCamera(performance.now());
   const dpr = Math.min(devicePixelRatio || 1, 2);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
@@ -1393,6 +1438,7 @@ window.draw3D = draw;
 window.raro3d = { view, centre: [C_LAT, C_LON],
                   get buildings(){ return bldCount / 3; },
                   get dist(){ return view.dist; },
+                  get camY(){ return camY; },
                   // where a screen pixel lands on the ground the camera is
                   // looking at, which is also how the drag is worked out
                   groundLL(sx, sy){
@@ -1606,16 +1652,19 @@ window.pan3D = panBy;
 
 stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
 function endGesture(id){
-  if (id == null) pts.clear(); else pts.delete(id);
+  if (id == null){
+    for (const k of pts.keys()) try { stage.releasePointerCapture(k); } catch(e){}
+    pts.clear();
+  } else {
+    try { if (stage.hasPointerCapture(id)) stage.releasePointerCapture(id); } catch(e){}
+    pts.delete(id);
+  }
   if (pts.size < 2){ pinch = null; twoMid = null; twist = null; }
   if (!pts.size) orbiting = false;
 }
 stage.addEventListener("pointerdown", ev => {
   if (!window.mode3d) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
-  // hold the pointer, so a mouse released off the window or over another
-  // element still reports the release to us
-  try { stage.setPointerCapture(ev.pointerId); } catch(e){}
   flight = null;
   orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
   pinch = null; twoMid = null; twist = null; moved3d = 0;
@@ -1633,6 +1682,13 @@ stage.addEventListener("pointermove", ev => {
   const cur = { x:ev.clientX, y:ev.clientY };
   moved3d += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
   pts.set(ev.pointerId, cur);
+  // Hold the pointer once this is plainly a drag, so a release off the window
+  // or over another element still reports back. Capturing on the press
+  // instead would make every tap land on the canvas, and the pins would stop
+  // opening: a captured pointer sends its click to the element holding it.
+  if (moved3d > 6 && !stage.hasPointerCapture(ev.pointerId)){
+    try { stage.setPointerCapture(ev.pointerId); } catch(e){}
+  }
   if (pts.size >= 2){
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;

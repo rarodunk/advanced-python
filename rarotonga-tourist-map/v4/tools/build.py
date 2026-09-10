@@ -155,6 +155,23 @@ GALLERY_CSS = """
 #navHint.on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (max-width:860px){ #navHint{bottom:calc(150px + env(safe-area-inset-bottom));font-size:11.5px} }
 
+/* ---------- the name under the cursor ----------
+   A pin that has shrunk to a dot, or dropped its label to keep the coast
+   readable, still has to answer the obvious question. Anything with a real
+   cursor gets the name on hover, in both settings; a touch screen has no
+   hover to give, and gets nothing new. */
+@media (hover:hover) and (pointer:fine){
+  .mk:hover{z-index:9000!important}
+  .mk:hover .cap{
+    display:block!important;background:rgba(6,20,28,.94);
+    border-color:rgba(255,255,255,.22);box-shadow:0 8px 22px rgba(0,0,0,.5);
+    font-size:12px;padding:4px 9px
+  }
+  .mk.tiny:hover .dot,.mk.tiny.small:hover .dot{width:24px!important;height:24px!important;border-width:2px!important}
+  .mk.tiny:hover .dot span{display:block!important;font-size:11px}
+  .mk.dim:hover{opacity:.8}
+}
+
 /* ---------- the district strip ---------- */
 #districts{
   position:fixed;left:50%;transform:translateX(-50%);z-index:20;

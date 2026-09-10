@@ -131,6 +131,45 @@ with sync_playwright() as pw:
     print(f"a lost release left the map {slid:.0f} m adrift")
     assert slid < 5, "the map kept dragging after the pointer let go"
 
+    # A pin must still open on a plain click. Capturing the pointer on the
+    # press once broke this outright: a captured pointer sends its click to
+    # the element holding it, so every tap landed on the canvas.
+    pg.evaluate("()=>openPlace('traderjacks')"); pg.wait_for_timeout(1600)
+    pg.evaluate("closeSheet()"); pg.wait_for_timeout(400)
+    pin = pg.evaluate("""()=>{const on = m => {
+          const r = m.getBoundingClientRect();
+          return m.style.display !== 'none' && r.top > 90 && r.bottom < innerHeight - 90
+                 && r.left > 220 && r.right < innerWidth - 90;
+        };
+        const ms = [...document.querySelectorAll('.mk')].filter(on);
+        if (!ms.length) return null;
+        const r = ms[Math.floor(ms.length / 2)].getBoundingClientRect();
+        return {x: r.x + r.width / 2, y: r.y + 12};}""")
+    assert pin, "no pin was in clear view to click"
+    pg.mouse.click(pin["x"], pin["y"]); pg.wait_for_timeout(700)
+    opened = pg.evaluate("document.querySelector('.sheet').classList.contains('up')")
+    print("a click on a pin opens it:", opened)
+    assert opened, "pins do not open in the 3D setting"
+    pg.evaluate("closeSheet()"); pg.wait_for_timeout(400)
+
+    # and hovering one says what it is, even when it is too small to carry a label
+    hov = pg.evaluate("""()=>{const m = [...document.querySelectorAll('.mk')].find(m => {
+          const r = m.getBoundingClientRect();
+          return m.style.display !== 'none' && r.top > 90 && r.bottom < innerHeight - 90
+                 && r.left > 220 && r.right < innerWidth - 90
+                 && getComputedStyle(m.querySelector('.cap')).display === 'none';
+        });
+        if (!m) return null;
+        const r = m.getBoundingClientRect();
+        return {x: r.x + r.width / 2, y: r.y + 10, before: 'none'};}""")
+    assert hov, "no pin was carrying a hidden label to hover"
+    pg.mouse.move(hov["x"], hov["y"]); pg.wait_for_timeout(350)
+    shown = pg.evaluate("""(p)=>{const mk=document.elementFromPoint(p.x,p.y)?.closest('.mk');
+        return mk ? getComputedStyle(mk.querySelector('.cap')).display : 'no pin';}""", hov)
+    print(f"a small pin's label: {hov['before']} normally, {shown} under the cursor")
+    assert hov["before"] == "none" and shown == "block", "hovering a pin does not name it"
+    pg.mouse.move(4, 4)
+
     # Opening a place puts you on the water looking back at it.
     wet = []
     for pid in ("traderjacks", "palace", "sheraton", "murilagoon"):
