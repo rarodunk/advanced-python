@@ -407,6 +407,7 @@ function drawMarkers(){
 function render(){
   if (camDirty){
     if (window.mode3d) draw3D(); else drawTiles();
+    if (window.drawCloseups) drawCloseups();
     drawMarkers(); camDirty = false;
   }
   requestAnimationFrame(render);

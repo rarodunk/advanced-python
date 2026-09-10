@@ -45,7 +45,16 @@ head = head.replace('<b>Rarotonga</b><small>Building the island</small>', '<b>Ra
 head = head.replace('<button class="iconbtn" id="tiltBtn" title="Flatten to overhead"><span class="lbl">2D</span></button>',
                     '<button class="iconbtn" id="d3Btn" title="3D setting (press 3)" disabled><span class="lbl">3D</span></button>\n'
                     '  <button class="iconbtn" id="editBtn" title="Adjust pins (press e)">\u2725</button>')
-head = head.replace('#world svg{', '''#fixPanel{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;
+head = head.replace('#world svg{', '''#closeupPanel{position:fixed;left:16px;top:104px;z-index:60;
+  width:min(330px,calc(100vw - 32px));background:#101d2b;border:1px solid #24384c;border-radius:14px;
+  padding:13px 15px;color:#eaf4f5;font-size:12.5px;line-height:1.5;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#closeupPanel b{display:block;font-size:13.5px;margin-bottom:5px}
+#closeupPanel p{margin:0 0 9px;color:#9fb8c2}
+#closeupPanel code{background:#08131d;padding:1px 5px;border-radius:4px}
+#closeupPanel pre{margin:0;padding:9px 10px;background:#08131d;border-radius:9px;overflow:auto;
+  max-height:200px;font-size:11.5px;color:#bfe4d8;white-space:pre}
+body.placing .cats,body.placing .isle{opacity:.25;pointer-events:none}
+#fixPanel{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;
   width:min(350px,calc(100vw - 28px));background:#101d2b;border:1px solid #24384c;border-radius:14px;
   padding:14px 15px;color:#eaf4f5;font-size:12.5px;line-height:1.5;box-shadow:0 18px 50px rgba(0,0,0,.5)}
 #fixPanel b{display:block;font-size:13.5px;margin-bottom:5px}
@@ -168,6 +177,26 @@ assert 'p.img.x' in tail and 'CAM_HOME()' in tail
 for bad in ["tiltBtn", "p.world", "drawScene", "viewProj"]: assert bad not in tail, bad
 jpg = base64.b64encode((V4 / "imagery.jpg").read_bytes()).decode()
 terr = base64.b64encode((VER / "terrain.png").read_bytes()).decode()
+
+# Close-ups: one small painting per place, each registered to the patch of
+# coastline it depicts. Embedded like everything else, because the page has to
+# work as a single file; the build says how much they cost.
+closeups, cu_bytes = {}, 0
+cu_manifest = VER / "closeups.json"
+if cu_manifest.exists():
+    for pid, rec in json.loads(cu_manifest.read_text()).items():
+        f = VER / "closeups" / rec["file"]
+        if not f.exists():
+            print(f"  closeup for {pid}: {f.name} is missing, skipped")
+            continue
+        raw = f.read_bytes()
+        cu_bytes += len(raw)
+        mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+        closeups[pid] = { "file": rec["file"], "bbox": rec["bbox"], "rot": rec.get("rot", 0),
+                          "src": "data:" + mime + ";base64," + base64.b64encode(raw).decode() }
+    if closeups:
+        print(f"  {len(closeups)} close-ups embedded ({cu_bytes / 1e6:.1f} MB before encoding)")
+CLOSEUPS_JS = (pathlib.Path(HERE / "closeups.js").read_text())
 globe = (HERE / "globe.js").read_text()
 # The 3D setting goes in last, wrapped, and after the rest of the page has
 # already run. A WebGL driver that refuses a shader must cost you the 3D
@@ -191,7 +220,9 @@ out = (head + "\n"
        + 'const TERRAIN_PNG = "data:image/png;base64,' + terr + '";\n'
        + 'const IMAGERY = ' + json.dumps(meta) + ';\n'
        + 'const TERRAIN = IMAGERY.terrain;\n'
+       + 'const CLOSEUP_ART = ' + json.dumps(closeups) + ';\n'
        + mid + "\n" + tail          # tail closes the page's <script>
+       + "\n<script>\n" + CLOSEUPS_JS + "\n</script>\n"
        + "\n<script>\n" + GLOBE + "\n</script>\n")
 (VER / "index.html").write_text('<meta charset="utf-8">\n' + out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")

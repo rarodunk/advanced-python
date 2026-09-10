@@ -72,6 +72,44 @@ shows a smear where the field folds over itself.
 `python3 tools/test_fit_art.py` checks that on a deliberately distorted copy
 of the stand-in base, with no network.
 
+## Close-ups
+
+The island painting is one picture at roughly ten metres a pixel. It holds up
+until you go looking at a single hotel, and then there is nothing there. A
+close-up is a second, much smaller painting of one property that fades in once
+you have zoomed far enough for it to fill a good part of the screen, and it
+obeys the same rule as the base map: the picture is art, the position is
+geography.
+
+Put the images in `v4/closeups/` and register them in `v4/closeups.json`:
+
+    {
+      "murilagoon": { "file": "muri.jpg",
+                      "bbox": [-159.7320, -21.2600, -159.7230, -21.2520],
+                      "rot": 0 }
+    }
+
+`bbox` is west, south, east, north: the patch of ground the painting covers.
+Getting that by hand is miserable, so don't — select the place, press `c`, then
+drag the image into position, wheel to size it and `[` `]` to turn it. The
+panel prints the record to paste back. `MAX_ZOOM` lifts itself so the closest
+registered close-up can actually be reached.
+
+A close-up also becomes the picture at the top of that place's card.
+
+What to ask an image model for, per place:
+
+> A top-down aerial illustration of a single beachfront property in Rarotonga,
+> painted in the same style as the island map: straight overhead, north-up, no
+> perspective. Palm-shaded grounds, the building's roofs, the beach and the
+> turquoise lagoon along one edge. No text, no labels, no pins, no border.
+
+Straight overhead again, and no text again, for the same two reasons.
+
+`python3 tools/test_closeups.py` builds a close-up out of the base map, checks
+it stays hidden from across the island, and checks that it lands within a pixel
+of the ground it is registered to.
+
 ## The 3D setting
 
 Press `3`, or the 3D button in the rail, and the same map becomes terrain. It
