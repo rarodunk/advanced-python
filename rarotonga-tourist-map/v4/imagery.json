@@ -5,14 +5,14 @@
     -159.705,
     -21.17
   ],
-  "width": 1200,
-  "height": 1000,
+  "width": 2200,
+  "height": 1860,
   "zoom": null,
-  "source": "synthetic stand-in",
-  "attribution": "Stand-in base drawn from the island's own elevation. Run tools/fetch_imagery.py for satellite imagery.",
+  "source": "painted basemap fitted to the coastline",
+  "attribution": "Illustrated base map, fitted to the real coastline.",
   "edge": {
-    "top": "#0a2a44",
-    "bottom": "#0a2a44"
+    "top": "#023d7e",
+    "bottom": "#033e82"
   },
   "terrain": {
     "bbox": [
