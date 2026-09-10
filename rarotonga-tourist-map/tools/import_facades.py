@@ -80,6 +80,9 @@ def main():
              if p.suffix.lower() in (".png", ".webp", ".jpg", ".jpeg")]
     if not files:
         sys.exit(f"no images in {a.folder}")
+    # an elevation can only belong to a place that exists; a typo in a file
+    # name would otherwise sit in the manifest doing nothing and look fine
+    known = set(re.findall(r'\{ id:"([^"]+)", name:', (ROOT / "v2" / "index.html").read_text()))
     OUT.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
 
@@ -89,6 +92,9 @@ def main():
         if not m:
             print(f"  {f.name}: no <place>-<face> in the name, skipped"); continue
         pid, face = m.group("id"), m.group("face")
+        if pid not in known:
+            print(f"  {f.name}: no place called {pid!r} in the guide, skipped")
+            continue
         im = Image.open(f)
         im, eave = trim(im, Image)
         if max(im.size) > a.max_px:

@@ -664,20 +664,35 @@ function buildBuildings(){
       // says which part of the picture is wall, and that part is stretched
       // over the wall height
       const white = [255, 255, 255];
-      const faceQuad = (face, a, b, c, dd) => {
+      // How much of the picture belongs on the wall. Under a pitched roof,
+      // only the part below the eave: the roof itself is geometry and would
+      // otherwise be drawn twice. Under a flat roof there is nothing to
+      // clash with, so the whole elevation goes up — which is the only way a
+      // sign board standing above the parapet ever gets drawn.
+      const flatRoof = m.roof === "flat";
+      const faceQuad = (face, x0, x1, z0, z1) => {
         const rec = art[face] || art.front;
         if (!rec) return false;
         const e0 = rec.eave != null ? rec.eave : 0.55;
-        // v runs from the eave line down to the bottom of the picture
-        quadUV(a, b, c, dd, [[0, e0], [1, e0], [1, 1], [0, 1]], white,
+        const yBase = 0.2, yEave = 0.2 + eaveY;
+        // the picture is hung at its own scale: the wall part fills the wall,
+        // and whatever sits above the eave keeps its proportion above it
+        const perFraction = eaveY / Math.max(0.15, 1 - e0);
+        const top = flatRoof ? yEave + perFraction * e0 : yEave;
+        const v0 = flatRoof ? 0 : e0;
+        // u runs the other way: local +x is to the viewer's left when they are
+        // standing in front of the building, so the picture would otherwise
+        // hang back to front — invisible on a shelf of pies, obvious the
+        // moment there is lettering on it
+        quadUV(P(x0, top, z0), P(x1, top, z1), P(x1, yBase, z1), P(x0, yBase, z0),
+               [[1, v0], [0, v0], [0, 1], [1, 1]], white,
                p.id + ":" + (art[face] ? face : "front"));
         return true;
       };
-      const y0 = 0.2, y1 = 0.2 + eaveY;
-      faceQuad("front", P(-hw, y1, -hd), P(hw, y1, -hd), P(hw, y0, -hd), P(-hw, y0, -hd));
-      faceQuad("back",  P(hw, y1, hd),  P(-hw, y1, hd), P(-hw, y0, hd), P(hw, y0, hd));
-      faceQuad("side",  P(-hw, y1, hd), P(-hw, y1, -hd), P(-hw, y0, -hd), P(-hw, y0, hd));
-      faceQuad("side",  P(hw, y1, -hd), P(hw, y1, hd),  P(hw, y0, hd),  P(hw, y0, -hd));
+      faceQuad("front", -hw, hw, -hd, -hd);
+      faceQuad("back",   hw, -hw, hd,  hd);
+      faceQuad("side",  -hw, -hw, hd, -hd);
+      faceQuad("side",   hw,  hw, -hd, hd);
     } else
     // walls, floor by floor, with a band between them
     for (let k = 0; k < storeys; k++){

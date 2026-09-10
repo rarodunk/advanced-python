@@ -1,4 +1,38 @@
 {
+ "mooring": {
+  "front": {
+   "eave": 0.2515,
+   "file": "mooring-front.webp",
+   "ratio": 2.1927
+  },
+  "roof": {
+   "eave": 0.2302,
+   "file": "mooring-roof.webp",
+   "ratio": 1.209
+  },
+  "side": {
+   "eave": 0.3889,
+   "file": "mooring-side.webp",
+   "ratio": 2.3486
+  }
+ },
+ "palace": {
+  "front": {
+   "eave": 0.2291,
+   "file": "palace-front.webp",
+   "ratio": 2.0118
+  },
+  "roof": {
+   "eave": 0.0168,
+   "file": "palace-roof.webp",
+   "ratio": 1.1011
+  },
+  "side": {
+   "eave": 0.2753,
+   "file": "palace-side.webp",
+   "ratio": 1.9104
+  }
+ },
  "traderjacks": {
   "front": {
    "eave": 0.676,

@@ -478,9 +478,9 @@
  "mooring": {
   "colour": {
    "roof": [
-    86,
-    92,
-    96
+    206,
+    206,
+    200
    ],
    "trim": [
     236,
@@ -493,19 +493,20 @@
     148
    ]
   },
-  "eave": 2.2,
+  "eave": 1.8,
   "face": 96,
-  "note": "a shipping container by the passage, with picnic tables and an awning",
-  "palms": 5,
+  "note": "from its painted elevations: an open pavilion by the passage, hipped roof on posts, blue counter across the back. Its position is still the Avana passage, not the Muri node OpenStreetMap carries",
+  "open": "front",
+  "palms": 6,
   "pool": false,
-  "roof": "flat",
+  "roof": "hip",
   "size": [
-   7,
-   3,
-   3.0
+   13,
+   9,
+   5.2
   ],
   "storeys": 1,
-  "veranda": true
+  "veranda": false
  },
  "murimarket": {
   "colour": {
@@ -636,9 +637,9 @@
  "palace": {
   "colour": {
    "roof": [
-    96,
-    104,
-    110
+    188,
+    190,
+    188
    ],
    "trim": [
     244,
@@ -653,19 +654,14 @@
   },
   "eave": 1.9,
   "face": 0,
-  "note": "a takeaway counter: a small kiosk with a serving window and an awning",
+  "note": "from its painted elevations: a kiosk with a serving counter along the front and a sign board above the roof",
   "palms": 4,
   "pool": false,
   "roof": "flat",
-  "sign": [
-   206,
-   46,
-   42
-  ],
   "size": [
-   9,
-   6,
-   3.4
+   13,
+   7,
+   4.4
   ],
   "storeys": 1,
   "veranda": true
