@@ -85,7 +85,12 @@ if (typeof openPlaceInner === "function"){
     if (art){
       const band = document.querySelector("#sheetBody .hero .band");
       if (band){
-        band.style.background = `#0b2740 center/cover no-repeat url(${art.src})`;
+        // The renderings are upright, and what matters in them — the sign, the
+        // roof, the boat — sits above the middle, so the crop is taken from
+        // the upper third rather than the centre, and the band is given more
+        // height to show it in.
+        band.style.background = `#0b2740 center 30%/cover no-repeat url(${art.src})`;
+        band.style.height = "172px";
         band.textContent = "";
       }
     }

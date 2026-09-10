@@ -196,7 +196,7 @@ if cu_manifest.exists():
             continue
         raw = f.read_bytes()
         cu_bytes += len(raw)
-        mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
+        mime = {".png": "image/png", ".webp": "image/webp"}.get(f.suffix.lower(), "image/jpeg")
         src = ("closeups/" + rec["file"]) if LINK_ASSETS else \
               ("data:" + mime + ";base64," + base64.b64encode(raw).decode())
         closeups[pid] = { "file": rec["file"], "bbox": rec.get("bbox"),
