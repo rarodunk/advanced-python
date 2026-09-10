@@ -290,12 +290,12 @@ button{border:0;background:none;cursor:pointer}
 const ALL = [0,1,2,3,4,5,6];
 const PLACES = [
   /* ---------------- AVARUA + THE NORTH COAST ---------------- */
-  { id:"traderjacks", name:"Trader Jack's", cat:"drink", deg:2, r:268, district:"Avarua harbour", ll:[-21.2046,-159.7769],
+  { id:"traderjacks", name:"Trader Jack's", cat:"drink", deg:2, r:268, district:"Avarua harbour", ll:[-21.2062,-159.7748],
     blurb:"The bar built out over the reef edge at the harbour mouth, flattened by Cyclone Sally in 1997 and rebuilt lower and tougher. Sit on the deck with a Matutu, watch the swell detonate on the reef three metres away, and you have understood the island's whole relationship with the sea in about ninety seconds.",
     tip:"Friday from about 5pm is when the whole island turns up. Get there before the crowd if you want a rail seat, and order the ika mata to start.",
     price:"$$", best:"Sunset to late", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],11,23], tags:["sunset","live music","seafood"], phone:"+68226464", hero:true },
 
-  { id:"punanganui", name:"Punanga Nui Market", cat:"culture", deg:352, r:271, district:"Avarua waterfront", ll:[-21.2042,-159.7802],
+  { id:"punanganui", name:"Punanga Nui Market", cat:"culture", deg:352, r:271, district:"Avarua waterfront", ll:[-21.2051,-159.7825],
     blurb:"Saturday morning is the single fixed point in the Rarotongan week. Sixty-odd stalls of rukau, eke, pawpaw, black pearls, tivaevae quilts and ukulele players, wrapped around the waterfront from about 6am until the good stuff runs out at midday.",
     tip:"Go at 7am, not 10am. Bring cash, eat a coconut-cream doughnut from the Mama's stall, and buy your pearls here rather than in the duty-free shops.",
     price:"$", best:"Saturday 7–11am", dur:"1–2 hrs", hours:[[6],6,12], tags:["market","free entry","souvenirs"], hero:true },
@@ -305,7 +305,7 @@ const PLACES = [
     tip:"Visitors are genuinely welcome at the 10am service. Cover your shoulders and knees, sit at the back, don't photograph during worship, and stay for the tea afterwards — that's where you actually meet people.",
     price:"Free", best:"Sunday 10am", dur:"1.5 hrs", hours:[[0],9,12], tags:["free","sunday","music"], hero:true },
 
-  { id:"tamarind", name:"Tamarind House", cat:"eat", deg:14, r:266, district:"Between Avarua and Matavera", ll:[-21.2043,-159.7636],
+  { id:"tamarind", name:"Tamarind House", cat:"eat", deg:14, r:266, district:"Between Avarua and Matavera", ll:[-21.2036,-159.7625],
     blurb:"A restored colonial house on the seaward side of the road, white timber and shutters, doing the most composed cooking on the island. Lunch under the frangipani is the best-value serious meal in Rarotonga.",
     tip:"High tea on the lawn is the sleeper booking — scones, sandwiches, the lagoon in front of you. Book a day ahead; it's small.",
     price:"$$$", best:"Lunch or early dinner", dur:"1.5–2 hrs", hours:[[2,3,4,5,6],11,21], tags:["fine dining","booking","garden"], phone:"+68226487", book:"https://tamarindhouserarotonga.com/contact" },
@@ -315,7 +315,7 @@ const PLACES = [
     tip:"Portions are enormous — one box genuinely feeds two. Cash, and the queue moves faster than it looks.",
     price:"$", best:"Any hungry moment", dur:"20 min", hours:[[1,2,3,4,5,6],10,20], tags:["cheap eats","takeaway","local"] },
 
-  { id:"museum", name:"Cook Islands Library & Museum", cat:"culture", deg:346, r:248, district:"Avarua", ll:[-21.2080,-159.7738],
+  { id:"museum", name:"Cook Islands Library & Museum", cat:"culture", deg:346, r:248, district:"Avarua", ll:[-21.2079,-159.7726],
     blurb:"A single wooden room of adzes, shell trumpets, missionary-era printing and colonial-era photographs, run by volunteers. Twenty minutes here reframes everything you'll see for the rest of the trip.",
     tip:"Ask about the vaka — the ocean-going canoes. The staff will point you to Avana passage and explain why it matters to New Zealand Māori.",
     price:"$", best:"Weekday mornings", dur:"45 min", hours:[[1,2,3,4,5],9,14], tags:["history","rainy day","cheap"] },
@@ -340,7 +340,7 @@ const PLACES = [
     tip:"The whole island can hear the Auckland flight leave. If you're near the runway at departure time, the wave-off is a genuine local event.",
     price:"—", best:"Red-eye arrivals", dur:"—", hours:null, tags:["arrival","practical"] },
 
-  { id:"blackrock", name:"Black Rock (Tuoro)", cat:"swim", deg:316, r:277, district:"Nikao / Tuoro", ll:[-21.2119,-159.8261],
+  { id:"blackrock", name:"Black Rock (Tuoro)", cat:"swim", deg:316, r:277, district:"Nikao / Tuoro", ll:[-21.2083,-159.8238],
     blurb:"A volcanic outcrop standing off a pale beach on the north-west corner. In Cook Islands belief this is where the spirits of the dead depart for Avaiki, the homeland. It's also the island's best jumping rock and its most reliable sunset.",
     tip:"Snorkel out to the left of the rock for the drop-off; jump from the seaward side only, and check the water depth first. Sunset here is free and beats any paid tour.",
     price:"Free", best:"Late afternoon", dur:"1–2 hrs", hours:[ALL,6,19], tags:["free","sunset","snorkel","sacred"], hero:true },
@@ -351,7 +351,7 @@ const PLACES = [
     tip:"Take the afternoon tour and stay for the evening show — you'll understand the dances instead of just watching them. The view down over the reef at dusk is the best on the island.",
     price:"$$$", best:"Tue/Thu/Sat evening", dur:"4–5 hrs", hours:[[2,4,6],15,22], tags:["cultural show","booking","view"], phone:"+68221924", book:"https://www.highlandparadise.co.ck/contact/", hero:true },
 
-  { id:"waterline", name:"The Waterline", cat:"eat", deg:272, r:273, district:"Arorangi", ll:[-21.2502,-159.8224],
+  { id:"waterline", name:"The Waterline", cat:"eat", deg:272, r:273, district:"Arorangi", ll:[-21.2281,-159.8292],
     blurb:"Tables on the sand on the west coast, which means every dinner here comes with the sun going down into the Pacific behind it. The kitchen leans Mediterranean-Pacific and does not fumble the fish.",
     tip:"Book the 5:30 sitting in winter and the 6:15 in summer to land the sunset exactly. Ask for a table at the water end, not the road end.",
     price:"$$$", best:"Sunset dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],11,21], tags:["sunset","beachfront","booking"] },
@@ -361,7 +361,7 @@ const PLACES = [
     tip:"Small room, big reputation: book. Takeaway containers travel well back to a self-catering unit.",
     price:"$$", best:"Dinner", dur:"1.5 hrs", hours:[[2,3,4,5,6],17,21], tags:["asian","booking","local favourite"] },
 
-  { id:"kikau", name:"Kikau Hut", cat:"eat", deg:258, r:269, district:"Arorangi", ll:[-21.2385,-159.8280],
+  { id:"kikau", name:"Kikau Hut", cat:"eat", deg:258, r:269, district:"Arorangi", ll:[-21.2125,-159.8257],
     blurb:"A thatched roadside institution running on garlic butter, curries and a menu that hasn't needed reinventing in twenty years. Unfashionable, warm, and busy every night with the same reliable pleasure.",
     tip:"The garlic prawns are the order. It fills with repeat visitors by 7pm — call ahead in high season.",
     price:"$$", best:"Dinner", dur:"1.5 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["classic","family","curry"] },
@@ -418,7 +418,7 @@ const PLACES = [
     price:"Free (or $$ guided)", best:"Dry morning", dur:"3–4 hrs", hours:[ALL,7,15], tags:["hike","free","signature","guided option"], hero:true },
 
   /* ---------------- TITIKAVEKA + THE SOUTH ---------------- */
-  { id:"mairenui", name:"Maire Nui Botanical Gardens", cat:"culture", deg:198, r:252, district:"Titikaveka", ll:[-21.2705,-159.7580],
+  { id:"mairenui", name:"Maire Nui Botanical Gardens", cat:"culture", deg:198, r:252, district:"Titikaveka", ll:[-21.2704,-159.7503],
     blurb:"Four acres of heliconia, ginger and lily ponds on the south coast, with a café doing the best cake on the island under a shade tree. Quiet in a way the beach never quite is.",
     tip:"Café first, garden second — the lemon meringue goes early. Entry to the garden is a small donation that funds the planting.",
     price:"$", best:"Morning", dur:"1–1.5 hrs", hours:[[1,2,3,4,5,6],9,16], tags:["garden","cake","quiet"] },
@@ -428,17 +428,17 @@ const PLACES = [
     tip:"Hire the clear-bottom kayak here and paddle east — turtles feed along this stretch most mornings.",
     price:"$$", best:"Breakfast to mid-afternoon", dur:"2–3 hrs", hours:[[1,2,3,4,5,6],8,16], tags:["breakfast","kayak","turtles"] },
 
-  { id:"fruits", name:"Fruits of Rarotonga Snorkel", cat:"swim", deg:170, r:269, district:"Titikaveka / Ngatangiia", ll:[-21.2718,-159.7482],
+  { id:"fruits", name:"Fruits of Rarotonga Snorkel", cat:"swim", deg:170, r:269, district:"Titikaveka / Ngatangiia", ll:[-21.2707,-159.7436],
     blurb:"The best shore snorkel on Rarotonga, straight off a small beach beside the jam shop the spot is named after. Deep coral bommies, big schools, and a decent chance of a green turtle without getting in a boat.",
     tip:"Enter at the sandy channel and swim left along the coral heads. Avoid it on an outgoing tide with a big swell — the passage current runs. Buy the mango chutney on the way out.",
     price:"Free", best:"Morning, high tide", dur:"1–2 hrs", hours:[ALL,7,18], tags:["free","snorkel","turtles","best"], hero:true },
 
-  { id:"vaima", name:"Vaima Restaurant", cat:"eat", deg:195, r:264, district:"Titikaveka", ll:[-21.2640,-159.7935],
+  { id:"vaima", name:"Vaima Restaurant", cat:"eat", deg:195, r:264, district:"Titikaveka", ll:[-21.2637,-159.7935],
     blurb:"A long-running south-coast dining room where the fish arrives whole, the service is unhurried and the room fills with the same people every night of a two-week holiday.",
     tip:"Order whatever came in that day rather than off the printed menu. Book — it is small and it is popular.",
     price:"$$$", best:"Dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["seafood","booking","classic"], phone:"+68226123" },
 
-  { id:"shipwreck", name:"Shipwreck Hut", cat:"drink", deg:180, r:267, district:"Aroa / Rutaki", ll:[-21.2465,-159.8275],
+  { id:"shipwreck", name:"Shipwreck Hut", cat:"drink", deg:180, r:267, district:"Aroa / Rutaki", ll:[-21.2464,-159.8241],
     blurb:"A driftwood shack on the sand doing cocktails at the exact point where the south-coast lagoon turns the colour of a swimming pool advertisement. Barefoot, unbothered, extremely photogenic.",
     tip:"It's small and it fills. Come mid-afternoon rather than at sunset if you want a table on the sand.",
     price:"$$", best:"Afternoon", dur:"1–2 hrs", hours:[[1,2,3,4,5,6],11,19], tags:["cocktails","beach bar","photo"] },
@@ -454,22 +454,22 @@ const PLACES = [
     price:"$", best:"Any hot afternoon", dur:"10 min", hours:[ALL,8,17], tags:["cheap","coconut","roadside"] },
 
   /* ---------------- MURI + THE EAST ---------------- */
-  { id:"murimarket", name:"Muri Night Market", cat:"eat", deg:124, r:259, district:"Muri Beach", ll:[-21.2627,-159.7340],
+  { id:"murimarket", name:"Muri Night Market", cat:"eat", deg:124, r:259, district:"Muri Beach", ll:[-21.2572,-159.7324],
     blurb:"A dozen family food stalls on the Muri foreshore most nights of the week — curries, barbecue, ika mata, doughnuts — eaten at long shared tables with the lagoon going dark behind you. The best-value dinner on the island by a distance.",
     tip:"Arrive at 6pm sharp; popular stalls sell out by 7. Bring cash and small notes. Rotates by night, so check which stalls are on before setting your heart on the Thai one.",
     price:"$", best:"From 6pm", dur:"1–1.5 hrs", hours:[[0,1,2,3,4,5,6],17,21], tags:["cheap","street food","lagoon"], hero:true },
 
-  { id:"tevaranui", name:"Te Vara Nui Over-Water Show", cat:"culture", deg:132, r:245, district:"Muri", ll:[-21.2693,-159.7406],
+  { id:"tevaranui", name:"Te Vara Nui Over-Water Show", cat:"culture", deg:132, r:245, district:"Muri", ll:[-21.2546,-159.7310],
     blurb:"A cultural village tour and buffet followed by a drum-and-dance show performed on a stage built over a lit water garden, with the dancers arriving by torchlight. It is theatrical in a way the resort island nights are not.",
     tip:"Do the 5pm village tour before the show — the weaving and coconut demonstrations are where the actual knowledge is. Book several days ahead in season.",
     price:"$$$", best:"Tue/Thu/Fri/Sat evening", dur:"4 hrs", hours:[[2,4,5,6],17,22], tags:["show","buffet","booking"], phone:"+68224006", book:"https://www.tevaranui.co.ck/bookings/bookengine.aspx", hero:true },
 
-  { id:"sails", name:"Sails Restaurant", cat:"eat", deg:120, r:263, district:"Muri Beach", ll:[-21.2637,-159.7350],
+  { id:"sails", name:"Sails Restaurant", cat:"eat", deg:120, r:263, district:"Muri Beach", ll:[-21.2575,-159.7313],
     blurb:"Upstairs on the Muri foreshore with the full sweep of the lagoon and the four motu in front of you. The view does a lot of work; the kitchen holds up its end, particularly at lunch.",
     tip:"Lunch beats dinner here purely because you can see the lagoon colours. Ask for a rail table when you book.",
     price:"$$$", best:"Lunch", dur:"1.5–2 hrs", hours:[[1,2,3,4,5,6],11,21], tags:["view","lagoon","booking"] },
 
-  { id:"lbv", name:"LBV Bakery", cat:"eat", deg:117, r:243, district:"Muri", ll:[-21.2675,-159.7372],
+  { id:"lbv", name:"LBV Bakery", cat:"eat", deg:117, r:243, district:"Muri", ll:[-21.2582,-159.7332],
     blurb:"A French bakery on a Polynesian island, which sounds implausible until you're eating the croissant. Proper laminated pastry, decent coffee, and a queue of expats by 7:30am.",
     tip:"Pastries sell out well before lunch. Get the ham and cheese croissant and take it 200 metres to the beach.",
     price:"$", best:"Early morning", dur:"30 min", hours:[[1,2,3,4,5,6],6,14], tags:["breakfast","coffee","pastry"] },
@@ -479,12 +479,12 @@ const PLACES = [
     tip:"Sunday afternoon is unusually alive here when the rest of the island has closed. Non-guests are welcome — plenty of people assume otherwise and stay away.",
     price:"$$$", best:"Late afternoon", dur:"1–2 hrs", hours:[ALL,11,22], tags:["cocktails","sunday","upscale"] },
 
-  { id:"murilagoon", name:"Muri Lagoon & the Four Motu", cat:"swim", deg:118, r:302, district:"Muri Beach", ll:[-21.2625,-159.7300],
+  { id:"murilagoon", name:"Muri Lagoon & the Four Motu", cat:"swim", deg:118, r:302, district:"Muri Beach", ll:[-21.2560,-159.7274],
     blurb:"The postcard: a wide turquoise lagoon with four small islands — Taakoka, Koromiri, Oneroa and Motutapu — sitting in it. Shallow enough to wade a long way out, calm enough to paddleboard, and it changes colour hourly with the light.",
     tip:"Kayak to Koromiri at high tide and walk the sandbar back. Wear reef shoes: there's more dead coral rubble underfoot than the photographs suggest. Water shoes, not jandals.",
     price:"Free", best:"High tide, mid-morning", dur:"Half a day", hours:[ALL,6,19], tags:["free","kayak","paddleboard","iconic"], hero:true },
 
-  { id:"lagooncruise", name:"Glass-Bottom Lagoon Cruise", cat:"swim", deg:121, r:271, district:"Departs Muri", ll:[-21.2620,-159.7370],
+  { id:"lagooncruise", name:"Glass-Bottom Lagoon Cruise", cat:"swim", deg:121, r:271, district:"Departs Muri", ll:[-21.2571,-159.7312],
     blurb:"Out across the lagoon with a snorkel stop over the coral gardens, then a barbecue fish lunch on a motu, coconut husking, ukulele and a genuinely funny running commentary. It is the most-booked thing on Rarotonga and it earns it.",
     tip:"Book the morning cruise — the wind gets up in the afternoon and the lagoon chops. The fish is grilled in front of you; say yes to the second helping.",
     price:"$$$", best:"Morning", dur:"4–5 hrs", hours:[[1,2,3,4,5,6],9,15], tags:["boat","bbq","snorkel","family"], phone:"+68222026", book:"https://www.captaintamas.com/", hero:true },
@@ -555,7 +555,7 @@ const PLACES = [
     price:"$$", best:"Weekday morning", dur:"2–3 hrs", hours:[[1,2,3,4,5],8,15], tags:["golf","cheap","quirky"],
     bring:"Sunscreen and your own hat; clubs and a cart are available there." },
 
-  { id:"whalecentre", name:"Whale & Wildlife Centre", cat:"culture", deg:280, r:262, district:"Arorangi", ll:[-21.2328,-159.8279],
+  { id:"whalecentre", name:"Whale & Wildlife Centre", cat:"culture", deg:280, r:262, district:"Arorangi", ll:[-21.2357,-159.8274],
     blurb:"A small research and education centre on the west coast run by the marine biologist who has spent decades identifying individual humpbacks in Cook Islands water. Talks are informal and the science is real.",
     tip:"Ask about the whale that pushed her away from a tiger shark — it's a famous piece of footage and the story is better in person. Opening hours revolve around fieldwork, so call ahead.",
     price:"$", best:"July–October", dur:"1 hr", hours:[[1,2,3,4,5],10,15], tags:["whales","science","rainy day"] },
@@ -570,7 +570,7 @@ const PLACES = [
     tip:"Buy fish from the roadside coolers, fruit and rukau at Punanga Nui, and only the boxed goods from the supermarket. Wigmore's in Vaimaanga saves the trip to town if you're staying south.",
     price:"$$", best:"Avoid Sunday — most close", dur:"45 min", hours:[[1,2,3,4,5,6],7,20], tags:["practical","budget","groceries"] },
 
-  { id:"money", name:"Money & the Triangle Coin", cat:"knowhow", deg:352, r:230, district:"Avarua banks", ll:[-21.2062,-159.7758],
+  { id:"money", name:"Money & the Triangle Coin", cat:"knowhow", deg:352, r:230, district:"Avarua banks", ll:[-21.2058,-159.7782],
     blurb:"The currency is the New Zealand dollar, but the Cook Islands mints its own coins — including a genuinely triangular three-dollar piece with Ina and the shark on it. It's legal tender here and worthless anywhere else, which is exactly why you want one.",
     tip:"ATMs are essentially confined to Avarua and one or two resorts — draw cash before you head round the island. Many small places are cash-only, and tipping is not a local custom.",
     price:"—", best:"Weekday banking hours", dur:"20 min", hours:[[1,2,3,4,5],9,15], tags:["practical","cash","souvenir"] },
@@ -606,7 +606,7 @@ const PLACES = [
     tip:"Carry coins and small notes on the scooter — most boxes can't make change and you'll pass four in a day. Take what you pay for, obviously.",
     price:"$", best:"Morning, when they're restocked", dur:"5 min", hours:[[1,2,3,4,5,6],7,18], tags:["free to look","local","cheap","produce"] },
 /* ---------------- ADDED IN THE THIRD PASS ---------------- */
-  { id:"otb", name:"On The Beach", cat:"eat", deg:276, r:271, district:"Manuia, Arorangi", ll:[-21.2345,-159.8275],
+  { id:"otb", name:"On The Beach", cat:"eat", deg:276, r:271, district:"Manuia, Arorangi", ll:[-21.2246,-159.8301],
     blurb:"White tablecloths a few metres off the sand on the sunset coast, and the most serious kitchen on the west side. The kind of place you book for the last night rather than the first.",
     tip:"Ask for a table on the sand rather than the deck, and time the booking for twenty minutes before sunset.",
     price:"$$$$", best:"Sunset dinner", dur:"2 hrs", hours:[[1,2,3,4,5,6],17,21], tags:["fine dining","sunset","booking"],
@@ -647,7 +647,7 @@ const PLACES = [
     price:"$$$", best:"Morning, calm weather", dur:"3–4 hrs", hours:[[1,2,3,4,5,6],8,16], tags:["diving","courses","boat"],
     book:"https://www.adventurecookislands.com/contact/" },
 
-  { id:"hospital", name:"Hospital & Emergencies", cat:"knowhow", deg:322, r:244, district:"Rarotonga Hospital, Nikao", ll:[-21.2270,-159.8105],
+  { id:"hospital", name:"Hospital & Emergencies", cat:"knowhow", deg:322, r:244, district:"Rarotonga Hospital, Nikao", ll:[-21.2120,-159.8200],
     blurb:"Rarotonga Hospital in Nikao runs 24 hours, with an outpatient clinic at Tupapa. Care for anything serious is good, but complex cases are flown to Auckland — which is the argument for travel insurance that covers medical evacuation.",
     tip:"Emergency numbers on the island: 999 police, 998 ambulance, 996 fire. Coral cuts go septic fast in this water; clean them properly the same day rather than the next.",
     price:"—", best:"Hopefully never", dur:"—", hours:[ALL,0,24], tags:["safety","practical","health"],

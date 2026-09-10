@@ -27,8 +27,6 @@ import argparse, json, math, pathlib, sys
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
 V4 = ROOT / "v4"
-SECTORS = 180          # how finely the radial correction follows the shore
-SMOOTH = 9             # sectors either side, so the warp stays smooth
 
 
 def load_real_mask():
@@ -45,7 +43,10 @@ def load_real_mask():
     for k in range(w * h):
         m = d[k*3] * 256 + d[k*3+1] + d[k*3+2] / 256 - 32768
         mask[k] = 1 if m > 0.5 else 0
-    return mask, w, h, t["bbox"]
+    # the main island only: the motu in Muri lagoon and the islets off
+    # Ngatangiia are land too, and an outline that starts on one of them
+    # traces the motu instead of Rarotonga
+    return keep_largest(mask, w, h), w, h, t["bbox"]
 
 
 def art_mask(img):
@@ -89,6 +90,84 @@ def keep_largest(mask, w, h):
     return out
 
 
+def trace_contour(mask, w, h):
+    """The island's outline, in order, by Moore-neighbour tracing.
+
+    Sorting boundary pixels by angle would flatten every cove and headland
+    into a radius, which is exactly the detail the fit needs.
+    """
+    NB = [(1,0), (1,1), (0,1), (-1,1), (-1,0), (-1,-1), (0,-1), (1,-1)]
+    at = lambda x, y: 0 <= x < w and 0 <= y < h and mask[y * w + x]
+    start = None
+    for j in range(h):
+        for i in range(w):
+            if mask[j * w + i]:
+                start = (i, j); break
+        if start: break
+    if not start:
+        sys.exit("no island found in one of the two masks")
+
+    # scanning left to right found this pixel, so the one before it is sea:
+    # that is where the walk around the shore begins
+    p, back = start, (start[0] - 1, start[1])
+    out = [start]
+    for _ in range(8 * (w + h) * 6):
+        k0 = NB.index((back[0] - p[0], back[1] - p[1]))
+        stepped = False
+        for k in range(1, 9):
+            c = NB[(k0 + k) % 8]
+            q = (p[0] + c[0], p[1] + c[1])
+            if at(*q):
+                prev = NB[(k0 + k - 1) % 8]
+                back = (p[0] + prev[0], p[1] + prev[1])
+                p = q
+                stepped = True
+                break
+        if not stepped:
+            break                      # a single isolated pixel
+        out.append(p)
+        if p == start and len(out) > 3:
+            break
+    return out
+
+
+def smooth_closed(pts, frac=0.02):
+    """Take the wiggle out of an outline before matching two of them.
+
+    A painted shore is drawn with far more crenellation than a 30 m elevation
+    grid resolves, and spacing points by arc length along it would spend the
+    painting's outline faster than the real one, sliding every match around
+    the island. Smoothing both to the same broad shape fixes that.
+    """
+    n = len(pts)
+    k = max(1, int(n * frac))
+    out = []
+    for i in range(n):
+        xs = ys = 0.0
+        for d in range(-k, k + 1):
+            q = pts[(i + d) % n]
+            xs += q[0]; ys += q[1]
+        out.append((xs / (2 * k + 1), ys / (2 * k + 1)))
+    return out
+
+
+def resample_closed(pts, n):
+    """n points evenly spaced along a closed outline."""
+    if len(pts) < 4:
+        sys.exit("the traced outline is too short to use")
+    seg = [math.dist(pts[i], pts[(i + 1) % len(pts)]) for i in range(len(pts))]
+    total = sum(seg) or 1.0
+    out, acc, k = [], 0.0, 0
+    for i in range(n):
+        want = total * i / n
+        while acc + seg[k] < want and k < len(pts) - 1:
+            acc += seg[k]; k += 1
+        t = (want - acc) / (seg[k] or 1.0)
+        a, b = pts[k], pts[(k + 1) % len(pts)]
+        out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out
+
+
 def moments(mask, w, h):
     """Centroid and the two standard deviations, in pixels."""
     n = sx = sy = sxx = syy = sxy = 0
@@ -109,40 +188,14 @@ def moments(mask, w, h):
             "sy": math.sqrt(max(vy, 1e-6)), "ang": ang}
 
 
-def radial_profile(mask, w, h, cx, cy):
-    """The furthest land in each direction from the centre, per sector."""
-    far = [0.0] * SECTORS
-    for j in range(h):
-        row = j * w
-        dy = j - cy
-        for i in range(w):
-            if not mask[row + i]:
-                continue
-            dx = i - cx
-            a = math.atan2(dy, dx)
-            s = int((a + math.pi) / (2 * math.pi) * SECTORS) % SECTORS
-            r = math.hypot(dx, dy)
-            if r > far[s]:
-                far[s] = r
-    # fill any empty sector from its neighbours, then smooth around the circle
-    for s in range(SECTORS):
-        if far[s] == 0:
-            near = [far[(s + d) % SECTORS] for d in range(-6, 7) if far[(s + d) % SECTORS]]
-            far[s] = sum(near) / len(near) if near else 1.0
-    out = []
-    for s in range(SECTORS):
-        vals = [far[(s + d) % SECTORS] for d in range(-SMOOTH, SMOOTH + 1)]
-        out.append(sum(vals) / len(vals))
-    return out
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("art", help="the painted top-down map, any size")
     ap.add_argument("--width", type=int, default=2400, help="output width in pixels")
     ap.add_argument("--quality", type=int, default=88)
     ap.add_argument("--work", type=int, default=700, help="working size for the fit")
-    ap.add_argument("--no-radial", action="store_true", help="fit position and scale only")
+    ap.add_argument("--no-radial", action="store_true",
+                    help="position, scale and rotation only, with no shoreline warp")
     ap.add_argument("--out", default=str(V4), help="where to write the base map")
     a = ap.parse_args()
     try:
@@ -183,41 +236,133 @@ def main():
     ca, sa = math.cos(dang), math.sin(dang)
     print(f"fit: scale {scale_x:.3f} x {scale_y:.3f}, rotation {math.degrees(dang):+.1f} deg")
 
-    def to_art(rx, ry, radial=None):
+    def to_art(rx, ry, warped=True):
         """A pixel on the real grid -> the pixel to sample in the painting."""
+        if warped:
+            rx, ry = warp(rx, ry)
         dx, dy = rx - R["cx"], ry - R["cy"]
-        if radial is not None:
-            r = math.hypot(dx, dy)
-            if r > 1e-6:
-                ang = math.atan2(dy, dx)
-                s = int((ang + math.pi) / (2 * math.pi) * SECTORS) % SECTORS
-                r *= radial[s]
-                dx, dy = math.cos(ang) * r, math.sin(ang) * r
         ux = dx * ca - dy * sa
         uy = dx * sa + dy * ca
         return A["cx"] + ux * scale_x, A["cy"] + uy * scale_y
 
-    # step two: sector by sector, how much further out the painted shore sits
-    radial = None
+    # The field is worked out on a coarse grid and read from there: every
+    # output pixel weighing hundreds of shoreline points would take longer
+    # than the rest of the script put together.
+    FW, FH = 160, 136
+    field = None
+
+    def smooth_pairs(pairs, frac):
+        n = len(pairs)
+        k = max(1, int(n * frac))
+        out = []
+        for i in range(n):
+            xs = ys = 0.0
+            for d in range(-k, k + 1):
+                dd = pairs[(i + d) % n][1]
+                xs += dd[0]; ys += dd[1]
+            out.append((pairs[i][0], (xs / (2 * k + 1), ys / (2 * k + 1))))
+        return out
+
+    def build_field(pairs, RW, RH):
+        out = []
+        for j in range(FH):
+            ry = (j + 0.5) * RH / FH
+            row = []
+            for i in range(FW):
+                rx = (i + 0.5) * RW / FW
+                wsum = dxs = dys = 0.0
+                for (cpt, d) in pairs:
+                    r2 = (rx - cpt[0]) ** 2 + (ry - cpt[1]) ** 2 + 4.0
+                    w = 1.0 / (r2 * r2)     # sharp, so the shore gets its own
+                                            # displacement, not the island's average
+                    wsum += w; dxs += w * d[0]; dys += w * d[1]
+                row.append((dxs / wsum, dys / wsum))
+            out.append(row)
+        return out
+
+    def warp(rx, ry):
+        """Where a point on the real grid sits on the painted one."""
+        if field is None:
+            return rx, ry
+        fx = min(FW - 1.001, max(0.0, rx * FW / RW - 0.5))
+        fy = min(FH - 1.001, max(0.0, ry * FH / RH - 0.5))
+        i0, j0 = int(fx), int(fy)
+        tx, ty = fx - i0, fy - j0
+        a00, a10 = field[j0][i0], field[j0][i0 + 1]
+        a01, a11 = field[j0 + 1][i0], field[j0 + 1][i0 + 1]
+        ddx = (a00[0] * (1-tx) + a10[0] * tx) * (1-ty) + (a01[0] * (1-tx) + a11[0] * tx) * ty
+        ddy = (a00[1] * (1-tx) + a10[1] * tx) * (1-ty) + (a01[1] * (1-tx) + a11[1] * tx) * ty
+        return rx + ddx, ry + ddy
+
+    # step two: match the two shorelines point for point, and let that
+    # displacement field carry the rest of the picture with it. A single
+    # radius about the centre cannot express a cove; this can.
+    field = None
     if not a.no_radial:
-        pr_real = radial_profile(real, RW, RH, R["cx"], R["cy"])
-        pr_art = radial_profile(am, aw, ah, A["cx"], A["cy"])
-        radial = []
-        for s in range(SECTORS):
-            ang = (s + 0.5) / SECTORS * 2 * math.pi - math.pi
-            # where this direction lands in the painting after step one
-            ux = math.cos(ang) * ca - math.sin(ang) * sa
-            uy = math.cos(ang) * sa + math.sin(ang) * ca
-            a2 = math.atan2(uy * scale_y, ux * scale_x)
-            s2 = int((a2 + math.pi) / (2 * math.pi) * SECTORS) % SECTORS
-            want = pr_art[s2] / max(1e-6, math.hypot(ux * scale_x, uy * scale_y))
-            radial.append(max(0.55, min(1.8, want / max(1e-6, pr_real[s]))))
-        sp = sorted(radial)
-        print(f"radial correction: {sp[0]:.2f} to {sp[-1]:.2f}, median {sp[len(sp)//2]:.2f}")
+        CN = 360
+        rc_raw, ac_raw = trace_contour(real, RW, RH), trace_contour(am, aw, ah)
+        print(f"outlines traced: {len(rc_raw)} points real, {len(ac_raw)} painted")
+        real_c = resample_closed(smooth_closed(rc_raw), CN)
+        art_c = resample_closed(smooth_closed(ac_raw), CN * 3)
+        # the painted outline, moved into the real grid by step one
+        inv = []
+        for (px_, py_) in art_c:
+            ux, uy = (px_ - A["cx"]) / scale_x, (py_ - A["cy"]) / scale_y
+            dx = ux * ca + uy * sa
+            dy = -ux * sa + uy * ca
+            inv.append((R["cx"] + dx, R["cy"] + dy))
+        # Each point of the real shore takes the nearest point of the painted
+        # shore. Matching the two by distance along the outline instead sounds
+        # tidier and is worse: the two shapes spend their length differently,
+        # so the pairing slides around the island.
+        def nearest_painted(pt):
+            best, bd = None, 1e18
+            for ip in inv:
+                d = (pt[0] - ip[0]) ** 2 + (pt[1] - ip[1]) ** 2
+                if d < bd:
+                    bd, best = d, ip
+            return best
+
+        # Each point of the real shore takes the nearest point of the painted
+        # shore. Matching the two by distance along the outline instead sounds
+        # tidier and is worse: the two shapes spend their length differently,
+        # so the pairing slides around the island. Then the whole thing is
+        # repeated against the shore as it now stands, which is what turns a
+        # first guess into a fit.
+        pairs, field = [], None
+        for _round in range(3):
+            pairs = []
+            for rp in real_c:
+                cur = warp(rp[0], rp[1]) if field else rp
+                q = nearest_painted(cur)
+                pairs.append((rp, (q[0] - rp[0], q[1] - rp[1])))
+            # Neighbouring points on the shore must move together. Nearest-point
+            # matching on its own will send two adjacent points to opposite
+            # sides of a bay the painter drew differently, and the field folds
+            # over itself there: on the map that shows up as a smear.
+            pairs = smooth_pairs(pairs, 0.05)
+            field = build_field(pairs, RW, RH)
+            # Both directions, because matching each real point to its nearest
+            # painted one can hide a fold: a whole painted headland collapsed
+            # onto a single point would still score well one way round.
+            fwd = sum(math.dist(warp(*rp), nearest_painted(warp(*rp))) for rp in real_c) / len(real_c)
+            warped_real = [warp(*rp) for rp in real_c]
+            rev = 0.0
+            for ip in inv[::3]:
+                rev += min(math.dist(ip, wp) for wp in warped_real)
+            rev /= len(inv[::3])
+            print(f"  round {_round + 1}: shore off by {fwd * mx:.0f} m, "
+                  f"and {rev * mx:.0f} m the other way")
+        offs = [math.hypot(d[0], d[1]) for _, d in pairs]
+        print(f"shoreline offsets after step one: median {sorted(offs)[CN//2] * mx:.0f} m, "
+              f"worst {max(offs) * mx:.0f} m")
+
 
     # how well the coastlines agree, in metres, before the picture is resampled
-    err = coast_error(real, RW, RH, am, aw, ah, to_art, radial, mx, my)
-    print(f"coastline agreement: the shore is out by {err[0]:.0f} m on average")
+    err = coast_error(real, RW, RH, am, aw, ah, to_art, True, mx, my)
+    print(f"how much of the island disagrees: {err[0]:.0f} m of coast, on average\n"
+          f"  (that figure counts the painted beach and surf as sea, which is\n"
+          f"   most of it; the shore-to-shore distances above are the fit)")
     if err[0] > 400:
         print("WARNING: that is a poor fit. Is the painting really straight\n"
               "         overhead and north-up, with the whole island in frame?")
@@ -241,7 +386,7 @@ def main():
         for i in range(OW):
             lon = W0 + (E0 - W0) * (i + 0.5) / OW
             rx = (lon - W0) / (E0 - W0) * RW
-            ax, ay = to_art(rx, ry, radial)
+            ax, ay = to_art(rx, ry)
             X = min(art.width - 1, max(0, ax * sxk))
             Y = min(art.height - 1, max(0, ay * syk))
             dst[i, j] = bilinear(src, X, Y, art.width, art.height)
@@ -270,7 +415,7 @@ def bilinear(src, x, y, w, h):
                      (c[i] * (1-tx) + d[i] * tx) * ty) for i in range(3))
 
 
-def coast_error(real, RW, RH, am, aw, ah, to_art, radial, mx, my):
+def coast_error(real, RW, RH, am, aw, ah, to_art, warped, mx, my):
     """How far the painted shore sits from the real one, on average.
 
     The two masks are compared on the real grid: the area they disagree about,
@@ -283,7 +428,7 @@ def coast_error(real, RW, RH, am, aw, ah, to_art, radial, mx, my):
     for j in range(RH):
         for i in range(RW):
             k = j * RW + i
-            ax, ay = to_art(i, j, radial)
+            ax, ay = to_art(i, j, warped)
             x, y = int(ax), int(ay)
             painted = 1 if (0 <= x < aw and 0 <= y < ah and am[y * aw + x]) else 0
             if painted != real[k]:

@@ -53,11 +53,21 @@ real coastline before it is used.
 
 The art has to be straight overhead, north-up, with the whole island and its
 reef in frame, and with no text, pins or borders drawn on it — the app adds
-those itself. The coastline comes from the elevation grid, where the sea is
-0 m; the painting's own coastline comes from its colours. They are matched by
-centre, then by scale and rotation from the shapes' own moments, then sector
-by sector around the island. The script prints how far apart the two shores
-end up; under about 150 m and the pins land where they belong.
+those itself. The coastline comes from the elevation grid, where the sea is 0 m; the
+painting's own comes from its colours. They are matched by centre, scale and
+rotation from the shapes' own moments, and then the two shorelines are matched
+point for point and that displacement carries the rest of the picture with it,
+repeated three times against the shore as it stands. The script prints the
+distance between the two shores in both directions after each round; the
+artwork in the repository lands at about 60 m one way and 100 m the other.
+
+Two details matter and both were learned the hard way. Matching the shorelines
+by distance along the outline sounds tidier than by nearest point and is far
+worse: a painted coast is drawn with more crenellation than a 30 m elevation
+grid resolves, so the pairing slides around the island. And the displacement
+has to be smoothed along the shore before it is used, or two adjacent points
+end up on opposite sides of a bay the painter drew differently and the map
+shows a smear where the field folds over itself.
 
 `python3 tools/test_fit_art.py` checks that on a deliberately distorted copy
 of the stand-in base, with no network.
@@ -95,6 +105,23 @@ where it cannot — the artifact host blocks third-party images — a probe fail
 the layer stays off and the mosaic carries the map exactly as before. Point it
 at another provider by setting `window.RARO_TILE_URL` before the page script,
 using `{z}` `{x}` `{y}` placeholders.
+
+## Surveyed coordinates
+
+`tools/import_osm.py` takes coordinates from an OpenStreetMap-sourced place
+list, matching by an explicit table rather than by name, and marks each entry
+with the feature it came from:
+
+    python3 tools/import_osm.py path/to/places.json           # report
+    python3 tools/import_osm.py path/to/places.json --write
+
+22 places came in this way. Anything moving more than a kilometre is printed
+with a warning, because that usually means the two lists mean different places
+by the same name; one entry, The Mooring, is deliberately left out on those
+grounds and the question is recorded in the script.
+
+`snap_coast.py` will not move an entry carrying an `OSM` comment. A heuristic
+that pulls strays towards the shore does not get to overrule a survey.
 
 ## Auditing the pins against the coastline
 

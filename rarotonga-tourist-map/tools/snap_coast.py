@@ -40,6 +40,17 @@ KEEP = {
 }
 
 
+def surveyed():
+    """Ids whose coordinate came from an OpenStreetMap feature.
+
+    Those are surveyed positions with a public link behind them. This script
+    is a heuristic that pulls strays towards the shore; a heuristic does not
+    get to overrule a survey, so they are left exactly where they are.
+    """
+    src = (HERE / "geo.py").read_text()
+    return set(re.findall(r'"([^"]+)":\s*\(-?\d+\.\d+,\s*-?\d+\.\d+\),\s*#\s*OSM', src))
+
+
 def read_places():
     """geo.py's LL table, read rather than imported: this script rewrites that
     file, and an import can hand back a stale .pyc from the same second."""
@@ -112,13 +123,14 @@ def main():
         return best, pt
 
     LL = read_places()
+    keep = KEEP | surveyed()
 
     moves, worst, strays = {}, [], []
     for pid, (lat, lon) in LL.items():
         d, _ = nearest(lat, lon)
         side = "inland" if at(lat, lon) > 0.5 else "in the water"
         worst.append((d, pid, side))
-        if pid not in KEEP and d > a.tol:
+        if pid not in keep and d > a.tol:
             strays.append((d, pid, side))
 
     # nearest first, so the confident ones claim their shore point before the
@@ -144,7 +156,7 @@ def main():
     worst.sort(reverse=True)
     print("\nfurthest from the shore, before any correction:")
     for d, pid, side in worst[:8]:
-        print(f"  {pid:<16} {d:6.0f} m {side}{'   (kept)' if pid in KEEP else ''}")
+        print(f"  {pid:<16} {d:6.0f} m {side}{'   (kept)' if pid in keep else ''}")
 
     if not moves:
         print("\nnothing to move: every place is within %.0f m of the shore." % a.tol)

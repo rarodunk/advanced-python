@@ -37,10 +37,13 @@ with tempfile.TemporaryDirectory() as tmp:
                        capture_output=True, text=True)
     print(r.stdout.strip() or r.stderr.strip())
     assert r.returncode == 0, r.stderr
-    line = [l for l in r.stdout.splitlines() if "shore is out by" in l]
-    assert line, "the fit never reported an agreement"
-    metres = float(line[0].split("by")[1].split("m")[0])
-    assert metres < 250, f"the fitted coastline is {metres:.0f} m out; that is too much"
+    rounds = [l for l in r.stdout.splitlines() if "shore off by" in l]
+    assert rounds, "the fit never reported a shore distance"
+    # "  round 3: shore off by 12 m, and 20 m the other way"
+    last = rounds[-1].replace(",", " ").split()
+    fwd, rev = float(last[last.index("by") + 1]), float(last[last.index("and") + 1])
+    print(f"final: {fwd:.0f} m forward, {rev:.0f} m back")
+    assert fwd < 200 and rev < 300, f"the fitted coastline is {fwd:.0f}/{rev:.0f} m out"
     out = Image.open(tmp / "imagery.jpg")
     assert out.width == 1100 and out.height > 800, out.size
 
