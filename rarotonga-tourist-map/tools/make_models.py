@@ -172,6 +172,21 @@ def main():
               f"{rec['storeys']} storey  {spec['roof']:<5} facing {rec['face']:>5.0f}deg"
               f"{'  pool' if rec['pool'] else ''}")
 
+    # Hand corrections win. This file is written by a person looking at a
+    # photograph, and nothing derived from a category has any business
+    # overruling that; keeping it separate means the generator can be re-run
+    # without losing the work.
+    hand_path = V4 / "models.hand.json"
+    hand = json.loads(hand_path.read_text()) if hand_path.exists() else {}
+    for pid, rec in hand.items():
+        if pid not in out:
+            out[pid] = {}
+        out[pid].update(rec)
+        out[pid].setdefault("colour", {"wall": [222, 214, 198], "roof": [96, 84, 74],
+                                       "trim": [245, 243, 236]})
+    if hand:
+        print(f"\n{len(hand)} hand-corrected: {', '.join(sorted(hand))}")
+
     (V4 / "models.json").write_text(json.dumps(out, indent=1, sort_keys=True))
     print(f"\n{len(out)} buildings written to v4/models.json "
           f"({len(P) - len(out)} places are water, track or habit).\n"

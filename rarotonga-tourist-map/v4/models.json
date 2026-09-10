@@ -33,33 +33,35 @@
  "airport": {
   "colour": {
    "roof": [
-    146,
-    137,
-    95
+    128,
+    132,
+    134
    ],
    "trim": [
-    247,
-    245,
-    239
+    246,
+    244,
+    238
    ],
    "wall": [
-    184,
-    171,
-    145
+    232,
+    228,
+    216
    ]
   },
-  "eave": 1.4,
+  "eave": 2.4,
   "face": 294,
-  "palms": 8,
+  "flag": true,
+  "note": "one terminal, one room: long, flat-roofed, a canopy over the doors",
+  "palms": 10,
   "pool": false,
   "roof": "flat",
   "size": [
-   46,
-   16,
-   6.5
+   52,
+   17,
+   7.0
   ],
   "storeys": 1,
-  "veranda": false
+  "veranda": true
  },
  "albertos": {
   "colour": {
@@ -95,30 +97,32 @@
  "avatiu": {
   "colour": {
    "roof": [
-    145,
-    132,
-    116
+    120,
+    124,
+    126
    ],
    "trim": [
-    245,
-    244,
-    238
+    214,
+    216,
+    214
    ],
    "wall": [
-    190,
     186,
-    178
+    190,
+    190
    ]
   },
-  "eave": 0.8,
+  "deck": 6.0,
+  "eave": 0.9,
   "face": 252,
-  "palms": 3,
+  "note": "the working port: long sheds along the wharf, flat roofs, no planting",
+  "palms": 2,
   "pool": false,
   "roof": "flat",
   "size": [
-   30,
+   34,
    14,
-   5.5
+   6.0
   ],
   "storeys": 1,
   "veranda": false
@@ -220,30 +224,33 @@
  "fishingclub": {
   "colour": {
    "roof": [
-    163,
-    113,
-    78
+    72,
+    104,
+    128
    ],
    "trim": [
-    252,
-    247,
-    226
+    244,
+    242,
+    236
    ],
    "wall": [
-    210,
-    162,
-    151
+    228,
+    226,
+    216
    ]
   },
-  "eave": 1.8,
+  "deck": 3.5,
+  "eave": 1.6,
   "face": 0,
-  "palms": 7,
+  "flag": true,
+  "note": "the club on the harbour: a plain hall with a deck facing the water",
+  "palms": 5,
   "pool": false,
   "roof": "hip",
   "size": [
-   15,
-   9,
-   4.6
+   20,
+   11,
+   5.0
   ],
   "storeys": 1,
   "veranda": true
@@ -313,33 +320,35 @@
  "kikau": {
   "colour": {
    "roof": [
-    159,
-    120,
-    80
+    138,
+    108,
+    68
    ],
    "trim": [
-    251,
-    247,
-    236
+    206,
+    184,
+    148
    ],
    "wall": [
-    185,
-    186,
-    160
+    176,
+    148,
+    108
    ]
   },
-  "eave": 1.6,
+  "eave": 2.2,
   "face": 294,
-  "palms": 6,
+  "note": "the thatched roadside hut, deep pitch, open sides",
+  "open": "front",
+  "palms": 8,
   "pool": false,
   "roof": "hip",
   "size": [
-   17,
-   10,
-   5.0
+   16,
+   11,
+   6.2
   ],
   "storeys": 1,
-  "veranda": true
+  "veranda": false
  },
  "lbv": {
   "colour": {
@@ -469,30 +478,31 @@
  "mooring": {
   "colour": {
    "roof": [
-    153,
-    122,
-    89
+    86,
+    92,
+    96
    ],
    "trim": [
-    235,
-    231,
-    217
+    236,
+    234,
+    228
    ],
    "wall": [
-    164,
-    167,
-    141
+    58,
+    122,
+    148
    ]
   },
-  "eave": 1.6,
+  "eave": 2.2,
   "face": 96,
-  "palms": 6,
+  "note": "a shipping container by the passage, with picnic tables and an awning",
+  "palms": 5,
   "pool": false,
-  "roof": "hip",
+  "roof": "flat",
   "size": [
-   17,
-   10,
-   5.0
+   7,
+   3,
+   3.0
   ],
   "storeys": 1,
   "veranda": true
@@ -500,30 +510,32 @@
  "murimarket": {
   "colour": {
    "roof": [
-    126,
-    114,
-    123
+    92,
+    82,
+    74
    ],
    "trim": [
+    244,
     240,
-    225,
-    196
+    232
    ],
    "wall": [
-    195,
-    156,
-    110
+    206,
+    198,
+    180
    ]
   },
   "eave": 2.4,
   "face": 96,
-  "palms": 6,
+  "note": "night market: a run of open stalls under one long roof",
+  "open": "front",
+  "palms": 9,
   "pool": false,
   "roof": "hip",
   "size": [
-   26,
-   12,
-   3.8
+   30,
+   10,
+   4.2
   ],
   "storeys": 1,
   "veranda": false
@@ -624,30 +636,36 @@
  "palace": {
   "colour": {
    "roof": [
-    124,
-    131,
-    95
+    96,
+    104,
+    110
    ],
    "trim": [
-    254,
-    250,
-    241
+    244,
+    242,
+    236
    ],
    "wall": [
-    198,
-    170,
-    154
+    236,
+    232,
+    220
    ]
   },
-  "eave": 1.6,
+  "eave": 1.9,
   "face": 0,
-  "palms": 6,
+  "note": "a takeaway counter: a small kiosk with a serving window and an awning",
+  "palms": 4,
   "pool": false,
-  "roof": "hip",
+  "roof": "flat",
+  "sign": [
+   206,
+   46,
+   42
+  ],
   "size": [
-   17,
-   10,
-   5.0
+   9,
+   6,
+   3.4
   ],
   "storeys": 1,
   "veranda": true
@@ -655,30 +673,32 @@
  "punanganui": {
   "colour": {
    "roof": [
-    130,
-    116,
-    85
+    70,
+    96,
+    120
    ],
    "trim": [
     246,
-    243,
-    231
+    244,
+    238
    ],
    "wall": [
-    188,
-    185,
-    168
+    214,
+    206,
+    186
    ]
   },
   "eave": 2.6,
   "face": 0,
-  "palms": 4,
+  "note": "from the artwork and the market's own plan: an open market shed, roof on posts, no walls",
+  "open": "front",
+  "palms": 10,
   "pool": false,
   "roof": "hip",
   "size": [
-   34,
-   16,
-   4.4
+   36,
+   15,
+   4.6
   ],
   "storeys": 1,
   "veranda": false
@@ -872,33 +892,36 @@
  "tapabar": {
   "colour": {
    "roof": [
-    140,
-    120,
-    102
+    122,
+    96,
+    66
    ],
    "trim": [
-    255,
-    253,
-    242
+    232,
+    222,
+    202
    ],
    "wall": [
-    209,
-    174,
-    141
+    178,
+    150,
+    118
    ]
   },
-  "eave": 1.8,
+  "deck": 3.0,
+  "eave": 2.4,
   "face": 96,
-  "palms": 7,
+  "note": "an open pavilion at the quiet end of Muri, roof on posts",
+  "open": "front",
+  "palms": 8,
   "pool": false,
   "roof": "hip",
   "size": [
-   15,
-   9,
-   4.6
+   14,
+   10,
+   5.0
   ],
   "storeys": 1,
-  "veranda": true
+  "veranda": false
  },
  "tevaranui": {
   "colour": {
@@ -966,33 +989,46 @@
  "traderjacks": {
   "colour": {
    "roof": [
-    135,
-    125,
-    97
+    232,
+    232,
+    228
    ],
    "trim": [
-    249,
-    243,
-    230
+    242,
+    240,
+    234
    ],
    "wall": [
-    203,
-    171,
-    158
+    86,
+    116,
+    132
    ]
   },
-  "eave": 1.8,
+  "deck": 4.5,
+  "eave": 2.2,
   "face": 228,
-  "palms": 7,
+  "flag": true,
+  "monitor": [
+   0.34,
+   1.3
+  ],
+  "note": "from a photograph of the building: one long low room on the harbour wall, open to the sea, shallow hipped roof with a raised centre, the name painted along the fascia, flagpole at the eastern end",
+  "open": "front",
+  "palms": 9,
   "pool": false,
   "roof": "hip",
+  "sign": [
+   188,
+   34,
+   38
+  ],
   "size": [
-   15,
-   9,
-   4.6
+   28,
+   13,
+   5.6
   ],
   "storeys": 1,
-  "veranda": true
+  "veranda": false
  },
  "vaima": {
   "colour": {

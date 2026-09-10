@@ -1,0 +1,66 @@
+{
+  "traderjacks": {
+    "note": "from a photograph of the building: one long low room on the harbour wall, open to the sea, shallow hipped roof with a raised centre, the name painted along the fascia, flagpole at the eastern end",
+    "size": [28, 13, 5.6],
+    "roof": "hip", "eave": 2.2, "storeys": 1,
+    "veranda": false, "open": "front", "deck": 4.5, "flag": true,
+    "monitor": [0.34, 1.3],
+    "sign": [188, 34, 38],
+    "palms": 9,
+    "colour": { "wall": [86, 116, 132], "roof": [232, 232, 228], "trim": [242, 240, 234] }
+  },
+  "punanganui": {
+    "note": "from the artwork and the market's own plan: an open market shed, roof on posts, no walls",
+    "size": [36, 15, 4.6], "roof": "hip", "eave": 2.6, "storeys": 1,
+    "veranda": false, "open": "front", "palms": 10,
+    "colour": { "wall": [214, 206, 186], "roof": [70, 96, 120], "trim": [246, 244, 238] }
+  },
+  "palace": {
+    "note": "a takeaway counter: a small kiosk with a serving window and an awning",
+    "size": [9, 6, 3.4], "roof": "flat", "eave": 1.9, "storeys": 1,
+    "veranda": true, "sign": [206, 46, 42], "palms": 4,
+    "colour": { "wall": [236, 232, 220], "roof": [96, 104, 110], "trim": [244, 242, 236] }
+  },
+  "kikau": {
+    "note": "the thatched roadside hut, deep pitch, open sides",
+    "size": [16, 11, 6.2], "roof": "hip", "eave": 2.2, "storeys": 1,
+    "veranda": false, "open": "front", "palms": 8,
+    "colour": { "wall": [176, 148, 108], "roof": [138, 108, 68], "trim": [206, 184, 148] }
+  },
+  "murimarket": {
+    "note": "night market: a run of open stalls under one long roof",
+    "size": [30, 10, 4.2], "roof": "hip", "eave": 2.4, "storeys": 1,
+    "veranda": false, "open": "front", "palms": 9,
+    "colour": { "wall": [206, 198, 180], "roof": [92, 82, 74], "trim": [244, 240, 232] }
+  },
+  "fishingclub": {
+    "note": "the club on the harbour: a plain hall with a deck facing the water",
+    "size": [20, 11, 5.0], "roof": "hip", "eave": 1.6, "storeys": 1,
+    "veranda": true, "deck": 3.5, "flag": true, "palms": 5,
+    "colour": { "wall": [228, 226, 216], "roof": [72, 104, 128], "trim": [244, 242, 236] }
+  },
+  "avatiu": {
+    "note": "the working port: long sheds along the wharf, flat roofs, no planting",
+    "size": [34, 14, 6.0], "roof": "flat", "eave": 0.9, "storeys": 1,
+    "veranda": false, "deck": 6.0, "palms": 2,
+    "colour": { "wall": [186, 190, 190], "roof": [120, 124, 126], "trim": [214, 216, 214] }
+  },
+  "airport": {
+    "note": "one terminal, one room: long, flat-roofed, a canopy over the doors",
+    "size": [52, 17, 7.0], "roof": "flat", "eave": 2.4, "storeys": 1,
+    "veranda": true, "flag": true, "palms": 10,
+    "colour": { "wall": [232, 228, 216], "roof": [128, 132, 134], "trim": [246, 244, 238] }
+  },
+  "tapabar": {
+    "note": "an open pavilion at the quiet end of Muri, roof on posts",
+    "size": [14, 10, 5.0], "roof": "hip", "eave": 2.4, "storeys": 1,
+    "veranda": false, "open": "front", "deck": 3.0, "palms": 8,
+    "colour": { "wall": [178, 150, 118], "roof": [122, 96, 66], "trim": [232, 222, 202] }
+  },
+  "mooring": {
+    "note": "a shipping container by the passage, with picnic tables and an awning",
+    "size": [7, 3, 3.0], "roof": "flat", "eave": 2.2, "storeys": 1,
+    "veranda": true, "palms": 5,
+    "colour": { "wall": [58, 122, 148], "roof": [86, 92, 96], "trim": [236, 234, 228] }
+  }
+}

@@ -143,6 +143,18 @@ GALLERY_CSS = """
 .mk.tiny .dot{width:15px;height:15px}
 .mk.tiny .dot::after{display:none}
 
+/* ---------- the gesture hint ---------- */
+#navHint{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(6px);z-index:25;
+  bottom:calc(96px + env(safe-area-inset-bottom));padding:8px 15px;border-radius:999px;
+  background:rgba(8,22,36,.86);backdrop-filter:blur(12px);border:1px solid var(--line);
+  color:var(--ink-2);font-size:12.5px;white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .35s ease,transform .35s ease;max-width:94vw;overflow:hidden;
+  text-overflow:ellipsis
+}
+#navHint.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:860px){ #navHint{bottom:calc(150px + env(safe-area-inset-bottom));font-size:11.5px} }
+
 /* ---------- the district strip ---------- */
 #districts{
   position:fixed;left:50%;transform:translateX(-50%);z-index:20;

@@ -417,6 +417,82 @@ function attach(bufName, loc, size){
 }
 
 
+
+/* ---------- materials ---------- */
+// Flat colour is what makes a massing model look like a massing model. These
+// are the surfaces an island building is actually made of, drawn once into
+// small tiling textures: corrugated iron that catches the sun along its ribs,
+// sawn timber for decks and posts, thatch, painted board, glass.
+const MATS = ["roof", "wall", "timber", "thatch", "glass", "ground", "leaf"];
+const matTex = {};
+function paintMaterials(){
+  const S = 128;
+  for (const name of MATS){
+    const c = document.createElement("canvas");
+    c.width = c.height = S;
+    const x = c.getContext("2d");
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, S, S);
+    if (name === "roof"){
+      // corrugations: a soft rib every eight pixels, bright on the crown
+      for (let i = 0; i < S; i += 8){
+        const g = x.createLinearGradient(i, 0, i + 8, 0);
+        g.addColorStop(0, "rgba(0,0,0,.20)"); g.addColorStop(0.45, "rgba(255,255,255,.16)");
+        g.addColorStop(0.6, "rgba(255,255,255,.06)"); g.addColorStop(1, "rgba(0,0,0,.20)");
+        x.fillStyle = g; x.fillRect(i, 0, 8, S);
+      }
+      x.fillStyle = "rgba(0,0,0,.10)";
+      for (let j = 0; j < S; j += 42) x.fillRect(0, j, S, 1);      // sheet joins
+    } else if (name === "timber"){
+      for (let j = 0; j < S; j += 10){
+        x.fillStyle = j % 20 ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.10)";
+        x.fillRect(0, j, S, 9);
+        x.fillStyle = "rgba(0,0,0,.22)"; x.fillRect(0, j + 9, S, 1);
+      }
+    } else if (name === "thatch"){
+      x.fillStyle = "rgba(0,0,0,.12)";
+      for (let k = 0; k < 900; k++){
+        const px = Math.random() * S, py = Math.random() * S;
+        x.fillRect(px, py, 1 + Math.random() * 5, 1);
+      }
+      for (let j = 0; j < S; j += 16){ x.fillStyle = "rgba(0,0,0,.16)"; x.fillRect(0, j, S, 2); }
+    } else if (name === "wall"){
+      x.fillStyle = "rgba(0,0,0,.07)";
+      for (let j = 0; j < S; j += 16) x.fillRect(0, j, S, 1);      // weatherboard
+      x.fillStyle = "rgba(255,255,255,.06)";
+      for (let j = 2; j < S; j += 16) x.fillRect(0, j, S, 2);
+    } else if (name === "glass"){
+      const g = x.createLinearGradient(0, 0, S, S);
+      g.addColorStop(0, "rgba(255,255,255,.45)"); g.addColorStop(0.5, "rgba(255,255,255,.05)");
+      g.addColorStop(1, "rgba(255,255,255,.30)");
+      x.fillStyle = g; x.fillRect(0, 0, S, S);
+      x.strokeStyle = "rgba(0,0,0,.35)"; x.lineWidth = 3;
+      x.strokeRect(1.5, 1.5, S - 3, S - 3); x.beginPath();
+      x.moveTo(S / 2, 0); x.lineTo(S / 2, S); x.stroke();
+    } else if (name === "leaf"){
+      const g = x.createLinearGradient(0, 0, 0, S);
+      g.addColorStop(0, "rgba(255,255,255,.25)"); g.addColorStop(1, "rgba(0,0,0,.25)");
+      x.fillStyle = g; x.fillRect(0, 0, S, S);
+      x.strokeStyle = "rgba(0,0,0,.25)"; x.lineWidth = 1;
+      for (let k = 0; k < 14; k++){
+        x.beginPath(); x.moveTo(S / 2, 0); x.lineTo(k * 10, S); x.stroke();
+      }
+    } else {
+      x.fillStyle = "rgba(0,0,0,.05)";
+      for (let k = 0; k < 500; k++) x.fillRect(Math.random() * S, Math.random() * S, 2, 2);
+    }
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    matTex[name] = t;
+  }
+}
+
 /* ---------- buildings ---------- */
 // A pin says where. Up close it should also say what is there, and the
 // painting cannot: a picture has no back, so standing it up in the scene
@@ -430,41 +506,62 @@ const MODELS = (typeof BUILDINGS !== "undefined" && BUILDINGS) || {};
 const B_NEAR = 450, B_FAR = 1100;       // metres of camera distance: full, then gone
 
 const bldProg = build(`
-attribute vec3 aPos; attribute vec3 aNrm; attribute vec3 aCol;
+attribute vec3 aPos; attribute vec3 aNrm; attribute vec3 aCol; attribute vec2 aUV;
 uniform mat4 uMVP;
-varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos;
-void main(){ vNrm = aNrm; vCol = aCol; vPos = aPos; gl_Position = uMVP * vec4(aPos, 1.0); }`, `
+varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos; varying vec2 vUV;
+void main(){ vNrm = aNrm; vCol = aCol; vPos = aPos; vUV = aUV;
+             gl_Position = uMVP * vec4(aPos, 1.0); }`, `
 precision mediump float;
-uniform vec3 uSun; uniform vec3 uHaze; uniform vec2 uFog; uniform vec3 uEye;
-uniform float uAlpha;
-varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos;
+uniform sampler2D uTex; uniform vec3 uSun; uniform vec3 uHaze; uniform vec2 uFog;
+uniform vec3 uEye; uniform float uAlpha;
+varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos; varying vec2 vUV;
 void main(){
   vec3 n = normalize(vNrm);
   float lam = clamp(dot(n, uSun), 0.0, 1.0);
-  vec3 c = vCol * (0.68 + 0.52 * lam);
+  // the material carries the detail — corrugations, boards, thatch — and the
+  // colour sampled from that place's own painting tints it
+  vec3 t = texture2D(uTex, vUV).rgb;
+  vec3 c = vCol * t * (0.72 + 0.55 * lam);
   float f = smoothstep(uFog.x, uFog.y, distance(vPos, uEye));
   c = mix(c, uHaze, f * 0.8);
   gl_FragColor = vec4(c * uAlpha, uAlpha);      // premultiplied, so it fades out cleanly
 }`);
 const BP = { pos: gl.getAttribLocation(bldProg, "aPos"), nrm: gl.getAttribLocation(bldProg, "aNrm"),
-             col: gl.getAttribLocation(bldProg, "aCol"), mvp: gl.getUniformLocation(bldProg, "uMVP"),
+             col: gl.getAttribLocation(bldProg, "aCol"), uv: gl.getAttribLocation(bldProg, "aUV"),
+             tex: gl.getUniformLocation(bldProg, "uTex"), mvp: gl.getUniformLocation(bldProg, "uMVP"),
              sun: gl.getUniformLocation(bldProg, "uSun"), haze: gl.getUniformLocation(bldProg, "uHaze"),
              fog: gl.getUniformLocation(bldProg, "uFog"), eye: gl.getUniformLocation(bldProg, "uEye"),
              alpha: gl.getUniformLocation(bldProg, "uAlpha") };
-let bldCount = 0;
+let bldCount = 0, bldGroups = [];
 
 function buildBuildings(){
-  const pos = [], nrm = [], col = [];
-  const push = (a, b, c, colour) => {          // one triangle, flat shaded
+  // geometry is gathered per material, because each one wants its own tiling
+  // texture and its own draw
+  const bin = {};
+  for (const m of MATS) bin[m] = { pos: [], nrm: [], col: [], uv: [] };
+  const SCALE = { roof: 1.15, wall: 2.4, timber: 1.5, thatch: 1.6,
+                  glass: 2.6, ground: 5.0, leaf: 1.6 };
+
+  const push = (a, b, c, colour, mat) => {
+    mat = mat || "wall";
+    const B = bin[mat], k = SCALE[mat];
     const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
     const n = norm(cross(u, v));
+    // the texture is laid on whichever pair of axes the face most faces, so
+    // a wall gets upright boards and a roof gets ribs running down it
+    const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
+    const uvOf = p => ay >= ax && ay >= az ? [p[0] / k, p[2] / k]
+                    : ax >= az            ? [p[2] / k, p[1] / k]
+                                          : [p[0] / k, p[1] / k];
     for (const p of [a, b, c]){
-      pos.push(p[0], p[1], p[2]);
-      nrm.push(n[0], n[1], n[2]);
-      col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+      B.pos.push(p[0], p[1], p[2]);
+      B.nrm.push(n[0], n[1], n[2]);
+      B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+      const t = uvOf(p);
+      B.uv.push(t[0], t[1]);
     }
   };
-  const quad = (a, b, c, d, colour) => { push(a, b, c, colour); push(a, c, d, colour); };
+  const quad = (a, b, c, d, colour, mat) => { push(a, b, c, colour, mat); push(a, c, d, colour, mat); };
 
   // deterministic wobble, so a place looks the same every time you visit it
   const seedOf = str => { let h = 2166136261; for (let i = 0; i < str.length; i++){
@@ -496,42 +593,60 @@ function buildBuildings(){
     const fh = eaveY / storeys;                       // floor to floor
 
     // a box, given in local coordinates
-    const solid = (x0, x1, y0, y1, z0, z1, colour) => {
+    const solid = (x0, x1, y0, y1, z0, z1, colour, mat) => {
       const a = P(x0,y0,z0), b = P(x1,y0,z0), c = P(x1,y0,z1), dd = P(x0,y0,z1);
       const A = P(x0,y1,z0), B = P(x1,y1,z0), Cc = P(x1,y1,z1), D = P(x0,y1,z1);
-      quad(a, b, B, A, colour); quad(b, c, Cc, B, colour);
-      quad(c, dd, D, Cc, colour); quad(dd, a, A, D, colour);
-      quad(A, B, Cc, D, shade(colour, 1.06));
+      quad(a, b, B, A, colour, mat); quad(b, c, Cc, B, colour, mat);
+      quad(c, dd, D, Cc, colour, mat); quad(dd, a, A, D, colour, mat);
+      quad(A, B, Cc, D, shade(colour, 1.06), mat);
     };
+    const ROOFMAT = m.thatch ? "thatch" : "roof";
 
     // the plot: a mown apron with a path to the front
     const pw = hw + e + 3.5, pd = hd + e + 3.5;
-    quad(P(-pw, 0.10, -pd), P(pw, 0.10, -pd), P(pw, 0.10, pd), P(-pw, 0.10, pd), sand);
+    quad(P(-pw, 0.10, -pd), P(pw, 0.10, -pd), P(pw, 0.10, pd), P(-pw, 0.10, pd), sand, "ground");
 
     // walls, floor by floor, with a band between them
     for (let k = 0; k < storeys; k++){
       const y0 = 0.2 + k * fh, y1 = 0.2 + (k + 1) * fh - 0.35;
-      solid(-hw, hw, y0, y1, -hd, hd, k ? shade(wall, 1.04) : wall);
-      solid(-hw - 0.25, hw + 0.25, y1, y1 + 0.35, -hd - 0.25, hd + 0.25, trim);
+      const openFront = m.open && k === 0;
+      if (openFront){
+        // Places like Trader Jack's have no front wall at all: a roof on
+        // posts, and you see straight through to the back of the room.
+        solid(-hw, hw, y0, y1, hd - 0.3, hd, shade(wall, 0.9), "wall");       // back wall
+        solid(-hw, -hw + 0.3, y0, y1, -hd, hd, shade(wall, 0.94), "wall");    // the two ends
+        solid(hw - 0.3, hw, y0, y1, -hd, hd, shade(wall, 0.94), "wall");
+        quad(P(-hw, y0, -hd + 0.05), P(hw, y0, -hd + 0.05),
+             P(hw, y1, -hd + 0.05), P(-hw, y1, -hd + 0.05), [26, 30, 32], "ground");  // the shade inside
+        const posts = Math.max(4, Math.round(w / 3.4));
+        for (let i = 0; i <= posts; i++){
+          const x = -hw + w * i / posts;
+          solid(x - 0.11, x + 0.11, y0, y1 + 0.35, -hd - 0.05, -hd + 0.17, trim, "timber");
+        }
+        solid(-hw, hw, y0 + 0.95, y0 + 1.08, -hd - 0.04, -hd + 0.1, trim, "timber");  // rail
+      } else {
+        solid(-hw, hw, y0, y1, -hd, hd, k ? shade(wall, 1.04) : wall, "wall");
+      }
+      solid(-hw - 0.25, hw + 0.25, y1, y1 + 0.35, -hd - 0.25, hd + 0.25, trim, "timber");
       // windows: a row front and back, shutters closed on the ends
-      const n = Math.max(2, Math.round(w / 4.2));
+      const n = (m.open && k === 0) ? 0 : Math.max(2, Math.round(w / 4.2));
       for (let i = 0; i < n; i++){
         const cx = -hw + w * (i + 0.5) / n, ww = Math.min(2.2, w / n * 0.55);
         const wy0 = y0 + fh * 0.28, wy1 = y0 + fh * 0.72;
         quad(P(cx - ww/2, wy0, -hd - 0.06), P(cx + ww/2, wy0, -hd - 0.06),
-             P(cx + ww/2, wy1, -hd - 0.06), P(cx - ww/2, wy1, -hd - 0.06), glass);
+             P(cx + ww/2, wy1, -hd - 0.06), P(cx - ww/2, wy1, -hd - 0.06), glass, "glass");
         quad(P(cx + ww/2, wy0, hd + 0.06), P(cx - ww/2, wy0, hd + 0.06),
-             P(cx - ww/2, wy1, hd + 0.06), P(cx + ww/2, wy1, hd + 0.06), glass);
+             P(cx - ww/2, wy1, hd + 0.06), P(cx + ww/2, wy1, hd + 0.06), glass, "glass");
       }
       // an upstairs balcony along the front, which is what these places have
       if (k > 0){
         const bz = -hd - 1.9;
-        solid(-hw, hw, y0 - 0.25, y0, bz, -hd, trim);
-        solid(-hw, hw, y0 + 0.95, y0 + 1.1, bz - 0.05, bz + 0.05, trim);
+        solid(-hw, hw, y0 - 0.25, y0, bz, -hd, trim, "timber");
+        solid(-hw, hw, y0 + 0.95, y0 + 1.1, bz - 0.05, bz + 0.05, trim, "timber");
         const posts = Math.max(3, Math.round(w / 2.4));
         for (let i = 0; i <= posts; i++){
           const x = -hw + w * i / posts;
-          solid(x - 0.06, x + 0.06, y0, y0 + 1.05, bz - 0.06, bz + 0.06, trim);
+          solid(x - 0.06, x + 0.06, y0, y0 + 1.05, bz - 0.06, bz + 0.06, trim, "timber");
         }
       }
     }
@@ -540,38 +655,68 @@ function buildBuildings(){
     const ew = hw + e, ed = hd + e, ry = 0.2 + eaveY;
     const r00 = P(-ew, ry, -ed), r10 = P(ew, ry, -ed),
           r11 = P(ew, ry, ed), r01 = P(-ew, ry, ed);
-    solid(-ew, ew, ry - 0.3, ry, -ed, ed, shade(roof, 0.8));      // fascia
+    // the fascia, which on a place with a name painted along it is the sign
+    solid(-ew, ew, ry - 0.3, ry, -ed, ed, m.sign ? m.sign : shade(roof, 0.8), "wall");
     if (m.roof === "flat"){
-      quad(r00, r10, r11, r01, roof);
+      quad(r00, r10, r11, r01, roof, ROOFMAT);
     } else if (m.roof === "gable"){
       const a1 = P(-ew, 0.2 + h, 0), a2 = P(ew, 0.2 + h, 0);
-      quad(r00, r10, a2, a1, roof);
-      quad(r01, r11, a2, a1, shade(roof, 0.88));
-      push(r00, a1, r01, shade(wall, 0.96)); push(r10, r11, a2, shade(wall, 0.96));
+      quad(r00, r10, a2, a1, roof, ROOFMAT);
+      quad(r01, r11, a2, a1, shade(roof, 0.88), ROOFMAT);
+      push(r00, a1, r01, shade(wall, 0.96), "wall"); push(r10, r11, a2, shade(wall, 0.96), "wall");
     } else {
       const rl = w * 0.2, top = 0.2 + h;
       const a1 = P(-rl, top, 0), a2 = P(rl, top, 0);
-      quad(r00, r10, a2, a1, roof);
-      quad(r11, r01, a1, a2, shade(roof, 0.86));
-      push(r00, a1, r01, shade(roof, 0.93));
-      push(r10, r11, a2, shade(roof, 0.93));
+      quad(r00, r10, a2, a1, roof, ROOFMAT);
+      quad(r11, r01, a1, a2, shade(roof, 0.86), ROOFMAT);
+      push(r00, a1, r01, shade(roof, 0.93), ROOFMAT);
+      push(r10, r11, a2, shade(roof, 0.93), ROOFMAT);
+    }
+    // a raised centre section along the ridge, with its own little roof —
+    // the thing that gives a long shallow island roof its shape
+    if (m.monitor){
+      const mw = hw * (m.monitor[0] || 0.4), mh = m.monitor[1] || 1.2;
+      const my0 = 0.2 + h - 0.15, my1 = my0 + mh;
+      solid(-mw, mw, my0, my1, -hd * 0.42, hd * 0.42, shade(wall, 1.05), "wall");
+      quad(P(-mw, my1, -hd * 0.42), P(mw, my1, -hd * 0.42),
+           P(mw, my1, hd * 0.42), P(-mw, my1, hd * 0.42), shade(roof, 1.04), ROOFMAT);
+      solid(-mw - 0.4, mw + 0.4, my1, my1 + 0.25, -hd * 0.42 - 0.4, hd * 0.42 + 0.4,
+            shade(roof, 0.85), ROOFMAT);
+    }
+    if (m.flag){
+      const fx = hw + e + 1.2, ft = 11;
+      solid(fx - 0.09, fx + 0.09, 0.2, ft, -hd * 0.2 - 0.09, -hd * 0.2 + 0.09, [235, 238, 240], "timber");
+      quad(P(fx + 0.1, ft - 2.2, -hd * 0.2), P(fx + 2.4, ft - 2.0, -hd * 0.2),
+           P(fx + 2.4, ft - 0.9, -hd * 0.2), P(fx + 0.1, ft - 0.8, -hd * 0.2), [26, 62, 140], "wall");
+    }
+    if (m.deck){
+      // a deck out towards the water, on a seawall
+      const dz0 = -hd - e - m.deck, dz1 = -hd - e * 0.5;
+      quad(P(-hw - 1, 0.5, dz0), P(hw + 1, 0.5, dz0), P(hw + 1, 0.5, dz1), P(-hw - 1, 0.5, dz1), trim, "timber");
+      solid(-hw - 1, hw + 1, 0.0, 0.55, dz0 - 0.4, dz0, shade(trim, 0.72), "ground");   // the wall itself
+      const rails = Math.max(4, Math.round(w / 3));
+      for (let i = 0; i <= rails; i++){
+        const x = -hw - 1 + (w + 2) * i / rails;
+        solid(x - 0.07, x + 0.07, 0.5, 1.5, dz0 - 0.07, dz0 + 0.07, trim, "timber");
+      }
+      solid(-hw - 1, hw + 1, 1.42, 1.55, dz0 - 0.06, dz0 + 0.06, trim, "timber");
     }
     if (m.spire){
       const sw = 0.9, tip = P(0, 0.2 + m.spire, -hd * 0.55);
       const b = z => [P(-sw, 0.2 + h * 0.95, -hd * 0.55 + z), P(sw, 0.2 + h * 0.95, -hd * 0.55 + z)];
       const [b1, b2] = b(-sw), [b4, b3] = b(sw);
-      push(b1, b2, tip, trim); push(b2, b3, tip, trim);
-      push(b3, b4, tip, trim); push(b4, b1, tip, trim);
+      push(b1, b2, tip, trim, "wall"); push(b2, b3, tip, trim, "wall");
+      push(b3, b4, tip, trim, "wall"); push(b4, b1, tip, trim, "wall");
     }
 
     // veranda along the ground floor
     if (m.veranda){
       const dz = -hd - e * 0.8;
-      quad(P(-hw, 0.35, -hd), P(hw, 0.35, -hd), P(hw, 0.35, dz), P(-hw, 0.35, dz), trim);
+      quad(P(-hw, 0.35, -hd), P(hw, 0.35, -hd), P(hw, 0.35, dz), P(-hw, 0.35, dz), trim, "timber");
       const n = Math.max(3, Math.round(w / 3.2));
       for (let i = 0; i <= n; i++){
         const x = -hw + (w * i / n);
-        solid(x - 0.14, x + 0.14, 0.35, 0.2 + fh - 0.3, dz - 0.14, dz + 0.14, trim);
+        solid(x - 0.14, x + 0.14, 0.35, 0.2 + fh - 0.3, dz - 0.14, dz + 0.14, trim, "timber");
       }
     }
 
@@ -580,8 +725,8 @@ function buildBuildings(){
       const px0 = -hw * 0.1, px1 = px0 + Math.min(10, w * 0.55);
       const pz0 = -hd - 9.0, pz1 = pz0 + 5.0;      // clear of the veranda
       quad(P(px0 - 0.5, 0.16, pz0 - 0.5), P(px1 + 0.5, 0.16, pz0 - 0.5),
-           P(px1 + 0.5, 0.16, pz1 + 0.5), P(px0 - 0.5, 0.16, pz1 + 0.5), trim);
-      quad(P(px0, 0.2, pz0), P(px1, 0.2, pz0), P(px1, 0.2, pz1), P(px0, 0.2, pz1), water);
+           P(px1 + 0.5, 0.16, pz1 + 0.5), P(px0 - 0.5, 0.16, pz1 + 0.5), trim, "ground");
+      quad(P(px0, 0.2, pz0), P(px1, 0.2, pz0), P(px1, 0.2, pz1), P(px0, 0.2, pz1), water, "glass");
     }
 
     // palms around the plot, never through the building
@@ -599,7 +744,7 @@ function buildBuildings(){
         const [ax, az] = foot[k], [bx, bz] = foot[(k + 1) % 4];
         quad(P(x + ax, 0.2, z + az), P(x + bx, 0.2, z + bz),
              P(x + bx * 0.45 + lean, th2, z + bz * 0.45),
-             P(x + ax * 0.45 + lean, th2, z + az * 0.45), bark);
+             P(x + ax * 0.45 + lean, th2, z + az * 0.45), bark, "timber");
       }
       // a crown of fronds, each a long thin wedge that dips at its tip, in
       // two greens so the canopy has some depth to it from below
@@ -610,19 +755,25 @@ function buildBuildings(){
         const tone = k % 2 ? frond : [78, 138, 60];
         const tipX = x + lean + Math.cos(fa) * fl, tipZ = z + Math.sin(fa) * fl;
         const midX = x + lean + Math.cos(fa) * fl * 0.5, midZ = z + Math.sin(fa) * fl * 0.5;
-        push(P(x + lean - 0.3, th2 + 0.2, z), P(midX, th2 + 0.35, midZ), P(tipX, dip, tipZ), tone);
-        push(P(x + lean + 0.3, th2 + 0.2, z), P(tipX, dip, tipZ), P(midX, th2 + 0.35, midZ), tone);
+        push(P(x + lean - 0.3, th2 + 0.2, z), P(midX, th2 + 0.35, midZ), P(tipX, dip, tipZ), tone, "leaf");
+        push(P(x + lean + 0.3, th2 + 0.2, z), P(tipX, dip, tipZ), P(midX, th2 + 0.35, midZ), tone, "leaf");
       }
     }
   }
-  bldCount = pos.length / 3;
-  const mk = (data, loc, size) => {
-    const b = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, b);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
-    return b;
-  };
-  bufs.bPos = mk(pos); bufs.bNrm = mk(nrm); bufs.bCol = mk(col);
+  bldGroups = [];
+  for (const name of MATS){
+    const B = bin[name];
+    if (!B.pos.length) continue;
+    const mk = data => {
+      const b = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+      return b;
+    };
+    bldGroups.push({ name, count: B.pos.length / 3,
+                     pos: mk(B.pos), nrm: mk(B.nrm), col: mk(B.col), uv: mk(B.uv) });
+  }
+  bldCount = bldGroups.reduce((n, g) => n + g.count, 0);
 }
 
 function drawBuildings(mvp, e, sun){
@@ -630,7 +781,6 @@ function drawBuildings(mvp, e, sun){
   const a = 1 - Math.max(0, Math.min(1, (view.dist - B_NEAR) / (B_FAR - B_NEAR)));
   if (a <= 0.01) return;
   gl.useProgram(bldProg);
-  attach("bPos", BP.pos, 3); attach("bNrm", BP.nrm, 3); attach("bCol", BP.col, 3);
   gl.uniformMatrix4fv(BP.mvp, false, new Float32Array(mvp));
   gl.uniform3f(BP.sun, sun[0], sun[1], sun[2]);
   gl.uniform3f(BP.eye, e[0], e[1], e[2]);
@@ -639,7 +789,19 @@ function drawBuildings(mvp, e, sun){
   gl.uniform1f(BP.alpha, a);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-  gl.drawArrays(gl.TRIANGLES, 0, bldCount);
+  gl.activeTexture(gl.TEXTURE3);
+  gl.uniform1i(BP.tex, 3);
+  const bindTo = (buf, loc, size) => {
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+  };
+  for (const g of bldGroups){
+    gl.bindTexture(gl.TEXTURE_2D, matTex[g.name]);
+    bindTo(g.pos, BP.pos, 3); bindTo(g.nrm, BP.nrm, 3);
+    bindTo(g.col, BP.col, 3); bindTo(g.uv, BP.uv, 2);
+    gl.drawArrays(gl.TRIANGLES, 0, g.count);
+  }
   gl.disable(gl.BLEND);
 }
 
@@ -717,6 +879,7 @@ tImg.onload = () => {
     uploadTexture(sat);
     buildShade();
     buildPuff();
+    paintMaterials();
     buildMesh();
     buildBuildings();
     ready = true;
@@ -736,9 +899,9 @@ tImg.src = TERRAIN_PNG;
 const view = { lat:-21.2349, lon:-159.7776, az:0.35, el:0.26, dist:11000 };
 const clampV = () => {
   view.el = Math.max(0.07, Math.min(1.45, view.el));
-  // 120 m is about a rooftop away: close enough to stand in the car park,
-  // which is the whole point of putting buildings on the ground.
-  view.dist = Math.max(120, Math.min(40000, view.dist));
+  // 45 m is standing across the road from the place, which is the distance
+  // at which a building stops being a marker and starts being a building.
+  view.dist = Math.max(45, Math.min(40000, view.dist));
 };
 function eyeAndTarget(){
   const t = [toWorldX(view.lon), worldY(view.lat, view.lon), toWorldZ(view.lat)];
@@ -902,38 +1065,112 @@ window.project3D = function(p){
 };
 
 /* ---------- gestures, only while the 3D setting is on ---------- */
+// Orbiting alone is not navigation: it spins you round a fixed point, so
+// getting to a particular beach means orbiting until it drifts past. Dragging
+// with two fingers, with the right button, or with shift held moves the point
+// you are orbiting, which is how you actually get somewhere.
 const pts = new Map();
-let pinch = null;
-canvas.addEventListener("pointerdown", ev => {
-  if (ev.target.closest(".mk")) return;
-  canvas.setPointerCapture(ev.pointerId);
+let pinch = null, panning = false, twoMid = null;
+
+// metres of ground per pixel of screen, at the distance you are standing off
+function groundPerPixel(){
+  return (2 * view.dist * Math.tan(46 * Math.PI / 360)) / Math.max(1, innerHeight);
+}
+function panBy(dxPx, dyPx){
+  const mpp = groundPerPixel();
+  const rx = Math.cos(view.az), rz = -Math.sin(view.az);      // screen right
+  const fx = -Math.sin(view.az), fz = -Math.cos(view.az);     // into the screen
+  const wx = -(rx * dxPx + fx * dyPx) * mpp;
+  const wz = -(rz * dxPx + fz * dyPx) * mpp;
+  view.lon += wx / M_LON;
+  view.lat -= wz / KM_LAT_M;
+  // stay over the ground the data covers
+  view.lat = Math.max(TB_S + 0.004, Math.min(TB_N - 0.004, view.lat));
+  view.lon = Math.max(TB_W + 0.004, Math.min(TB_E - 0.004, view.lon));
+  camDirty = true;
+}
+window.pan3D = panBy;
+
+// The gestures listen on the whole stage, in the capture phase, because the
+// pins sit on top of the canvas and there are seventy of them: a drag that
+// happens to start on one used to do nothing at all, which is most of what
+// made this hard to fly. A pin still opens on a tap — a press that never
+// moves — and swallows nothing else.
+let moved3d = 0;
+stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
+stage.addEventListener("pointerdown", ev => {
+  if (!window.mode3d) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
-  pinch = null;
-});
-canvas.addEventListener("pointermove", ev => {
+  panning = ev.button === 2 || ev.button === 1 || ev.shiftKey;
+  pinch = null; twoMid = null; moved3d = 0;
+}, true);
+stage.addEventListener("pointermove", ev => {
+  if (!window.mode3d) return;
   const prev = pts.get(ev.pointerId); if (!prev) return;
   const cur = { x:ev.clientX, y:ev.clientY };
+  moved3d += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
   pts.set(ev.pointerId, cur);
   if (pts.size >= 2){
+    // two fingers: pinch to come closer, slide to move across the island
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const mid = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
     if (pinch) view.dist *= pinch / d;
-    pinch = d;
+    if (twoMid) panBy(mid.x - twoMid.x, mid.y - twoMid.y);
+    pinch = d; twoMid = mid;
+  } else if (panning || ev.shiftKey){
+    panBy(cur.x - prev.x, cur.y - prev.y);
   } else {
     view.az -= (cur.x - prev.x) * 0.005;
     view.el += (cur.y - prev.y) * 0.004;
   }
   camDirty = true;
-});
-["pointerup","pointercancel"].forEach(e => canvas.addEventListener(e, ev => {
-  pts.delete(ev.pointerId); if (pts.size < 2) pinch = null;
-}));
-canvas.addEventListener("wheel", ev => {
-  ev.preventDefault();
+}, true);
+["pointerup","pointercancel"].forEach(e => stage.addEventListener(e, ev => {
+  pts.delete(ev.pointerId);
+  if (pts.size < 2){ pinch = null; twoMid = null; }
+  if (!pts.size) panning = false;
+}, true));
+// a drag that began on a pin must not also open that pin when it ends
+stage.addEventListener("click", ev => {
+  if (window.mode3d && moved3d > 8){ ev.preventDefault(); ev.stopPropagation(); moved3d = 0; }
+}, true);
+stage.addEventListener("wheel", ev => {
+  if (!window.mode3d) return;
+  ev.preventDefault(); ev.stopPropagation();
   const unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 400 : 1;
+  if (ev.shiftKey){ panBy(-ev.deltaX * unit, -ev.deltaY * unit); return; }
   view.dist *= Math.exp(ev.deltaY * unit * 0.0016);
   camDirty = true;
 }, { passive:false });
+
+// the arrow keys move you about, which is the one control everybody tries
+addEventListener("keydown", ev => {
+  if (!window.mode3d) return;
+  if (/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || "")) return;
+  const step = 90;
+  const k = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[ev.key];
+  if (k){ ev.preventDefault(); panBy(-k[0], -k[1]); }
+});
+
+// the zoom buttons belong to the flat map; in the 3D setting they have to
+// move the camera in and out instead, or they simply appear broken
+for (const [id, k] of [["zin", 0.65], ["zout", 1.55]]){
+  const btn = document.getElementById(id);
+  if (!btn) continue;
+  btn.addEventListener("click", ev => {
+    if (!window.mode3d) return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    view.dist *= k; camDirty = true; draw();
+  }, true);
+}
+const reset = document.getElementById("reset");
+if (reset) reset.addEventListener("click", ev => {
+  if (!window.mode3d) return;
+  ev.preventDefault(); ev.stopImmediatePropagation();
+  view.lat = C_LAT; view.lon = C_LON; view.az = 0.35; view.el = 0.26; view.dist = 11000;
+  camDirty = true; draw();
+}, true);
 
 /* ---------- switching between the two settings ---------- */
 // The 2D view is a plan at a known scale, so the tilt can start from the same
@@ -951,6 +1188,7 @@ window.setMode3D = function(on){
     view.lat = ll.lat; view.lon = ll.lon;
     view.dist = Math.max(150, metresAcross() * 1.15);
     startLoop();
+    showHint();
   } else {
     const im = llToImg(view.lat, view.lon);
     cam.x = im.x; cam.y = im.y;
@@ -958,6 +1196,25 @@ window.setMode3D = function(on){
   }
   camDirty = true;
 };
+// Nobody guesses a control they cannot see. This says what the gestures are,
+// the first few times you switch over, and then stops.
+const hint = document.createElement("div");
+hint.id = "navHint";
+hint.textContent = "Drag to orbit \u00b7 two fingers, shift-drag or right-drag to move \u00b7 scroll to zoom";
+hint.hidden = true;
+document.body.appendChild(hint);
+let hintTimer = 0;
+function showHint(){
+  let seen = 0;
+  try { seen = +(localStorage.getItem("raro4.navhint") || 0); } catch(e){}
+  if (seen > 4) return;
+  try { localStorage.setItem("raro4.navhint", seen + 1); } catch(e){}
+  hint.hidden = false; hint.classList.add("on");
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => { hint.classList.remove("on");
+    setTimeout(() => { hint.hidden = true; }, 400); }, 5200);
+}
+
 document.getElementById("d3Btn").onclick = () => setMode3D(!window.mode3d);
 addEventListener("keydown", e => {
   if (e.key === "3" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || ""))
