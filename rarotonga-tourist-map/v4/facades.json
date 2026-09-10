@@ -1,0 +1,14 @@
+{
+ "traderjacks": {
+  "front": {
+   "eave": 0.676,
+   "file": "traderjacks-front.webp",
+   "ratio": 1.9807
+  },
+  "roof": {
+   "eave": 0.2545,
+   "file": "traderjacks-roof.webp",
+   "ratio": 1.2488
+  }
+ }
+}

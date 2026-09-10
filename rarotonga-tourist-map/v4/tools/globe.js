@@ -493,6 +493,41 @@ function paintMaterials(){
   }
 }
 
+/* ---------- painted elevations ---------- */
+// Where a place has been painted flat-on, the painting is hung on the
+// geometry: the wall part of the front elevation goes on the front wall, the
+// roof image is projected straight down onto the roof planes. A model wearing
+// its own front stops looking like a model.
+const FACADES = (typeof FACADE_ART !== "undefined" && FACADE_ART) || {};
+const facadeTex = {};
+function loadFacades(){
+  const blank = gl.createTexture();          // stands in until the art arrives
+  gl.bindTexture(gl.TEXTURE_2D, blank);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                new Uint8Array([255, 255, 255, 255]));
+  for (const pid of Object.keys(FACADES)){
+    for (const face of Object.keys(FACADES[pid])){
+      const key = pid + ":" + face;
+      facadeTex[key] = blank;
+      const img = new Image();
+      img.onload = () => {
+        const t = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        facadeTex[key] = t;
+        camDirty = true;
+      };
+      img.src = FACADES[pid][face].src;
+    }
+  }
+}
+
 /* ---------- buildings ---------- */
 // A pin says where. Up close it should also say what is there, and the
 // painting cannot: a picture has no back, so standing it up in the scene
@@ -542,6 +577,23 @@ function buildBuildings(){
   const SCALE = { roof: 1.15, wall: 2.4, timber: 1.5, thatch: 1.6,
                   glass: 2.6, ground: 5.0, leaf: 1.6 };
 
+  // a face may carry its own painted elevation instead of a material
+  const pushUV = (a, b, c, uvs, colour, key) => {
+    const B = (bin[key] = bin[key] || { pos: [], nrm: [], col: [], uv: [] });
+    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+    const n = norm(cross(u, v));
+    [a, b, c].forEach((p, i) => {
+      B.pos.push(p[0], p[1], p[2]);
+      B.nrm.push(n[0], n[1], n[2]);
+      B.col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+      B.uv.push(uvs[i][0], uvs[i][1]);
+    });
+  };
+  const quadUV = (a, b, c, d, uv, colour, key) => {
+    pushUV(a, b, c, [uv[0], uv[1], uv[2]], colour, key);
+    pushUV(a, c, d, [uv[0], uv[2], uv[3]], colour, key);
+  };
+
   const push = (a, b, c, colour, mat) => {
     mat = mat || "wall";
     const B = bin[mat], k = SCALE[mat];
@@ -588,6 +640,7 @@ function buildBuildings(){
     let seed = seedOf(p.id);
     const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 
+    const art = FACADES[p.id] || null;
     const hw = w / 2, hd = d / 2;
     const eaveY = m.roof === "flat" ? h : h * 0.74;
     const fh = eaveY / storeys;                       // floor to floor
@@ -606,6 +659,26 @@ function buildBuildings(){
     const pw = hw + e + 3.5, pd = hd + e + 3.5;
     quad(P(-pw, 0.10, -pd), P(pw, 0.10, -pd), P(pw, 0.10, pd), P(-pw, 0.10, pd), sand, "ground");
 
+    if (art){
+      // the painted front, hung on the wall: the elevation's own eave line
+      // says which part of the picture is wall, and that part is stretched
+      // over the wall height
+      const white = [255, 255, 255];
+      const faceQuad = (face, a, b, c, dd) => {
+        const rec = art[face] || art.front;
+        if (!rec) return false;
+        const e0 = rec.eave != null ? rec.eave : 0.55;
+        // v runs from the eave line down to the bottom of the picture
+        quadUV(a, b, c, dd, [[0, e0], [1, e0], [1, 1], [0, 1]], white,
+               p.id + ":" + (art[face] ? face : "front"));
+        return true;
+      };
+      const y0 = 0.2, y1 = 0.2 + eaveY;
+      faceQuad("front", P(-hw, y1, -hd), P(hw, y1, -hd), P(hw, y0, -hd), P(-hw, y0, -hd));
+      faceQuad("back",  P(hw, y1, hd),  P(-hw, y1, hd), P(-hw, y0, hd), P(hw, y0, hd));
+      faceQuad("side",  P(-hw, y1, hd), P(-hw, y1, -hd), P(-hw, y0, -hd), P(-hw, y0, hd));
+      faceQuad("side",  P(hw, y1, -hd), P(hw, y1, hd),  P(hw, y0, hd),  P(hw, y0, -hd));
+    } else
     // walls, floor by floor, with a band between them
     for (let k = 0; k < storeys; k++){
       const y0 = 0.2 + k * fh, y1 = 0.2 + (k + 1) * fh - 0.35;
@@ -667,10 +740,26 @@ function buildBuildings(){
     } else {
       const rl = w * 0.2, top = 0.2 + h;
       const a1 = P(-rl, top, 0), a2 = P(rl, top, 0);
-      quad(r00, r10, a2, a1, roof, ROOFMAT);
-      quad(r11, r01, a1, a2, shade(roof, 0.86), ROOFMAT);
-      push(r00, a1, r01, shade(roof, 0.93), ROOFMAT);
-      push(r10, r11, a2, shade(roof, 0.93), ROOFMAT);
+      if (art && art.roof){
+        // straight down onto the roof: the painting is a plan, so the name
+        // lands along the ridge exactly where it was painted
+        const key = p.id + ":roof";
+        // The plan is drawn as you would look at it: the front of the
+        // building at the bottom of the picture, and left to right as you see
+        // it standing in front. Local +x runs to the viewer's left and the
+        // front is -z, so both axes turn over.
+        const uv = (x, z) => [(ew - x) / (2 * ew), (ed - z) / (2 * ed)];
+        const white = [255, 255, 255];
+        quadUV(r00, r10, a2, a1, [uv(-ew, -ed), uv(ew, -ed), uv(rl, 0), uv(-rl, 0)], white, key);
+        quadUV(r11, r01, a1, a2, [uv(ew, ed), uv(-ew, ed), uv(-rl, 0), uv(rl, 0)], white, key);
+        pushUV(r00, a1, r01, [uv(-ew, -ed), uv(-rl, 0), uv(-ew, ed)], white, key);
+        pushUV(r10, r11, a2, [uv(ew, -ed), uv(ew, ed), uv(rl, 0)], white, key);
+      } else {
+        quad(r00, r10, a2, a1, roof, ROOFMAT);
+        quad(r11, r01, a1, a2, shade(roof, 0.86), ROOFMAT);
+        push(r00, a1, r01, shade(roof, 0.93), ROOFMAT);
+        push(r10, r11, a2, shade(roof, 0.93), ROOFMAT);
+      }
     }
     // a raised centre section along the ridge, with its own little roof —
     // the thing that gives a long shallow island roof its shape
@@ -761,9 +850,9 @@ function buildBuildings(){
     }
   }
   bldGroups = [];
-  for (const name of MATS){
+  for (const name of Object.keys(bin)){
     const B = bin[name];
-    if (!B.pos.length) continue;
+    if (!B || !B.pos.length) continue;
     const mk = data => {
       const b = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, b);
@@ -797,7 +886,7 @@ function drawBuildings(mvp, e, sun){
     gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
   };
   for (const g of bldGroups){
-    gl.bindTexture(gl.TEXTURE_2D, matTex[g.name]);
+    gl.bindTexture(gl.TEXTURE_2D, matTex[g.name] || facadeTex[g.name] || matTex.wall);
     bindTo(g.pos, BP.pos, 3); bindTo(g.nrm, BP.nrm, 3);
     bindTo(g.col, BP.col, 3); bindTo(g.uv, BP.uv, 2);
     gl.drawArrays(gl.TRIANGLES, 0, g.count);
@@ -880,6 +969,7 @@ tImg.onload = () => {
     buildShade();
     buildPuff();
     paintMaterials();
+    loadFacades();
     buildMesh();
     buildBuildings();
     ready = true;

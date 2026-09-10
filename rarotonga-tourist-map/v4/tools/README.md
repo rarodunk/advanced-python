@@ -110,6 +110,30 @@ Straight overhead again, and no text again, for the same two reasons.
 it stays hidden from across the island, and checks that it lands within a pixel
 of the ground it is registered to.
 
+## Painted elevations on the buildings
+
+A massing model with a material on it still reads as a model. What makes a
+place look like itself is its own front — the lettering, the shutters, the
+rail, the rust down one panel — and that can be painted flat-on and hung on
+the geometry, the way a stylised game textures a street.
+
+    python3 tools/import_facades.py ~/Downloads/facades/
+    python3 build_all.py
+
+Name each file for the place and the face it shows: `traderjacks-front.png`,
+`traderjacks-side.png`, `traderjacks-roof.png`. Ask for them straight on, with
+no perspective and no ground, on a plain white background.
+
+The eave line is found rather than guessed: coming down from the ridge, the
+first row where the silhouette reaches its full width is the edge of the roof,
+so everything below it is wall. Taking the widest row instead finds the
+seawall at the bottom, which is just as wide and half a building too low.
+
+The roof image is a plan, so it is projected straight down onto the roof
+planes and the name lands along the ridge where it was painted. Front and
+side hang on their walls; a missing side falls back to the front. Places with
+no elevations keep the generated materials.
+
 ## The 3D setting
 
 Press `3`, or the 3D button in the rail, and the same map becomes terrain. It

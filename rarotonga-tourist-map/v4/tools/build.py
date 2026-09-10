@@ -261,6 +261,25 @@ if cu_manifest.exists():
 CLOSEUPS_JS = (pathlib.Path(HERE / "closeups.js").read_text())
 TOUR_JS = (pathlib.Path(HERE / "tour.js").read_text())
 
+# Painted elevations, hung on the buildings that have them.
+facades = {}
+fac_dir = VER / "facades"
+if (VER / "facades.json").exists():
+    import base64 as _b64
+    for pid, faces in json.loads((VER / "facades.json").read_text()).items():
+        rec = {}
+        for face, info in faces.items():
+            f = fac_dir / info["file"]
+            if not f.exists():
+                continue
+            mime = "image/webp" if f.suffix.lower() == ".webp" else "image/png"
+            rec[face] = { "ratio": info.get("ratio"), "eave": info.get("eave"),
+                          "src": "data:" + mime + ";base64," + _b64.b64encode(f.read_bytes()).decode() }
+        if rec:
+            facades[pid] = rec
+    if facades:
+        print(f"  {len(facades)} painted elevations")
+
 # The massing models the 3D setting stands on the ground up close.
 models = {}
 if (VER / "models.json").exists():
@@ -291,6 +310,7 @@ out = (head + "\n"
        + 'const TERRAIN = IMAGERY.terrain;\n'
        + 'const CLOSEUP_ART = ' + json.dumps(closeups) + ';\n'
        + 'const BUILDINGS = ' + json.dumps(models) + ';\n'
+       + 'const FACADE_ART = ' + json.dumps(facades) + ';\n'
        + mid + "\n" + tail          # tail closes the page's <script>
        + "\n<script>\n" + CLOSEUPS_JS + "\n</script>\n"
        + "\n<script>\n" + TOUR_JS + "\n</script>\n"
