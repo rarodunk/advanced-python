@@ -1,0 +1,929 @@
+{
+ "adventuredive": {
+  "colour": {
+   "roof": [
+    135,
+    128,
+    71
+   ],
+   "trim": [
+    250,
+    243,
+    231
+   ],
+   "wall": [
+    163,
+    179,
+    140
+   ]
+  },
+  "eave": 1.4,
+  "face": 270,
+  "roof": "hip",
+  "size": [
+   8,
+   6,
+   3.0
+  ],
+  "veranda": false
+ },
+ "airport": {
+  "colour": {
+   "roof": [
+    146,
+    137,
+    95
+   ],
+   "trim": [
+    247,
+    245,
+    239
+   ],
+   "wall": [
+    184,
+    171,
+    145
+   ]
+  },
+  "eave": 1.4,
+  "face": 294,
+  "roof": "flat",
+  "size": [
+   46,
+   16,
+   6.0
+  ],
+  "veranda": false
+ },
+ "albertos": {
+  "colour": {
+   "roof": [
+    156,
+    97,
+    48
+   ],
+   "trim": [
+    236,
+    231,
+    217
+   ],
+   "wall": [
+    171,
+    144,
+    103
+   ]
+  },
+  "eave": 1.6,
+  "face": 246,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "avatiu": {
+  "colour": {
+   "roof": [
+    145,
+    132,
+    116
+   ],
+   "trim": [
+    245,
+    244,
+    238
+   ],
+   "wall": [
+    190,
+    186,
+    178
+   ]
+  },
+  "eave": 0.8,
+  "face": 252,
+  "roof": "flat",
+  "size": [
+   30,
+   14,
+   5.5
+  ],
+  "veranda": false
+ },
+ "charlies": {
+  "colour": {
+   "roof": [
+    146,
+    128,
+    93
+   ],
+   "trim": [
+    251,
+    249,
+    239
+   ],
+   "wall": [
+    189,
+    204,
+    207
+   ]
+  },
+  "eave": 1.6,
+  "face": 144,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "cicc": {
+  "colour": {
+   "roof": [
+    124,
+    121,
+    68
+   ],
+   "trim": [
+    249,
+    244,
+    234
+   ],
+   "wall": [
+    201,
+    197,
+    191
+   ]
+  },
+  "eave": 0.6,
+  "face": 0,
+  "roof": "gable",
+  "size": [
+   17,
+   10,
+   8.5
+  ],
+  "spire": 11.0,
+  "veranda": false
+ },
+ "diveraro": {
+  "colour": {
+   "roof": [
+    156,
+    158,
+    156
+   ],
+   "trim": [
+    252,
+    248,
+    238
+   ],
+   "wall": [
+    191,
+    197,
+    203
+   ]
+  },
+  "eave": 1.4,
+  "face": 240,
+  "roof": "hip",
+  "size": [
+   8,
+   6,
+   3.0
+  ],
+  "veranda": false
+ },
+ "fishingclub": {
+  "colour": {
+   "roof": [
+    163,
+    113,
+    78
+   ],
+   "trim": [
+    252,
+    247,
+    226
+   ],
+   "wall": [
+    210,
+    162,
+    151
+   ]
+  },
+  "eave": 1.8,
+  "face": 0,
+  "roof": "hip",
+  "size": [
+   15,
+   9,
+   4.2
+  ],
+  "veranda": true
+ },
+ "highland": {
+  "colour": {
+   "roof": [
+    145,
+    114,
+    77
+   ],
+   "trim": [
+    245,
+    236,
+    217
+   ],
+   "wall": [
+    200,
+    205,
+    197
+   ]
+  },
+  "eave": 1.8,
+  "face": 234,
+  "roof": "gable",
+  "size": [
+   18,
+   11,
+   5.0
+  ],
+  "veranda": true
+ },
+ "hospital": {
+  "colour": {
+   "roof": [
+    115,
+    128,
+    109
+   ],
+   "trim": [
+    253,
+    250,
+    241
+   ],
+   "wall": [
+    200,
+    188,
+    172
+   ]
+  },
+  "eave": 1.0,
+  "face": 300,
+  "roof": "hip",
+  "size": [
+   38,
+   18,
+   7.5
+  ],
+  "veranda": false
+ },
+ "kikau": {
+  "colour": {
+   "roof": [
+    159,
+    120,
+    80
+   ],
+   "trim": [
+    251,
+    247,
+    236
+   ],
+   "wall": [
+    185,
+    186,
+    160
+   ]
+  },
+  "eave": 1.6,
+  "face": 294,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "lbv": {
+  "colour": {
+   "roof": [
+    114,
+    122,
+    90
+   ],
+   "trim": [
+    250,
+    248,
+    239
+   ],
+   "wall": [
+    202,
+    204,
+    192
+   ]
+  },
+  "eave": 1.6,
+  "face": 108,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "licence": {
+  "colour": {
+   "roof": [
+    140,
+    125,
+    110
+   ],
+   "trim": [
+    244,
+    237,
+    222
+   ],
+   "wall": [
+    199,
+    195,
+    193
+   ]
+  },
+  "eave": 0.8,
+  "face": 228,
+  "roof": "flat",
+  "size": [
+   12,
+   8,
+   3.8
+  ],
+  "veranda": false
+ },
+ "mairenui": {
+  "colour": {
+   "roof": [
+    116,
+    121,
+    61
+   ],
+   "trim": [
+    240,
+    237,
+    217
+   ],
+   "wall": [
+    187,
+    187,
+    139
+   ]
+  },
+  "eave": 0.9,
+  "face": 162,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   5.4
+  ],
+  "veranda": false
+ },
+ "matavera": {
+  "colour": {
+   "roof": [
+    130,
+    103,
+    66
+   ],
+   "trim": [
+    252,
+    249,
+    239
+   ],
+   "wall": [
+    190,
+    180,
+    142
+   ]
+  },
+  "eave": 0.6,
+  "face": 60,
+  "roof": "gable",
+  "size": [
+   14,
+   9,
+   7.0
+  ],
+  "spire": 9.0,
+  "veranda": false
+ },
+ "mooring": {
+  "colour": {
+   "roof": [
+    153,
+    122,
+    89
+   ],
+   "trim": [
+    235,
+    231,
+    217
+   ],
+   "wall": [
+    164,
+    167,
+    141
+   ]
+  },
+  "eave": 1.6,
+  "face": 96,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "murimarket": {
+  "colour": {
+   "roof": [
+    126,
+    114,
+    123
+   ],
+   "trim": [
+    240,
+    225,
+    196
+   ],
+   "wall": [
+    195,
+    156,
+    110
+   ]
+  },
+  "eave": 2.4,
+  "face": 96,
+  "roof": "hip",
+  "size": [
+   26,
+   12,
+   3.8
+  ],
+  "veranda": false
+ },
+ "museum": {
+  "colour": {
+   "roof": [
+    123,
+    125,
+    78
+   ],
+   "trim": [
+    243,
+    242,
+    235
+   ],
+   "wall": [
+    194,
+    176,
+    143
+   ]
+  },
+  "eave": 0.9,
+  "face": 342,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   5.4
+  ],
+  "veranda": false
+ },
+ "nustall": {
+  "colour": {
+   "roof": [
+    117,
+    118,
+    82
+   ],
+   "trim": [
+    251,
+    248,
+    236
+   ],
+   "wall": [
+    183,
+    200,
+    197
+   ]
+  },
+  "eave": 1.6,
+  "face": 150,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "otb": {
+  "colour": {
+   "roof": [
+    114,
+    123,
+    95
+   ],
+   "trim": [
+    238,
+    238,
+    231
+   ],
+   "wall": [
+    200,
+    182,
+    161
+   ]
+  },
+  "eave": 1.6,
+  "face": 240,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "palace": {
+  "colour": {
+   "roof": [
+    124,
+    131,
+    95
+   ],
+   "trim": [
+    254,
+    250,
+    241
+   ],
+   "wall": [
+    198,
+    170,
+    154
+   ]
+  },
+  "eave": 1.6,
+  "face": 0,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "punanganui": {
+  "colour": {
+   "roof": [
+    130,
+    116,
+    85
+   ],
+   "trim": [
+    246,
+    243,
+    231
+   ],
+   "wall": [
+    188,
+    185,
+    168
+   ]
+  },
+  "eave": 2.6,
+  "face": 0,
+  "roof": "hip",
+  "size": [
+   34,
+   16,
+   4.4
+  ],
+  "veranda": false
+ },
+ "rickshaw": {
+  "colour": {
+   "roof": [
+    131,
+    132,
+    83
+   ],
+   "trim": [
+    250,
+    246,
+    232
+   ],
+   "wall": [
+    180,
+    177,
+    142
+   ]
+  },
+  "eave": 1.6,
+  "face": 228,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "sails": {
+  "colour": {
+   "roof": [
+    133,
+    126,
+    126
+   ],
+   "trim": [
+    239,
+    223,
+    199
+   ],
+   "wall": [
+    206,
+    163,
+    150
+   ]
+  },
+  "eave": 1.6,
+  "face": 66,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "sheraton": {
+  "colour": {
+   "roof": [
+    129,
+    121,
+    82
+   ],
+   "trim": [
+    247,
+    242,
+    228
+   ],
+   "wall": [
+    185,
+    195,
+    182
+   ]
+  },
+  "eave": 0.4,
+  "face": 138,
+  "roof": "flat",
+  "size": [
+   40,
+   18,
+   9.0
+  ],
+  "veranda": false
+ },
+ "tamarind": {
+  "colour": {
+   "roof": [
+    128,
+    118,
+    55
+   ],
+   "trim": [
+    238,
+    232,
+    215
+   ],
+   "wall": [
+    177,
+    155,
+    98
+   ]
+  },
+  "eave": 1.6,
+  "face": 0,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "tapabar": {
+  "colour": {
+   "roof": [
+    140,
+    120,
+    102
+   ],
+   "trim": [
+    255,
+    253,
+    242
+   ],
+   "wall": [
+    209,
+    174,
+    141
+   ]
+  },
+  "eave": 1.8,
+  "face": 96,
+  "roof": "hip",
+  "size": [
+   15,
+   9,
+   4.2
+  ],
+  "veranda": true
+ },
+ "tevaranui": {
+  "colour": {
+   "roof": [
+    179,
+    100,
+    47
+   ],
+   "trim": [
+    227,
+    215,
+    192
+   ],
+   "wall": [
+    223,
+    211,
+    188
+   ]
+  },
+  "eave": 1.8,
+  "face": 144,
+  "roof": "gable",
+  "size": [
+   20,
+   12,
+   5.2
+  ],
+  "veranda": true
+ },
+ "titikavekacicc": {
+  "colour": {
+   "roof": [
+    120,
+    136,
+    106
+   ],
+   "trim": [
+    255,
+    253,
+    242
+   ],
+   "wall": [
+    195,
+    197,
+    185
+   ]
+  },
+  "eave": 0.6,
+  "face": 144,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   7.5
+  ],
+  "spire": 9.5,
+  "veranda": false
+ },
+ "traderjacks": {
+  "colour": {
+   "roof": [
+    135,
+    125,
+    97
+   ],
+   "trim": [
+    249,
+    243,
+    230
+   ],
+   "wall": [
+    203,
+    171,
+    158
+   ]
+  },
+  "eave": 1.8,
+  "face": 228,
+  "roof": "hip",
+  "size": [
+   15,
+   9,
+   4.2
+  ],
+  "veranda": true
+ },
+ "vaima": {
+  "colour": {
+   "roof": [
+    161,
+    102,
+    62
+   ],
+   "trim": [
+    252,
+    247,
+    227
+   ],
+   "wall": [
+    215,
+    195,
+    183
+   ]
+  },
+  "eave": 1.6,
+  "face": 156,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "waterline": {
+  "colour": {
+   "roof": [
+    144,
+    114,
+    86
+   ],
+   "trim": [
+    242,
+    233,
+    210
+   ],
+   "wall": [
+    216,
+    158,
+    134
+   ]
+  },
+  "eave": 1.6,
+  "face": 252,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   4.6
+  ],
+  "veranda": true
+ },
+ "wilsons": {
+  "colour": {
+   "roof": [
+    150,
+    120,
+    95
+   ],
+   "trim": [
+    248,
+    241,
+    215
+   ],
+   "wall": [
+    213,
+    184,
+    147
+   ]
+  },
+  "eave": 1.8,
+  "face": 186,
+  "roof": "hip",
+  "size": [
+   15,
+   9,
+   4.2
+  ],
+  "veranda": true
+ }
+}

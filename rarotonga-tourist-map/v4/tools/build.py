@@ -208,6 +208,12 @@ if cu_manifest.exists():
             print("  that is a heavy page for a phone; set RARO_LINK_ASSETS=1 to serve\n"
                   "  them as files instead (tools/make_site.py copies them into dist/)")
 CLOSEUPS_JS = (pathlib.Path(HERE / "closeups.js").read_text())
+
+# The massing models the 3D setting stands on the ground up close.
+models = {}
+if (VER / "models.json").exists():
+    models = json.loads((VER / "models.json").read_text())
+    print(f"  {len(models)} buildings")
 globe = (HERE / "globe.js").read_text()
 # The 3D setting goes in last, wrapped, and after the rest of the page has
 # already run. A WebGL driver that refuses a shader must cost you the 3D
@@ -232,6 +238,7 @@ out = (head + "\n"
        + 'const IMAGERY = ' + json.dumps(meta) + ';\n'
        + 'const TERRAIN = IMAGERY.terrain;\n'
        + 'const CLOSEUP_ART = ' + json.dumps(closeups) + ';\n'
+       + 'const BUILDINGS = ' + json.dumps(models) + ';\n'
        + mid + "\n" + tail          # tail closes the page's <script>
        + "\n<script>\n" + CLOSEUPS_JS + "\n</script>\n"
        + "\n<script>\n" + GLOBE + "\n</script>\n")

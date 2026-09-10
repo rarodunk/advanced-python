@@ -383,6 +383,11 @@ function drawMarkers(){
     // that camera instead of the plan view's flat transform
     const s = (window.mode3d && window.project3D) ? project3D(p) : project(p.img);
     if (!s || s.x < -80 || s.x > w + 80 || s.y < -60 || s.y > h + 60){ el.style.display = "none"; continue; }
+    // Standing among the buildings, a pin four kilometres away is not a
+    // landmark, it is a sticker on the sky.
+    if (window.mode3d && window.raro3d && s.w > Math.max(1500, raro3d.dist * 6)){
+      el.style.display = "none"; continue;
+    }
     el.style.display = "";
     el.style.transform = `translate(${s.x}px,${s.y}px) translate(-50%,-100%)`;
     el.style.zIndex = String(1000 + Math.round(s.y));      // lower on screen draws on top, like depth

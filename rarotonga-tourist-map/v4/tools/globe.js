@@ -121,7 +121,7 @@ precision highp float;
 uniform sampler2D uTex;      // the satellite mosaic
 uniform sampler2D uShade;    // r: the sun's shadows, g: ambient occlusion
 uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec2 uFog;
-uniform vec2 uShadeMix; uniform float uGrade;
+uniform vec2 uShadeMix; uniform float uGrade; uniform float uClose;
 varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
   vec3 c = texture2D(uTex, vUV).rgb;
@@ -151,6 +151,15 @@ void main(){
   vec3 V = normalize(uEye - vPos);
   float spec = pow(max(dot(reflect(-uSun, vec3(0.0, 1.0, 0.0)), V), 0.0), 48.0);
   c += vec3(0.85, 0.92, 1.0) * spec * 0.30 * (1.0 - land);
+
+  // Up close the base map has nothing left to give: it is one picture at ten
+  // metres a pixel, and magnifying it just smears. Past that point the ground
+  // becomes ground — sand at the shore, grass above it — so the buildings
+  // have something clean to stand on.
+  vec3 ground = mix(vec3(0.85, 0.79, 0.63), vec3(0.42, 0.54, 0.31),
+                    smoothstep(1.0, 7.0, vH));
+  ground = mix(vec3(0.16, 0.42, 0.55), ground, step(0.5, vH));
+  c = mix(c, ground, uClose * 0.8);
 
   // a little contrast, the way a photograph is graded
   c = clamp((c - 0.5) * 1.12 + 0.5, 0.0, 1.4);
@@ -215,7 +224,8 @@ const T = {
   eye: gl.getUniformLocation(terrainProg, "uEye"), haze: gl.getUniformLocation(terrainProg, "uHaze"),
   fog: gl.getUniformLocation(terrainProg, "uFog"),
   shadeMix: gl.getUniformLocation(terrainProg, "uShadeMix"),
-  grade: gl.getUniformLocation(terrainProg, "uGrade") };
+  grade: gl.getUniformLocation(terrainProg, "uGrade"),
+  close: gl.getUniformLocation(terrainProg, "uClose") };
 const S = { p: gl.getAttribLocation(skyProg, "aP"), top: gl.getUniformLocation(skyProg, "uTop"),
             haze: gl.getUniformLocation(skyProg, "uHazeSky"),
             horizon: gl.getUniformLocation(skyProg, "uHorizon") };
@@ -389,6 +399,157 @@ function attach(bufName, loc, size){
   gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
 }
 
+
+/* ---------- buildings ---------- */
+// A pin says where. Up close it should also say what is there, and the
+// painting cannot: a picture has no back, so standing it up in the scene
+// gives a cardboard cut-out the moment the camera moves. These are massing
+// models — footprint, roof, veranda — sized from what kind of place it is and
+// coloured from that place's own artwork. They are a sketch and they are
+// meant to read as one.
+const MODELS = (typeof BUILDINGS !== "undefined" && BUILDINGS) || {};
+// A five-metre roof seen from two kilometres is three pixels. These only
+// mean anything once the camera is close enough to walk the place.
+const B_NEAR = 450, B_FAR = 1100;       // metres of camera distance: full, then gone
+
+const bldProg = build(`
+attribute vec3 aPos; attribute vec3 aNrm; attribute vec3 aCol;
+uniform mat4 uMVP;
+varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos;
+void main(){ vNrm = aNrm; vCol = aCol; vPos = aPos; gl_Position = uMVP * vec4(aPos, 1.0); }`, `
+precision mediump float;
+uniform vec3 uSun; uniform vec3 uHaze; uniform vec2 uFog; uniform vec3 uEye;
+uniform float uAlpha;
+varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos;
+void main(){
+  vec3 n = normalize(vNrm);
+  float lam = clamp(dot(n, uSun), 0.0, 1.0);
+  vec3 c = vCol * (0.68 + 0.52 * lam);
+  float f = smoothstep(uFog.x, uFog.y, distance(vPos, uEye));
+  c = mix(c, uHaze, f * 0.8);
+  gl_FragColor = vec4(c * uAlpha, uAlpha);      // premultiplied, so it fades out cleanly
+}`);
+const BP = { pos: gl.getAttribLocation(bldProg, "aPos"), nrm: gl.getAttribLocation(bldProg, "aNrm"),
+             col: gl.getAttribLocation(bldProg, "aCol"), mvp: gl.getUniformLocation(bldProg, "uMVP"),
+             sun: gl.getUniformLocation(bldProg, "uSun"), haze: gl.getUniformLocation(bldProg, "uHaze"),
+             fog: gl.getUniformLocation(bldProg, "uFog"), eye: gl.getUniformLocation(bldProg, "uEye"),
+             alpha: gl.getUniformLocation(bldProg, "uAlpha") };
+let bldCount = 0;
+
+function buildBuildings(){
+  const pos = [], nrm = [], col = [];
+  const push = (a, b, c, colour) => {          // one triangle, flat shaded
+    const u = [b[0]-a[0], b[1]-a[1], b[2]-a[2]], v = [c[0]-a[0], c[1]-a[1], c[2]-a[2]];
+    const n = norm(cross(u, v));
+    for (const p of [a, b, c]){
+      pos.push(p[0], p[1], p[2]);
+      nrm.push(n[0], n[1], n[2]);
+      col.push(colour[0] / 255, colour[1] / 255, colour[2] / 255);
+    }
+  };
+  const quad = (a, b, c, d, colour) => { push(a, b, c, colour); push(a, c, d, colour); };
+
+  for (const p of PLACES){
+    const m = MODELS[p.id];
+    if (!m || !p.latlon) continue;
+    const [w, d, h] = m.size;
+    const e = m.eave || 1.0;
+    const base = worldY(p.latlon.lat, p.latlon.lon);
+    const ox = toWorldX(p.latlon.lon), oz = toWorldZ(p.latlon.lat);
+    const th = (m.face || 0) * Math.PI / 180;
+    const ct = Math.cos(th), st = Math.sin(th);
+    // local x runs along the front, local z away from it; the front looks
+    // down the bearing the tool worked out from the coastline
+    const P = (x, y, z) => [ox + x * ct + z * st, base + y, oz - x * st + z * ct];
+    const C = m.colour, wall = C.wall, roof = C.roof, trim = C.trim;
+    const hw = w / 2, hd = d / 2, eaveY = h * (m.roof === "flat" ? 1 : 0.58);
+
+    // a footing, so the model sits on the ground instead of hovering in the
+    // blur of a painting that was never drawn at this scale
+    const pw = hw + e + 2.5, pd = hd + e + 2.5;
+    quad(P(-pw, 0.12, -pd), P(pw, 0.12, -pd), P(pw, 0.12, pd), P(-pw, 0.12, pd),
+         [Math.round(C.trim[0] * 0.86), Math.round(C.trim[1] * 0.86), Math.round(C.trim[2] * 0.82)]);
+
+    // walls
+    const c000 = P(-hw, 0.2, -hd), c100 = P(hw, 0, -hd), c110 = P(hw, 0, hd), c010 = P(-hw, 0, hd);
+    const t000 = P(-hw, eaveY, -hd), t100 = P(hw, eaveY, -hd),
+          t110 = P(hw, eaveY, hd), t010 = P(-hw, eaveY, hd);
+    quad(c000, c100, t100, t000, wall);
+    quad(c100, c110, t110, t100, wall);
+    quad(c110, c010, t010, t110, wall);
+    quad(c010, c000, t000, t010, wall);
+
+    // roof, out over the eaves
+    const ew = hw + e, ed = hd + e;
+    const r00 = P(-ew, eaveY, -ed), r10 = P(ew, eaveY, -ed),
+          r11 = P(ew, eaveY, ed), r01 = P(-ew, eaveY, ed);
+    if (m.roof === "flat"){
+      quad(r00, r10, r11, r01, roof);
+    } else if (m.roof === "gable"){
+      const a1 = P(-ew, h, 0), a2 = P(ew, h, 0);
+      quad(r00, r10, a2, a1, roof);
+      quad(r01, r11, a2, a1, roof);
+      push(r00, a1, r01, trim);
+      push(r10, r11, a2, trim);
+    } else {                                    // hip
+      const rl = w * 0.22;
+      const a1 = P(-rl, h, 0), a2 = P(rl, h, 0);
+      quad(r00, r10, a2, a1, roof);             // front pitch
+      quad(r11, r01, a1, a2, roof);             // back pitch
+      push(r00, a1, r01, roof);                 // the two hipped ends
+      push(r10, r11, a2, roof);
+    }
+    if (m.spire){
+      const s = 0.9, tip = P(0, m.spire, -hd * 0.55);
+      const b1 = P(-s, h * 0.95, -hd * 0.55 - s), b2 = P(s, h * 0.95, -hd * 0.55 - s);
+      const b3 = P(s, h * 0.95, -hd * 0.55 + s), b4 = P(-s, h * 0.95, -hd * 0.55 + s);
+      push(b1, b2, tip, trim); push(b2, b3, tip, trim);
+      push(b3, b4, tip, trim); push(b4, b1, tip, trim);
+    }
+    if (m.veranda){
+      // a deck along the front, and posts holding the eave up over it
+      const dy = 0.35, dz = -hd - e * 0.8;
+      quad(P(-hw, dy, -hd), P(hw, dy, -hd), P(hw, dy, dz), P(-hw, dy, dz), trim);
+      const n = Math.max(3, Math.round(w / 3.2));
+      for (let i = 0; i <= n; i++){
+        const x = -hw + (w * i / n), t = 0.16;
+        const q0 = P(x - t, dy, dz - t), q1 = P(x + t, dy, dz - t),
+              q2 = P(x + t, dy, dz + t), q3 = P(x - t, dy, dz + t);
+        const u0 = P(x - t, eaveY, dz - t), u1 = P(x + t, eaveY, dz - t),
+              u2 = P(x + t, eaveY, dz + t), u3 = P(x - t, eaveY, dz + t);
+        quad(q0, q1, u1, u0, trim); quad(q1, q2, u2, u1, trim);
+        quad(q2, q3, u3, u2, trim); quad(q3, q0, u0, u3, trim);
+      }
+    }
+  }
+  bldCount = pos.length / 3;
+  const mk = (data, loc, size) => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    return b;
+  };
+  bufs.bPos = mk(pos); bufs.bNrm = mk(nrm); bufs.bCol = mk(col);
+}
+
+function drawBuildings(mvp, e, sun){
+  if (!bldCount) return;
+  const a = 1 - Math.max(0, Math.min(1, (view.dist - B_NEAR) / (B_FAR - B_NEAR)));
+  if (a <= 0.01) return;
+  gl.useProgram(bldProg);
+  attach("bPos", BP.pos, 3); attach("bNrm", BP.nrm, 3); attach("bCol", BP.col, 3);
+  gl.uniformMatrix4fv(BP.mvp, false, new Float32Array(mvp));
+  gl.uniform3f(BP.sun, sun[0], sun[1], sun[2]);
+  gl.uniform3f(BP.eye, e[0], e[1], e[2]);
+  gl.uniform3fv(BP.haze, SEA_NEAR);
+  gl.uniform2f(BP.fog, view.dist * 2.0, view.dist * 4.5);
+  gl.uniform1f(BP.alpha, a);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.drawArrays(gl.TRIANGLES, 0, bldCount);
+  gl.disable(gl.BLEND);
+}
+
 /* ---------- the clouds ---------- */
 const puffTex = gl.createTexture();
 function buildPuff(){
@@ -464,6 +625,7 @@ tImg.onload = () => {
     buildShade();
     buildPuff();
     buildMesh();
+    buildBuildings();
     ready = true;
     document.getElementById("d3Btn").disabled = false;
     if (window.mode3d) draw();
@@ -481,7 +643,9 @@ tImg.src = TERRAIN_PNG;
 const view = { lat:-21.2349, lon:-159.7776, az:0.35, el:0.26, dist:11000 };
 const clampV = () => {
   view.el = Math.max(0.07, Math.min(1.45, view.el));
-  view.dist = Math.max(700, Math.min(40000, view.dist));
+  // 120 m is about a rooftop away: close enough to stand in the car park,
+  // which is the whole point of putting buildings on the ground.
+  view.dist = Math.max(120, Math.min(40000, view.dist));
 };
 function eyeAndTarget(){
   const t = [toWorldX(view.lon), worldY(view.lat, view.lon), toWorldZ(view.lat)];
@@ -489,7 +653,7 @@ function eyeAndTarget(){
   const e = [t[0] + r * Math.sin(view.az), t[1] + view.dist * Math.sin(view.el),
              t[2] + r * Math.cos(view.az)];
   const eLat = C_LAT - e[2] / KM_LAT_M, eLon = C_LON + e[0] / M_LON;
-  e[1] = Math.max(e[1], worldY(eLat, eLon) + 60);   // never underground
+  e[1] = Math.max(e[1], worldY(eLat, eLon) + 12);   // never underground
   return { e, t };
 }
 
@@ -561,7 +725,11 @@ function draw(){
   gl.uniform2f(T.fog, view.dist * 2.0, view.dist * 4.5);
   gl.uniform2f(T.shadeMix, SHADE_MIX[0], SHADE_MIX[1]);
   gl.uniform1f(T.grade, PAINTED ? 0.35 : 1.0);
+  // fully painted ground below 220 m, fully the base map above 700
+  gl.uniform1f(T.close, 1 - Math.max(0, Math.min(1, (view.dist - 220) / 480)));
   gl.drawElements(gl.TRIANGLES, indexCount, uint32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
+
+  drawBuildings(mvp, e, sun);
 
   // clouds last, facing the camera, drifting west to east
   const fwd = norm(sub(t, e));
@@ -593,6 +761,9 @@ function draw(){
   gl.disable(gl.BLEND);
 }
 window.draw3D = draw;
+// a handle for the tests, and for anyone poking at the scene from a console
+window.raro3d = { view, get buildings(){ return bldCount / 3; },
+                  get dist(){ return view.dist; } };
 
 /* ---------- the compass ---------- */
 // It turns with the camera in 3D and points north in 2D, and clicking it puts
@@ -682,7 +853,7 @@ window.setMode3D = function(on){
   if (on){
     const ll = imgToLL(cam.x, cam.y);
     view.lat = ll.lat; view.lon = ll.lon;
-    view.dist = Math.max(900, metresAcross() * 1.15);
+    view.dist = Math.max(150, metresAcross() * 1.15);
     startLoop();
   } else {
     const im = llToImg(view.lat, view.lon);
