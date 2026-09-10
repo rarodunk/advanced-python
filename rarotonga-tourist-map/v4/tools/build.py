@@ -120,6 +120,45 @@ GALLERY_CSS = """
 .isle .stats b{display:block;font-size:16px;font-weight:600;margin-top:2px}
 .isle.hide{display:none}
 
+/* ---------- pins, the way a map app draws them ---------- */
+.mk .dot{
+  width:38px;height:38px;border:0;border-radius:50% 50% 50% 50% / 58% 58% 42% 42%;
+  transform:none;box-shadow:0 6px 16px rgba(0,0,0,.42);position:relative;
+}
+.mk .dot::after{
+  content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);
+  border-left:8px solid transparent;border-right:8px solid transparent;
+  border-top:11px solid currentColor;
+}
+.mk .dot span{transform:none;font-size:17px;filter:grayscale(1) brightness(3)}
+.mk:hover .dot,.mk.sel .dot{transform:scale(1.12)}
+.mk .cap{
+  background:none;border:0;backdrop-filter:none;padding:2px 0 0;
+  font-size:13px;font-weight:600;color:#fff;letter-spacing:.01em;
+  text-shadow:0 1px 3px rgba(0,0,0,.75),0 0 12px rgba(0,0,0,.35);
+}
+.mk.small .dot{width:26px;height:26px}
+.mk.small .dot::after{bottom:-4px;border-left-width:5px;border-right-width:5px;border-top-width:8px}
+.mk.small .dot span{font-size:12px}
+.mk.tiny .dot{width:15px;height:15px}
+.mk.tiny .dot::after{display:none}
+
+/* ---------- the district strip ---------- */
+#districts{
+  position:fixed;left:50%;transform:translateX(-50%);z-index:20;
+  bottom:calc(18px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:6px;
+  padding:8px 10px;border-radius:999px;background:rgba(8,22,36,.82);backdrop-filter:blur(14px);
+  border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.42)
+}
+#districts .arw{width:34px;height:34px;border-radius:50%;font-size:19px;line-height:1;color:var(--ink-2)}
+#districts .arw:hover{background:var(--panel-2);color:#fff}
+#districts .mid{min-width:150px;text-align:center;cursor:pointer}
+#districts b{display:block;font-size:15px;font-weight:600}
+#districts .dots{display:flex;gap:5px;justify-content:center;margin-top:5px}
+#districts .dots i{width:5px;height:5px;border-radius:50%;background:var(--panel-3)}
+#districts .dots i.on{background:var(--good)}
+@media (max-width:860px){ #districts{bottom:calc(86px + env(safe-area-inset-bottom))} }
+
 /* ---------- compass ---------- */
 #compass svg{width:22px;height:22px;transition:transform .18s ease-out}
 .credit{left:16px;bottom:calc(122px + env(safe-area-inset-bottom));max-width:52vw}
@@ -208,6 +247,7 @@ if cu_manifest.exists():
             print("  that is a heavy page for a phone; set RARO_LINK_ASSETS=1 to serve\n"
                   "  them as files instead (tools/make_site.py copies them into dist/)")
 CLOSEUPS_JS = (pathlib.Path(HERE / "closeups.js").read_text())
+TOUR_JS = (pathlib.Path(HERE / "tour.js").read_text())
 
 # The massing models the 3D setting stands on the ground up close.
 models = {}
@@ -241,6 +281,7 @@ out = (head + "\n"
        + 'const BUILDINGS = ' + json.dumps(models) + ';\n'
        + mid + "\n" + tail          # tail closes the page's <script>
        + "\n<script>\n" + CLOSEUPS_JS + "\n</script>\n"
+       + "\n<script>\n" + TOUR_JS + "\n</script>\n"
        + "\n<script>\n" + GLOBE + "\n</script>\n")
 (VER / "index.html").write_text('<meta charset="utf-8">\n' + out)
 print(len(out) // 1024, "KB", out.count("\n"), "lines")

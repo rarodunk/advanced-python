@@ -360,7 +360,9 @@ const nodes = new Map();
 PLACES.forEach(p => {
   const el = document.createElement("button");
   el.className = "mk";
-  el.innerHTML = `<span class="dot" style="background:${CATS[p.group].color}">
+  // the tail under the pin is drawn from currentColor, so the category colour
+  // has to be set as colour as well as background
+  el.innerHTML = `<span class="dot" style="background:${CATS[p.group].color};color:${CATS[p.group].color}">
       <span>${CATS[p.group].icon}</span></span><span class="cap">${p.name}</span>`;
   el.onclick = ev => { ev.stopPropagation(); if (!editing) openPlace(p.id); };
   makeDraggable(el, p);
@@ -374,7 +376,9 @@ function drawMarkers(){
   // Zoomed in, every pin carries its name; zoomed out only the heroes do, so
   // the island reads at a glance instead of arriving as a wall of labels.
   const zi = cam.zoom * ISLAND_SPAN / 2000;             // 1 = island 2000 px wide, whatever the mosaic's resolution
-  const near = window.mode3d ? false : zi > 0.9,
+  // in the 3D setting the camera's own distance decides: close enough to walk
+  // the place, close enough to want every name
+  const near = window.mode3d ? (window.raro3d ? raro3d.dist < 4500 : false) : zi > 0.9,
         mid  = window.mode3d ? true  : zi > 0.45,
         tiny = window.mode3d ? false : zi < 0.33;
   for (const p of PLACES){
@@ -396,13 +400,17 @@ function drawMarkers(){
     el.classList.toggle("tiny", tiny && !p.hero && state.sel !== p.id);
     order.push({ el, p, sx:s.x, sy:s.y, big: p.hero ? mid : near });
   }
-  const boxes = order.map(o => [o.sx - 15, o.sy - 34, o.sx + 15, o.sy + 2]);
+  // On the flat map a name may not cover a pin. In the 3D setting the pins
+  // are scattered in depth and half of them are behind a ridge anyway, so
+  // names compete only with other names — otherwise a coastal strip of
+  // twenty places shows no names at all.
+  const boxes = window.mode3d ? [] : order.map(o => [o.sx - 15, o.sy - 34, o.sx + 15, o.sy + 2]);
   order.sort((a, b) => (b.p.hero ? 1 : 0) - (a.p.hero ? 1 : 0) || b.sy - a.sy);
   for (const o of order){
     let named = o.big && (shown.has(o.p.id) || state.sel === o.p.id);
     if (named){
-      const wpx = o.p.name.length * 6.4 + 16;
-      const box = [o.sx - wpx/2, o.sy - 4, o.sx + wpx/2, o.sy + 20];
+      const wpx = o.p.name.length * 6.9 + 18;
+      const box = [o.sx - wpx/2, o.sy - 6, o.sx + wpx/2, o.sy + 22];
       if (boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) named = false;
       else boxes.push(box);
     }

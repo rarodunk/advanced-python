@@ -120,7 +120,7 @@ void main(){
 precision highp float;
 uniform sampler2D uTex;      // the satellite mosaic
 uniform sampler2D uShade;    // r: the sun's shadows, g: ambient occlusion
-uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec2 uFog;
+uniform vec3 uSun; uniform vec3 uEye; uniform vec3 uHaze; uniform vec3 uAir; uniform vec2 uFog;
 uniform vec2 uShadeMix; uniform float uGrade; uniform float uClose;
 varying vec2 vUV; varying vec2 vTUV; varying vec3 vNrm; varying vec3 vPos; varying float vH;
 void main(){
@@ -135,6 +135,19 @@ void main(){
   // water towards turquoise, land towards a deeper jungle green rather than
   // the yellow-green a saturation push alone gives you
   c *= mix(vec3(1.0), mix(vec3(0.86, 1.03, 1.18), vec3(0.88, 1.06, 0.86), land), uGrade);
+
+  // The painting and the elevation grid disagree in places — the artist drew
+  // the Muri bay further into the island than it really goes, and no fit of a
+  // coastline can undo that inland. On a flat map you never notice. In three
+  // dimensions the lagoon climbs a mountain. So the grid decides what is land
+  // and the painting only decides what land looks like: where the ground
+  // stands well above the sea and the picture insists on water, the water is
+  // overruled.
+  float watery = clamp((c.b - c.r) * 2.6, 0.0, 1.0) * clamp((c.b - 0.32) * 4.0, 0.0, 1.0);
+  float onLand = smoothstep(2.0, 12.0, vH);
+  vec3 bush = mix(vec3(0.33, 0.45, 0.23), vec3(0.17, 0.30, 0.15),
+                  clamp(vH / 420.0, 0.0, 1.0));
+  c = mix(c, bush, watery * onLand);
 
   vec3 n = normalize(vNrm);
   float lam = clamp(dot(n, uSun), 0.0, 1.0);
@@ -164,12 +177,16 @@ void main(){
   // a little contrast, the way a photograph is graded
   c = clamp((c - 0.5) * 1.12 + 0.5, 0.0, 1.4);
 
+  // Distance haze is atmosphere, and atmosphere is pale sky, not sea. Fading
+  // a far ridge towards the water colour turns every mountain turquoise at
+  // eye level, which is exactly what it looks like: a lagoon standing up.
   float f = smoothstep(uFog.x, uFog.y, distance(vPos, uEye));
-  float edge = min(min(vTUV.x, 1.0 - vTUV.x), min(vTUV.y, 1.0 - vTUV.y));
+  c = mix(c, uAir, f * 0.85);
+
   // the mosaic's own ocean is a square; dissolve a wide band of it into the
-  // open water so the join never shows
-  f = max(f, 1.0 - smoothstep(0.0, 0.20, edge));
-  gl_FragColor = vec4(mix(c, uHaze, f), 1.0);
+  // open water, and that one does go to the sea colour
+  float edge = min(min(vTUV.x, 1.0 - vTUV.x), min(vTUV.y, 1.0 - vTUV.y));
+  gl_FragColor = vec4(mix(c, uHaze, 1.0 - smoothstep(0.0, 0.20, edge)), 1.0);
 }`);
 
 const skyProg = build(`
@@ -541,8 +558,8 @@ function drawBuildings(mvp, e, sun){
   gl.uniformMatrix4fv(BP.mvp, false, new Float32Array(mvp));
   gl.uniform3f(BP.sun, sun[0], sun[1], sun[2]);
   gl.uniform3f(BP.eye, e[0], e[1], e[2]);
-  gl.uniform3fv(BP.haze, SEA_NEAR);
-  gl.uniform2f(BP.fog, view.dist * 2.0, view.dist * 4.5);
+  gl.uniform3fv(BP.haze, SKY_HAZE);
+  gl.uniform2f(BP.fog, Math.max(5000, view.dist * 2.0), Math.max(22000, view.dist * 5.0));
   gl.uniform1f(BP.alpha, a);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -722,7 +739,10 @@ function draw(){
   gl.uniform3f(T.sun, sun[0], sun[1], sun[2]);
   gl.uniform3f(T.eye, e[0], e[1], e[2]);
   gl.uniform3fv(T.haze, SEA_NEAR);
-  gl.uniform2f(T.fog, view.dist * 2.0, view.dist * 4.5);
+  gl.uniform3fv(T.air, SKY_HAZE);
+  // haze belongs to the air, so it is measured in kilometres of it, not in
+  // how far the camera happens to be sitting back
+  gl.uniform2f(T.fog, Math.max(5000, view.dist * 2.0), Math.max(22000, view.dist * 5.0));
   gl.uniform2f(T.shadeMix, SHADE_MIX[0], SHADE_MIX[1]);
   gl.uniform1f(T.grade, PAINTED ? 0.35 : 1.0);
   // fully painted ground below 220 m, fully the base map above 700
