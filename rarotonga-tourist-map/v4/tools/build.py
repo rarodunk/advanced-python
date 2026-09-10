@@ -1,4 +1,4 @@
-import pathlib, base64
+import os, pathlib, base64
 # Paths are derived from this file, so the tree works wherever it is cloned.
 HERE = pathlib.Path(__file__).resolve().parent      # <version>/tools
 VER  = HERE.parent                                  # <version>
@@ -181,6 +181,11 @@ terr = base64.b64encode((VER / "terrain.png").read_bytes()).decode()
 # Close-ups: one small painting per place, each registered to the patch of
 # coastline it depicts. Embedded like everything else, because the page has to
 # work as a single file; the build says how much they cost.
+# Embedding keeps the page a single file, which is what an artifact needs and
+# what makes it work from a Downloads folder. A folder-served copy (Netlify,
+# your own hosting) is better off linking them: the browser caches each image
+# and the first paint is not carrying seventy of them.
+LINK_ASSETS = os.environ.get("RARO_LINK_ASSETS") == "1"
 closeups, cu_bytes = {}, 0
 cu_manifest = VER / "closeups.json"
 if cu_manifest.exists():
@@ -192,10 +197,16 @@ if cu_manifest.exists():
         raw = f.read_bytes()
         cu_bytes += len(raw)
         mime = "image/png" if f.suffix.lower() == ".png" else "image/jpeg"
-        closeups[pid] = { "file": rec["file"], "bbox": rec.get("bbox"), "rot": rec.get("rot", 0),
-                          "src": "data:" + mime + ";base64," + base64.b64encode(raw).decode() }
+        src = ("closeups/" + rec["file"]) if LINK_ASSETS else \
+              ("data:" + mime + ";base64," + base64.b64encode(raw).decode())
+        closeups[pid] = { "file": rec["file"], "bbox": rec.get("bbox"),
+                          "rot": rec.get("rot", 0), "src": src }
     if closeups:
-        print(f"  {len(closeups)} close-ups embedded ({cu_bytes / 1e6:.1f} MB before encoding)")
+        how = "linked" if LINK_ASSETS else "embedded"
+        print(f"  {len(closeups)} close-ups {how} ({cu_bytes / 1e6:.1f} MB before encoding)")
+        if not LINK_ASSETS and cu_bytes * 4 / 3 > 9e6:
+            print("  that is a heavy page for a phone; set RARO_LINK_ASSETS=1 to serve\n"
+                  "  them as files instead (tools/make_site.py copies them into dist/)")
 CLOSEUPS_JS = (pathlib.Path(HERE / "closeups.js").read_text())
 globe = (HERE / "globe.js").read_text()
 # The 3D setting goes in last, wrapped, and after the rest of the page has

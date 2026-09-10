@@ -6,6 +6,7 @@
 Writes dist/:
 
     index.html      the satellite guide, 2D and 3D (v4)
+    closeups/       the card art, for a page built with RARO_LINK_ASSETS=1
     painted.html    the painted map (v3)
     app/            the installable version, with its service worker
     _headers        cache rules, which Netlify and Cloudflare Pages both read
@@ -46,6 +47,9 @@ def main():
     for src, dst in PAGES:
         shutil.copy2(ROOT / src, DIST / dst)
     shutil.copytree(ROOT / "app", DIST / "app")
+    # the card art, when the page was built to link rather than embed it
+    if (ROOT / "v4" / "closeups").exists():
+        shutil.copytree(ROOT / "v4" / "closeups", DIST / "closeups")
     (DIST / "_headers").write_text(HEADERS)
     total = sum(p.stat().st_size for p in DIST.rglob("*") if p.is_file())
     print(f"dist/ ready: {len(list(DIST.rglob('*')))} files, {total / 1e6:.1f} MB")

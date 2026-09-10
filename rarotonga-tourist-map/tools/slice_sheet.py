@@ -43,6 +43,12 @@ def main():
     ap.add_argument("ids", nargs="+", help="place ids in reading order, left to right")
     ap.add_argument("--quality", type=int, default=86)
     ap.add_argument("--max-px", type=int, default=1100, help="longest edge of each panel")
+    ap.add_argument("--scale", type=float, default=1.0,
+                    help="enlarge each panel by this before saving; a card is drawn at "
+                         "about 360 points, which a retina screen renders at 720")
+    ap.add_argument("--sharpen", type=float, default=0.0,
+                    help="unsharp mask strength, 0 to 2. Enlarging invents no detail, "
+                         "but it stops the enlargement itself looking soft")
     ap.add_argument("--dry-run", action="store_true", help="find the panels, write nothing")
     a = ap.parse_args()
     try:
@@ -87,6 +93,13 @@ def main():
             pid = a.ids[k]; k += 1
             box = (c0 + 2, r0 + 2, c1 - 2, r1 - 2)          # inside the frame line
             panel = sheet.crop(box)
+            if a.scale != 1.0:
+                panel = panel.resize((round(panel.width * a.scale), round(panel.height * a.scale)),
+                                     Image.LANCZOS)
+            if a.sharpen > 0:
+                from PIL import ImageFilter
+                panel = panel.filter(ImageFilter.UnsharpMask(
+                    radius=1.1 * a.scale, percent=int(70 * a.sharpen), threshold=3))
             if max(panel.size) > a.max_px:
                 s = a.max_px / max(panel.size)
                 panel = panel.resize((round(panel.width * s), round(panel.height * s)),

@@ -8,7 +8,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-python3 build_all.py
+# a folder-served copy links the card art instead of carrying it inline
+RARO_LINK_ASSETS=1 python3 build_all.py
 python3 tools/make_site.py
 
 if [ "${1:-}" = "--draft" ]; then
