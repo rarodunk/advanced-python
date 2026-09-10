@@ -16,6 +16,7 @@ MANIFEST = V4 / "closeups.json"
 FOLDER = V4 / "closeups"
 BBOX = [-159.7320, -21.2600, -159.7230, -21.2520]      # a patch of Muri
 had_manifest = MANIFEST.exists()
+saved = MANIFEST.read_text() if had_manifest else None   # the real register, put back at the end
 
 try:
     FOLDER.mkdir(exist_ok=True)
@@ -24,6 +25,8 @@ try:
                       int(base.width * 0.75), int(base.height * 0.55))).resize((600, 600))
     crop.save(FOLDER / "_test.jpg", quality=80)
     MANIFEST.write_text(json.dumps({"murilagoon": {"file": "_test.jpg", "bbox": BBOX, "rot": 0}}))
+    # only the test's own entry is present while it runs, so a stray card image
+    # cannot be what makes the assertions pass
     r = subprocess.run([sys.executable, str(V4 / "tools" / "build.py")], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert "1 close-ups embedded" in r.stdout, r.stdout
@@ -83,7 +86,9 @@ try:
     print("\nclose-ups pass")
 finally:
     (FOLDER / "_test.jpg").unlink(missing_ok=True)
-    if not had_manifest:
+    if had_manifest:
+        MANIFEST.write_text(saved)
+    else:
         MANIFEST.unlink(missing_ok=True)
         if FOLDER.exists() and not any(FOLDER.iterdir()):
             FOLDER.rmdir()

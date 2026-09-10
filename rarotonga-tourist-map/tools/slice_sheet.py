@@ -50,25 +50,28 @@ def main():
     except ImportError:
         sys.exit("pip install pillow first")
 
+    from collections import Counter
     sheet = Image.open(a.sheet).convert("RGB")
     W, H = sheet.size
     print(f"sheet: {W} x {H}")
-    small = sheet.resize((W // 4, H // 4))
-    sw, sh = small.size
-    px = small.load()
+    px = sheet.load()
 
-    # the cream the sheets are printed on, taken from a corner rather than
-    # assumed, so a different border colour still works
-    bg = px[3, 3]
+    # The cream these are printed on: the commonest colour in the picture, not
+    # the corner, which on these sheets is a painted palm frond.
+    bg = Counter(sheet.resize((W // 3, H // 3)).getdata()).most_common(1)[0][0]
     def ink(x, y):
         r, g, b = px[x, y]
         return abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) > 60
 
-    col_counts = [sum(1 for y in range(sh) if ink(x, y)) for x in range(sw)]
-    row_counts = [sum(1 for y_ in [0] for y in range(sh) if False)] if False else \
-                 [sum(1 for x in range(sw) if ink(x, y)) for y in range(sh)]
-    cols = [c for c in bands(col_counts, sh * 0.25) if c[1] - c[0] > sw * 0.08]
-    rows = [r for r in bands(row_counts, sw * 0.25) if r[1] - r[0] > sh * 0.08]
+    # Panels are separated by gutters of bare cream, so look for the gutters
+    # rather than the panels: the decorative border runs to the edge of the
+    # page and would otherwise merge a whole row into one block.
+    ys = list(range(int(H * 0.16), int(H * 0.42), 4))
+    xs = list(range(int(W * 0.10), int(W * 0.90), 4))
+    col_counts = [sum(1 for y in ys if ink(x, y)) for x in range(W)]
+    row_counts = [sum(1 for x in xs if ink(x, y)) for y in range(H)]
+    cols = [c for c in bands(col_counts, len(ys) * 0.15) if c[1] - c[0] > W * 0.08]
+    rows = [r for r in bands(row_counts, len(xs) * 0.15) if r[1] - r[0] > H * 0.18]
     print(f"found {len(cols)} columns, {len(rows)} rows")
     if len(cols) * len(rows) < len(a.ids):
         sys.exit(f"only {len(cols) * len(rows)} panels found for {len(a.ids)} names.\n"
@@ -82,11 +85,8 @@ def main():
             if k >= len(a.ids):
                 break
             pid = a.ids[k]; k += 1
-            box = (c0 * 4, r0 * 4, c1 * 4, r1 * 4)
+            box = (c0 + 2, r0 + 2, c1 - 2, r1 - 2)          # inside the frame line
             panel = sheet.crop(box)
-            # the caption sits under the frame inside the same band; the photo
-            # is the top of it, in the proportion these sheets are laid out
-            panel = panel.crop((0, 0, panel.width, int(panel.height * 0.88)))
             if max(panel.size) > a.max_px:
                 s = a.max_px / max(panel.size)
                 panel = panel.resize((round(panel.width * s), round(panel.height * s)),
