@@ -175,12 +175,27 @@ GALLERY_CSS = """
 #compass svg{width:22px;height:22px;transition:transform .18s ease-out}
 .credit{left:16px;bottom:calc(122px + env(safe-area-inset-bottom));max-width:52vw}
 
+/* A phone is held in one hand and tapped with a thumb. Every control here is
+   sized past the 44px anybody can reliably hit, and the type with it, because
+   a chip you cannot read is no better than one you cannot press. */
 @media (max-width:860px){
-  .cats{position:static;flex-direction:row;width:auto;overflow-x:auto;padding:12px 2px 4px}
-  .cat{width:auto}
+  .cats{position:static;flex-direction:row;width:auto;overflow-x:auto;padding:10px 12px 6px;gap:10px}
+  .cat{width:auto;min-height:50px;padding:10px 18px 10px 10px;font-size:16px;gap:10px}
+  .cat i{width:34px;height:34px;border-radius:12px;font-size:16px}
+  .cat .n{font-size:12px;margin-left:8px}
+  .rail{right:12px;gap:11px}
+  .rail .iconbtn{width:54px;height:54px;font-size:20px;border-width:1.5px}
+  .rail .lbl{font-size:13px}
+  #compass svg{width:27px;height:27px}
   .isle .stats{display:none}
   .isle .thumb{width:64px;height:44px}
-  .credit{bottom:calc(88px + env(safe-area-inset-bottom))}
+  #districts{padding:9px 8px;gap:4px}
+  #districts .arw{width:46px;height:46px;font-size:24px}
+  #districts .mid{min-width:130px}
+  #districts b{font-size:16px}
+  #districts .dots i{width:6px;height:6px}
+  /* clear of the district strip, which sits at 86px on a phone */
+  .credit{bottom:calc(160px + env(safe-area-inset-bottom));max-width:58vw}
 }
 """
 head = head.replace("</style>", GALLERY_CSS + "\n</style>", 1)
@@ -290,6 +305,8 @@ globe = (HERE / "globe.js").read_text()
 # already run. A WebGL driver that refuses a shader must cost you the 3D
 # button, not the whole guide: before this, a throw here left the page sitting
 # on its loading curtain forever.
+tail = tail.replace('// Open on something worth seeing, so the island never appears as an empty shell.\nsetTimeout(() => {\n  const t = raroNow();\n  const heroes = PLACES.filter(p => p.hero && isOpen(p, t) === true);\n  openPlace((heroes.length ? heroes[Math.floor(Math.random() * heroes.length)] : PLACES.find(p => p.id === "murilagoon")).id, false);\n}, 700);', '// Open on something worth seeing, so the island never appears as an empty shell.\n// On a phone the card is the whole screen, so opening one on arrival hides the\n// map you came for: there the island opens on itself.\nsetTimeout(() => {\n  if (innerWidth < 900) return;\n  const t = raroNow();\n  const heroes = PLACES.filter(p => p.hero && isOpen(p, t) === true);\n  openPlace((heroes.length ? heroes[Math.floor(Math.random() * heroes.length)] : PLACES.find(p => p.id === "murilagoon")).id, false);\n}, 700);')
+assert "innerWidth < 900" in tail
 GLOBE = """
 try {
 """ + globe + """

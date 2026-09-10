@@ -1,4 +1,157 @@
 {
+ "airport": {
+  "front": {
+   "eave": 0.5463,
+   "file": "airport-front.webp",
+   "ratio": 1.3935
+  },
+  "roof": {
+   "eave": 0.7131,
+   "file": "airport-roof.webp",
+   "ratio": 1.1811
+  },
+  "side": {
+   "eave": 0.4716,
+   "file": "airport-side.webp",
+   "ratio": 2.0175
+  }
+ },
+ "albertos": {
+  "front": {
+   "eave": 0.2885,
+   "file": "albertos-front.webp",
+   "ratio": 1.3712
+  },
+  "roof": {
+   "eave": 0.2701,
+   "file": "albertos-roof.webp",
+   "ratio": 1.1283
+  },
+  "side": {
+   "eave": 0.2514,
+   "file": "albertos-side.webp",
+   "ratio": 1.76
+  }
+ },
+ "blackrock": {
+  "front": {
+   "eave": 0.8075,
+   "file": "blackrock-front.webp",
+   "ratio": 1.494
+  },
+  "roof": {
+   "eave": 0.6322,
+   "file": "blackrock-roof.webp",
+   "ratio": 1.1273
+  },
+  "side": {
+   "eave": 0.6989,
+   "file": "blackrock-side.webp",
+   "ratio": 2.4839
+  }
+ },
+ "bus": {
+  "front": {
+   "eave": 0.3258,
+   "file": "bus-front.webp",
+   "ratio": 1.5227
+  },
+  "roof": {
+   "eave": 0.0539,
+   "file": "bus-roof.webp",
+   "ratio": 2.2722
+  },
+  "side": {
+   "eave": 0.023,
+   "file": "bus-side.webp",
+   "ratio": 2.5747
+  }
+ },
+ "cicc": {
+  "front": {
+   "eave": 0.6362,
+   "file": "cicc-front.webp",
+   "ratio": 1.621
+  },
+  "roof": {
+   "eave": 0.2529,
+   "file": "cicc-roof.webp",
+   "ratio": 1.2098
+  },
+  "side": {
+   "eave": 0.3732,
+   "file": "cicc-side.webp",
+   "ratio": 2.6939
+  }
+ },
+ "diveraro": {
+  "front": {
+   "eave": 0.2658,
+   "file": "diveraro-front.webp",
+   "ratio": 1.3971
+  },
+  "roof": {
+   "eave": 0.2414,
+   "file": "diveraro-roof.webp",
+   "ratio": 1.0517
+  },
+  "side": {
+   "eave": 0.3086,
+   "file": "diveraro-side.webp",
+   "ratio": 1.6152
+  }
+ },
+ "highland": {
+  "front": {
+   "eave": 0.3507,
+   "file": "highland-front.webp",
+   "ratio": 1.4896
+  },
+  "roof": {
+   "eave": 0.5523,
+   "file": "highland-roof.webp",
+   "ratio": 1.2282
+  },
+  "side": {
+   "eave": 0.3981,
+   "file": "highland-side.webp",
+   "ratio": 2.2427
+  }
+ },
+ "kikau": {
+  "front": {
+   "eave": 0.3275,
+   "file": "kikau-front.webp",
+   "ratio": 1.6197
+  },
+  "roof": {
+   "eave": 0.2297,
+   "file": "kikau-roof.webp",
+   "ratio": 1.1303
+  },
+  "side": {
+   "eave": 0.4125,
+   "file": "kikau-side.webp",
+   "ratio": 1.6014
+  }
+ },
+ "licence": {
+  "front": {
+   "eave": 0.4232,
+   "file": "licence-front.webp",
+   "ratio": 1.6946
+  },
+  "roof": {
+   "eave": 0.1689,
+   "file": "licence-roof.webp",
+   "ratio": 1.276
+  },
+  "side": {
+   "eave": 0.3665,
+   "file": "licence-side.webp",
+   "ratio": 2.4188
+  }
+ },
  "mooring": {
   "front": {
    "eave": 0.2515,
@@ -16,6 +169,23 @@
    "ratio": 2.3486
   }
  },
+ "museum": {
+  "front": {
+   "eave": 0.5181,
+   "file": "museum-front.webp",
+   "ratio": 1.7631
+  },
+  "roof": {
+   "eave": 0.0218,
+   "file": "museum-roof.webp",
+   "ratio": 1.3224
+  },
+  "side": {
+   "eave": 0.5106,
+   "file": "museum-side.webp",
+   "ratio": 2.1844
+  }
+ },
  "palace": {
   "front": {
    "eave": 0.2291,
@@ -31,6 +201,91 @@
    "eave": 0.2753,
    "file": "palace-side.webp",
    "ratio": 1.9104
+  }
+ },
+ "punanganui": {
+  "front": {
+   "eave": 0.5307,
+   "file": "punanganui-front.webp",
+   "ratio": 1.7327
+  },
+  "roof": {
+   "eave": 0.6733,
+   "file": "punanganui-roof.webp",
+   "ratio": 1.1954
+  },
+  "side": {
+   "eave": 0.5382,
+   "file": "punanganui-side.webp",
+   "ratio": 2.6176
+  }
+ },
+ "rarosafari": {
+  "front": {
+   "eave": 0.5596,
+   "file": "rarosafari-front.webp",
+   "ratio": 1.4296
+  },
+  "roof": {
+   "eave": 0.0728,
+   "file": "rarosafari-roof.webp",
+   "ratio": 0.9439
+  },
+  "side": {
+   "eave": 0.4162,
+   "file": "rarosafari-side.webp",
+   "ratio": 2.3027
+  }
+ },
+ "rickshaw": {
+  "front": {
+   "eave": 0.4214,
+   "file": "rickshaw-front.webp",
+   "ratio": 1.3485
+  },
+  "roof": {
+   "eave": 0.3244,
+   "file": "rickshaw-roof.webp",
+   "ratio": 1.1382
+  },
+  "side": {
+   "eave": 0.4594,
+   "file": "rickshaw-side.webp",
+   "ratio": 1.8297
+  }
+ },
+ "storytellers": {
+  "front": {
+   "eave": 0.2658,
+   "file": "storytellers-front.webp",
+   "ratio": 1.3274
+  },
+  "roof": {
+   "eave": 0.5276,
+   "file": "storytellers-roof.webp",
+   "ratio": 1.0722
+  },
+  "side": {
+   "eave": 0.2929,
+   "file": "storytellers-side.webp",
+   "ratio": 1.7803
+  }
+ },
+ "tamarind": {
+  "front": {
+   "eave": 0.309,
+   "file": "tamarind-front.webp",
+   "ratio": 1.8283
+  },
+  "roof": {
+   "eave": 0.5673,
+   "file": "tamarind-roof.webp",
+   "ratio": 1.1769
+  },
+  "side": {
+   "eave": 0.3532,
+   "file": "tamarind-side.webp",
+   "ratio": 2.2985
   }
  },
  "traderjacks": {

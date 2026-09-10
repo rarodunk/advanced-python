@@ -22,6 +22,40 @@ DIST = ROOT / "dist"
 
 PAGES = [("v4/index.html", "index.html"), ("v3/index.html", "painted.html")]
 
+# The pages are authored as artifact fragments: the artifact host supplies the
+# document around them, including the viewport meta. A static host does not, and
+# without that meta a phone lays the page out at 980px and scales the result
+# down, which is why every control read as tiny on a handset. Wrap them here.
+SHELL = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04121f">
+<meta name="description" content="{desc}">
+<title>{title}</title>
+</head>
+<body style="margin:0;background:#04121f">
+{body}
+</body>
+</html>
+"""
+TITLES = {
+    "index.html": ("Rarotonga Island Guide",
+                   "A painted map of Rarotonga in two and three dimensions: "
+                   "where to stay, eat, drink and swim."),
+    "painted.html": ("Rarotonga, painted", "The painted map of Rarotonga."),
+}
+
+
+def wrap(html, name):
+    """Give a fragment a document, unless it already has one."""
+    if html.lstrip()[:9].lower() == "<!doctype":
+        return html
+    title, desc = TITLES.get(name, ("Rarotonga", "Rarotonga."))
+    body = html.replace("<title>" + title + "</title>\n", "", 1)
+    return SHELL.format(title=title, desc=desc, body=body)
+
 HEADERS = """\
 # The pages carry their imagery inline, so they are big and they change
 # whenever the guide changes: never cache the HTML itself.
@@ -45,7 +79,7 @@ def main():
         shutil.rmtree(DIST)
     DIST.mkdir()
     for src, dst in PAGES:
-        shutil.copy2(ROOT / src, DIST / dst)
+        (DIST / dst).write_text(wrap((ROOT / src).read_text(), dst))
     shutil.copytree(ROOT / "app", DIST / "app")
     # the card art, when the page was built to link rather than embed it
     if (ROOT / "v4" / "closeups").exists():

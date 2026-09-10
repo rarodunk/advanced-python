@@ -1170,14 +1170,14 @@ window.project3D = function(p){
 };
 
 /* ---------- gestures, only while the 3D setting is on ---------- */
-// Orbiting alone is not navigation: it spins you round a fixed point, so
-// getting to a particular beach means orbiting until it drifts past. Dragging
-// with two fingers, with the right button, or with shift held moves the point
-// you are orbiting, which is how you actually get somewhere.
+// Dragging moves you across the island, because that is what dragging does on
+// every other map anybody has ever used. Turning is a deliberate act: twist
+// two fingers, spin two fingers sideways on a trackpad, or hold shift and
+// drag. Orbiting on a plain drag is what made this so hard to fly: you could
+// never get to a place, only spin past it.
 const pts = new Map();
-let pinch = null, panning = false, twoMid = null;
+let pinch = null, twoMid = null, twist = null, orbiting = false, moved3d = 0;
 
-// metres of ground per pixel of screen, at the distance you are standing off
 function groundPerPixel(){
   return (2 * view.dist * Math.tan(46 * Math.PI / 360)) / Math.max(1, innerHeight);
 }
@@ -1189,25 +1189,21 @@ function panBy(dxPx, dyPx){
   const wz = -(rz * dxPx + fz * dyPx) * mpp;
   view.lon += wx / M_LON;
   view.lat -= wz / KM_LAT_M;
-  // stay over the ground the data covers
   view.lat = Math.max(TB_S + 0.004, Math.min(TB_N - 0.004, view.lat));
   view.lon = Math.max(TB_W + 0.004, Math.min(TB_E - 0.004, view.lon));
   camDirty = true;
 }
+function orbitBy(dAz, dEl){
+  view.az += dAz; view.el += dEl; camDirty = true;
+}
 window.pan3D = panBy;
 
-// The gestures listen on the whole stage, in the capture phase, because the
-// pins sit on top of the canvas and there are seventy of them: a drag that
-// happens to start on one used to do nothing at all, which is most of what
-// made this hard to fly. A pin still opens on a tap — a press that never
-// moves — and swallows nothing else.
-let moved3d = 0;
 stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
 stage.addEventListener("pointerdown", ev => {
   if (!window.mode3d) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
-  panning = ev.button === 2 || ev.button === 1 || ev.shiftKey;
-  pinch = null; twoMid = null; moved3d = 0;
+  orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
+  pinch = null; twoMid = null; twist = null; moved3d = 0;
 }, true);
 stage.addEventListener("pointermove", ev => {
   if (!window.mode3d) return;
@@ -1216,25 +1212,30 @@ stage.addEventListener("pointermove", ev => {
   moved3d += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
   pts.set(ev.pointerId, cur);
   if (pts.size >= 2){
-    // two fingers: pinch to come closer, slide to move across the island
     const [a, b] = [...pts.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
     const mid = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
-    if (pinch) view.dist *= pinch / d;
-    if (twoMid) panBy(mid.x - twoMid.x, mid.y - twoMid.y);
-    pinch = d; twoMid = mid;
-  } else if (panning || ev.shiftKey){
-    panBy(cur.x - prev.x, cur.y - prev.y);
+    if (pinch) view.dist *= pinch / d;                     // pinch: closer or further
+    if (twist != null){                                    // twist: turn the island
+      let dt = ang - twist;
+      while (dt > Math.PI) dt -= 2 * Math.PI;
+      while (dt < -Math.PI) dt += 2 * Math.PI;
+      view.az -= dt;
+    }
+    if (twoMid) view.el += (mid.y - twoMid.y) * 0.004;      // two fingers up and down: tilt
+    pinch = d; twist = ang; twoMid = mid;
+  } else if (orbiting){
+    orbitBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
   } else {
-    view.az -= (cur.x - prev.x) * 0.005;
-    view.el += (cur.y - prev.y) * 0.004;
+    panBy(cur.x - prev.x, cur.y - prev.y);
   }
   camDirty = true;
 }, true);
 ["pointerup","pointercancel"].forEach(e => stage.addEventListener(e, ev => {
   pts.delete(ev.pointerId);
-  if (pts.size < 2){ pinch = null; twoMid = null; }
-  if (!pts.size) panning = false;
+  if (pts.size < 2){ pinch = null; twoMid = null; twist = null; }
+  if (!pts.size) orbiting = false;
 }, true));
 // a drag that began on a pin must not also open that pin when it ends
 stage.addEventListener("click", ev => {
@@ -1244,8 +1245,28 @@ stage.addEventListener("wheel", ev => {
   if (!window.mode3d) return;
   ev.preventDefault(); ev.stopPropagation();
   const unit = ev.deltaMode === 1 ? 16 : ev.deltaMode === 2 ? 400 : 1;
-  if (ev.shiftKey){ panBy(-ev.deltaX * unit, -ev.deltaY * unit); return; }
+  // sideways on a trackpad turns the island; that is the desktop twist
+  if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)){
+    orbitBy(ev.deltaX * unit * 0.004, 0);
+    return;
+  }
+  if (ev.shiftKey){ orbitBy(ev.deltaY * unit * 0.004, 0); return; }
   view.dist *= Math.exp(ev.deltaY * unit * 0.0016);
+  camDirty = true;
+}, { passive:false, capture:true });
+
+// Safari hands trackpad and touch rotation over directly, which is the
+// gesture people actually reach for on a Mac
+let gStart = 0;
+addEventListener("gesturestart", ev => {
+  if (!window.mode3d) return;
+  ev.preventDefault(); gStart = view.az;
+}, { passive:false });
+addEventListener("gesturechange", ev => {
+  if (!window.mode3d) return;
+  ev.preventDefault();
+  view.az = gStart - (ev.rotation || 0) * Math.PI / 180;
+  if (ev.scale) view.dist /= Math.max(0.5, Math.min(2, ev.scale));
   camDirty = true;
 }, { passive:false });
 
@@ -1255,7 +1276,11 @@ addEventListener("keydown", ev => {
   if (/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || "")) return;
   const step = 90;
   const k = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[ev.key];
-  if (k){ ev.preventDefault(); panBy(-k[0], -k[1]); }
+  if (k){
+    ev.preventDefault();
+    if (ev.shiftKey) orbitBy(k[0] * 0.004, k[1] * 0.003);
+    else panBy(-k[0], -k[1]);
+  }
 });
 
 // the zoom buttons belong to the flat map; in the 3D setting they have to
@@ -1273,7 +1298,9 @@ const reset = document.getElementById("reset");
 if (reset) reset.addEventListener("click", ev => {
   if (!window.mode3d) return;
   ev.preventDefault(); ev.stopImmediatePropagation();
-  view.lat = C_LAT; view.lon = C_LON; view.az = 0.35; view.el = 0.26; view.dist = 11000;
+  view.lat = C_LAT; view.lon = C_LON; view.az = 0.35;
+  view.el = innerWidth < 900 ? 0.44 : 0.26;
+  view.dist = 11000 * frameScale();
   camDirty = true; draw();
 }, true);
 
@@ -1281,6 +1308,13 @@ if (reset) reset.addEventListener("click", ev => {
 // The 2D view is a plan at a known scale, so the tilt can start from the same
 // ground the map was showing rather than jumping somewhere else.
 function metresAcross(){ return innerWidth / cam.zoom / IMG_W * (TB_E - TB_W) * M_LON; }
+// The field of view is vertical, so a tall narrow screen sees far less ground
+// across than a wide one at the same distance. Without this the island arrives
+// wider than the phone and half of it is off the sides.
+function frameScale(){
+  const a = innerWidth / Math.max(1, innerHeight);
+  return a < 1.35 ? 1.35 / a : 1;
+}
 window.setMode3D = function(on){
   window.mode3d = on;
   canvas.style.display = on ? "" : "none";
@@ -1291,7 +1325,9 @@ window.setMode3D = function(on){
   if (on){
     const ll = imgToLL(cam.x, cam.y);
     view.lat = ll.lat; view.lon = ll.lon;
-    view.dist = Math.max(150, metresAcross() * 1.15);
+    view.dist = Math.max(150, metresAcross() * 1.15 * frameScale());
+    // looking down more on a phone: at a shallow angle the island is all horizon
+    if (innerWidth < 900) view.el = Math.max(view.el, 0.44);
     startLoop();
     showHint();
   } else {
@@ -1305,7 +1341,7 @@ window.setMode3D = function(on){
 // the first few times you switch over, and then stops.
 const hint = document.createElement("div");
 hint.id = "navHint";
-hint.textContent = "Drag to orbit \u00b7 two fingers, shift-drag or right-drag to move \u00b7 scroll to zoom";
+hint.textContent = "Drag to move \u00b7 twist two fingers to turn \u00b7 pinch or scroll to zoom";
 hint.hidden = true;
 document.body.appendChild(hint);
 let hintTimer = 0;

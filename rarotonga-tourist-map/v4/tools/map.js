@@ -378,9 +378,13 @@ function drawMarkers(){
   const zi = cam.zoom * ISLAND_SPAN / 2000;             // 1 = island 2000 px wide, whatever the mosaic's resolution
   // in the 3D setting the camera's own distance decides: close enough to walk
   // the place, close enough to want every name
-  const near = window.mode3d ? (window.raro3d ? raro3d.dist < 4500 : false) : zi > 0.9,
-        mid  = window.mode3d ? true  : zi > 0.45,
-        tiny = window.mode3d ? false : zi < 0.33;
+  // Seen from off the island every pin is a pin whether or not you can read it,
+  // and seventy of them at full size bury the island they are meant to mark.
+  const d3 = window.mode3d && window.raro3d ? raro3d.dist : 0;
+  const far3d = d3 > (innerWidth < 900 ? 9000 : 17000);
+  const near = window.mode3d ? d3 < 4500 : zi > 0.9,
+        mid  = window.mode3d ? !far3d : zi > 0.45,
+        tiny = window.mode3d ? far3d : zi < 0.33;
   for (const p of PLACES){
     const el = nodes.get(p.id);
     // in the 3D setting a place sits on the terrain, so it projects through
