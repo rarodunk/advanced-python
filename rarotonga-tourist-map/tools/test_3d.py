@@ -143,7 +143,11 @@ with sync_playwright() as pw:
     # press once broke this outright: a captured pointer sends its click to
     # the element holding it, so every tap landed on the canvas.
     pg.evaluate("()=>openPlace('traderjacks')"); pg.wait_for_timeout(1600)
-    pg.evaluate("closeSheet()"); pg.wait_for_timeout(400)
+    pg.evaluate("closeSheet()")
+    # back off far enough that several pins are in the clear, but not so far
+    # that they shrink to dots
+    pg.evaluate("()=>{const v=raro3d.view; v.dist=900; v.el=0.45; window.pan3D(0.0001,0);}")
+    pg.wait_for_timeout(700)
     pin = pg.evaluate("""()=>{const on = m => {
           const r = m.getBoundingClientRect();
           return m.style.display !== 'none' && r.top > 90 && r.bottom < innerHeight - 90
@@ -214,10 +218,31 @@ with sync_playwright() as pw:
         now = pg.evaluate("({d:raro3d.view.dist, az:raro3d.view.az, el:raro3d.view.el})")
         return was["d"] / now["d"], now["az"] - was["az"], now["el"] - was["el"]
 
+    # The zoom is deliberately damped: one to one with the fingers is the
+    # convention and it is wrong on a phone, where a pinch that spreads five
+    # times over drops you inside a building with nothing around you to say
+    # where you are. The square root of the spread keeps the feel and halves
+    # the distance covered.
     z, turn, tilt = two_finger("pinch")
     print(f"a pinch three times apart: zoom {z:.2f}x, turn {turn:+.3f} rad, tilt {tilt:+.3f}")
-    assert 1.8 < z < 3.2, "the pinch does not track the fingers"
+    assert 1.4 < z < 2.3, "the pinch does not track the fingers"
     assert abs(turn) < 0.05 and abs(tilt) < 0.05, "a pinch also spun or tilted the view"
+
+    # and the compass is the way round the island: hold it and slide
+    az0 = pg.evaluate("raro3d.view.az")
+    spun = pg.evaluate("""()=>{
+      const el = document.getElementById('compass');
+      const r = el.getBoundingClientRect(), bx = r.x + r.width/2, by = r.y + r.height/2;
+      const mk = (t,x,y) => new PointerEvent(t, {pointerId:4, pointerType:'touch',
+          clientX:x, clientY:y, bubbles:true, isPrimary:true});
+      el.dispatchEvent(mk('pointerdown', bx, by));
+      for (let i = 1; i <= 30; i++) el.dispatchEvent(mk('pointermove', bx - i*6, by));
+      el.dispatchEvent(mk('pointerup', bx - 180, by));
+      return true;
+    }""")
+    deg = (pg.evaluate("raro3d.view.az") - az0) * 57.3
+    print(f"sliding the compass 180 px turned the island {deg:.0f} degrees")
+    assert abs(deg) > 15, "the compass does not turn the island"
     z, turn, tilt = two_finger("twist")
     print(f"a twist of fifty degrees: zoom {z:.2f}x, turn {turn:+.3f} rad")
     assert 0.95 < z < 1.05, "a twist also zoomed"

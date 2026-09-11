@@ -1624,7 +1624,7 @@ const clampV = () => {
   view.el = Math.max(0.07, Math.min(1.45, view.el));
   // 45 m is standing across the road from the place, which is the distance
   // at which a building stops being a marker and starts being a building.
-  view.dist = Math.max(45, Math.min(40000, view.dist));
+  view.dist = Math.max(innerWidth < 900 ? 80 : 45, Math.min(40000, view.dist));
 };
 // The height the camera hangs from. Reading it straight off the ground under
 // the focus makes the whole view jolt every time you cross a ridge or a
@@ -1808,6 +1808,36 @@ if (compass){
     if (!window.mode3d) return;
     view.az = 0; camDirty = true; syncCompass(); draw();
   };
+
+  // Going round the island is the thing people most want to do with it and
+  // the hardest to ask for with two fingers: a twist on a phone is a fiddly,
+  // imprecise gesture, and it competes with the pinch. So the compass itself
+  // is the control. Hold it and slide, and the island turns under you; let go
+  // and it stops; tap it and you are facing north again. The whole way round
+  // is about two screen widths of travel.
+  let spin = null;
+  compass.style.touchAction = "none";
+  compass.addEventListener("pointerdown", ev => {
+    if (!window.mode3d) return;
+    spin = { x: ev.clientX, y: ev.clientY, moved: 0 };
+    try { compass.setPointerCapture(ev.pointerId); } catch(e){}
+    ev.preventDefault(); ev.stopPropagation();
+  }, true);
+  compass.addEventListener("pointermove", ev => {
+    if (!spin) return;
+    const dx = ev.clientX - spin.x, dy = ev.clientY - spin.y;
+    spin.moved += Math.abs(dx) + Math.abs(dy);
+    spin.x = ev.clientX; spin.y = ev.clientY;
+    turnBy(dx * (Math.PI / Math.max(320, innerWidth)), 0);
+    syncCompass();
+    ev.preventDefault(); ev.stopPropagation();
+  }, true);
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(e =>
+    compass.addEventListener(e, ev => {
+      if (spin && spin.moved > 6){ ev.preventDefault(); ev.stopPropagation(); }
+      spin = null;
+    }, true));
+  compass.title = "Hold and slide to go round the island \u00b7 tap for north";
   syncCompass();
 }
 
@@ -1977,11 +2007,11 @@ function groundAt(sx, sy, e, t){
 function zoomAt(ratio, sx, sy){
   const g = groundUnder(sx, sy);
   const was = view.dist;
-  view.dist = Math.max(45, Math.min(40000, view.dist * ratio));
+  view.dist = Math.max(innerWidth < 900 ? 80 : 45, Math.min(40000, view.dist * ratio));
   const closed = 1 - view.dist / was;              // how much of the way we came in
   if (g && closed > 0){
     let dx = g[0] - toWorldX(view.lon), dz = g[2] - toWorldZ(view.lat);
-    const len = Math.hypot(dx, dz), leash = view.dist * 0.35;
+    const len = Math.hypot(dx, dz), leash = view.dist * 0.25;
     if (len > leash){ dx *= leash / len; dz *= leash / len; }
     moveFocus(dx * closed, dz * closed);
   }
@@ -2096,29 +2126,39 @@ stage.addEventListener("pointermove", ev => {
       pinch = d; twist = ang; twoMid = mid; twoKey = ids.join();
       pinch0 = d; twist0 = ang; mid0 = mid; gate = 0;
     } else {
-      // Zoom always follows the fingers: that is the one thing a pinch is for,
-      // and gating it made the map feel dead. Turning needs to be asked for,
-      // because nobody spreads two fingers without rolling their hand a few
-      // degrees. Tilting is the two fingers travelling together, up or down,
-      // which is a different shape of gesture again.
-      const spread = Math.abs(Math.log(d / pinch0));
+      // Two fingers do three things at once, the way they do on any map:
+      // spread to zoom, slide sideways to move, twist to go round. What they
+      // do NOT do is any of them at full strength on the first pixel.
       let turned = ang - twist0;
       while (turned > Math.PI) turned -= 2 * Math.PI;
       while (turned < -Math.PI) turned += 2 * Math.PI;
       const dmid = { x: mid.x - twoMid.x, y: mid.y - twoMid.y };
-      const ratio = pinch / d;
+      const fromX = mid.x - mid0.x, fromY = mid.y - mid0.y;
 
-      if (spread > 0.1) zoomAt(Math.max(0.7, Math.min(1.45, ratio)), mid.x, mid.y);
-      if (Math.abs(turned) > 0.3){                    // about seventeen degrees
+      // Zoom, damped. One to one with the fingers is the convention and it is
+      // wrong on a small screen: a pinch that spreads five times over takes you
+      // from the whole island to a rooftop, and you arrive inside a building
+      // with nothing around you to say where you are. The square root of the
+      // spread keeps the direction and the feel and halves the distance
+      // covered, so the island stays in sight while you come down.
+      if (Math.abs(Math.log(d / pinch)) > 1e-4)
+        zoomAt(Math.pow(Math.max(0.5, Math.min(2.0, pinch / d)), 0.55), mid.x, mid.y);
+
+      // Sideways moves you, at the same time, because you nearly always want to
+      // pinch towards something slightly off to one side.
+      if (dmid.x) panBy(dmid.x, 0, twoMid.x, twoMid.y);
+
+      // Up and down tilts, but only once it is plainly what the hand is doing:
+      // a pinch drifts a few pixels vertically and that is not a request.
+      if (Math.abs(fromY) > 20 && Math.abs(fromY) > Math.abs(fromX))
+        view.el += dmid.y * 0.0035;
+
+      // and a real twist goes round the island
+      if (Math.abs(turned) > 0.3){
         let dt = ang - twist;
         while (dt > Math.PI) dt -= 2 * Math.PI;
         while (dt < -Math.PI) dt += 2 * Math.PI;
         turnBy(-dt, 0);
-      }
-      // both fingers travelling the same way, and not spreading: a tilt
-      if (spread < 0.06 && Math.abs(turned) < 0.25 &&
-          Math.abs(mid.y - mid0.y) > 18 && Math.abs(dmid.y) > Math.abs(dmid.x)){
-        view.el += dmid.y * 0.0035;
       }
       pinch = d; twist = ang; twoMid = mid;
       camDirty = true;
@@ -2135,7 +2175,7 @@ function flyZoom(ratio, sx, sy){
   // the same aim as a pinch, but eased, because a tap has no travel to follow
   const g = groundUnder(sx, sy);
   const to = { lat: view.lat, lon: view.lon, az: view.az, el: view.el,
-               dist: Math.max(45, Math.min(40000, view.dist * ratio)) };
+               dist: Math.max(innerWidth < 900 ? 80 : 45, Math.min(40000, view.dist * ratio)) };
   const closed = 1 - to.dist / view.dist;
   if (g && closed > 0){
     let dx = g[0] - toWorldX(view.lon), dz = g[2] - toWorldZ(view.lat);
@@ -2271,7 +2311,7 @@ window.setMode3D = function(on){
 // the first few times you switch over, and then stops.
 const hint = document.createElement("div");
 hint.id = "navHint";
-hint.textContent = "Drag to move \u00b7 pinch or double-tap to zoom \u00b7 twist two fingers to turn";
+hint.textContent = "Drag to move \u00b7 pinch or double-tap to zoom \u00b7 slide the compass to go round";
 hint.hidden = true;
 document.body.appendChild(hint);
 let hintTimer = 0;
