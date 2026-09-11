@@ -2255,23 +2255,41 @@ addEventListener("keydown", ev => {
 
 // the zoom buttons belong to the flat map; in the 3D setting they have to
 // move the camera in and out instead, or they simply appear broken
-for (const [id, k] of [["zin", 0.65], ["zout", 1.55]]){
+// The zoom buttons belong to the flat map; in the 3D setting they have to move
+// the camera instead, or they simply appear broken. They are also the one way
+// in that needs no gesture at all, so they are worth making good: a known step,
+// eased rather than jumped, aimed at the middle of the screen. Holding one
+// repeats, which is how you cross the whole range without pinching once.
+for (const [id, k] of [["zin", 0.62], ["zout", 1.6]]){
   const btn = document.getElementById(id);
   if (!btn) continue;
+  let timer = 0, stepped = false;
+  const step = () => { stepped = true; flyZoom(k, innerWidth / 2, innerHeight * 0.52); };
   btn.addEventListener("click", ev => {
     if (!window.mode3d) return;
     ev.preventDefault(); ev.stopImmediatePropagation();
-    view.dist *= k; camDirty = true; draw();
+    if (!stepped) step();                    // a hold has already been stepping
+    stepped = false;
   }, true);
+  btn.addEventListener("pointerdown", ev => {
+    if (!window.mode3d) return;
+    stepped = false;
+    timer = setTimeout(function again(){
+      step();
+      timer = setTimeout(again, 260);
+    }, 420);
+  }, true);
+  for (const e of ["pointerup", "pointercancel", "pointerleave"])
+    btn.addEventListener(e, () => clearTimeout(timer), true);
 }
 const reset = document.getElementById("reset");
 if (reset) reset.addEventListener("click", ev => {
   if (!window.mode3d) return;
   ev.preventDefault(); ev.stopImmediatePropagation();
-  view.lat = C_LAT; view.lon = C_LON; view.az = 0.35;
-  view.el = innerWidth < 900 ? 0.44 : 0.26;
-  view.dist = 11000 * frameScale();
-  camDirty = true; draw();
+  // eased, like everything else: a jump back to the whole island loses you
+  flyTo({ lat: C_LAT, lon: C_LON, az: 0.35,
+          el: innerWidth < 900 ? 0.44 : 0.26,
+          dist: 11000 * frameScale() }, 620);
 }, true);
 
 /* ---------- switching between the two settings ---------- */

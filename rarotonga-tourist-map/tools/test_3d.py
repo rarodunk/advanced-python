@@ -228,6 +228,16 @@ with sync_playwright() as pw:
     assert 1.4 < z < 2.3, "the pinch does not track the fingers"
     assert abs(turn) < 0.05 and abs(tilt) < 0.05, "a pinch also spun or tilted the view"
 
+    # The buttons are the one way in and out that needs no gesture at all, and
+    # they have been dead in the 3D setting before now.
+    d0 = pg.evaluate("raro3d.view.dist")
+    pg.locator("#zin").click(); pg.wait_for_timeout(600)
+    d1 = pg.evaluate("raro3d.view.dist")
+    pg.locator("#zout").click(); pg.wait_for_timeout(600)
+    d2 = pg.evaluate("raro3d.view.dist")
+    print(f"the zoom buttons: {d0:.0f} m -> {d1:.0f} m -> {d2:.0f} m")
+    assert d1 < d0 * 0.8 and d2 > d1 * 1.2, "the zoom buttons do not move the camera"
+
     # and the compass is the way round the island: hold it and slide
     az0 = pg.evaluate("raro3d.view.az")
     spun = pg.evaluate("""()=>{
