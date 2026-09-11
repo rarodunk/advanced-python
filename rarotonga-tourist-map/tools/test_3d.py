@@ -238,6 +238,44 @@ with sync_playwright() as pw:
     print(f"the zoom buttons: {d0:.0f} m -> {d1:.0f} m -> {d2:.0f} m")
     assert d1 < d0 * 0.8 and d2 > d1 * 1.2, "the zoom buttons do not move the camera"
 
+    # Safari's own two-finger gestures, replayed the way an iPhone sends them:
+    # scale and rotation measured from the start of the gesture rather than
+    # from the last event. Taking them at face value is what made the zoom run
+    # away on iOS, and no browser here fires them, so this stands in for the
+    # device. The pointer path must stay quiet while they run.
+    def safari(kind, steps=20):
+        pg.evaluate("""()=>{const v=raro3d.view; v.lat=-21.2349; v.lon=-159.7776;
+            v.dist=8000; v.az=0.4; v.el=0.44; window.pan3D(0.0001,0);}""")
+        pg.wait_for_timeout(300)
+        was = pg.evaluate("({d:raro3d.view.dist, az:raro3d.view.az})")
+        pg.evaluate("""([kind, steps]) => {
+          const fire = (type, props) => {
+            const ev = new Event(type, {bubbles:true, cancelable:true});
+            Object.assign(ev, props);
+            window.dispatchEvent(ev);
+          };
+          const cx = innerWidth/2, cy = innerHeight/2;
+          fire('gesturestart', {scale:1, rotation:0, clientX:cx, clientY:cy});
+          for (let i = 1; i <= steps; i++){
+            const p = {clientX:cx, clientY:cy, scale:1, rotation:0};
+            if (kind === 'pinch') p.scale = 1 + i * 0.12;
+            if (kind === 'twist') p.rotation = i * 2.4;
+            fire('gesturechange', p);
+          }
+          fire('gestureend', {scale:1, rotation:0, clientX:cx, clientY:cy});
+        }""", [kind, steps])
+        pg.wait_for_timeout(250)
+        now = pg.evaluate("({d:raro3d.view.dist, az:raro3d.view.az})")
+        return was["d"] / now["d"], now["az"] - was["az"]
+
+    z, turn = safari("pinch")
+    print(f"Safari's own pinch, fingers 3.4x apart: {z:.2f}x closer, turn {turn:+.2f} rad")
+    assert 1.4 < z < 2.6, "Safari's pinch either does nothing or runs away"
+    assert abs(turn) < 0.05, "Safari's pinch also spun the view"
+    z, turn = safari("twist")
+    print(f"Safari's own twist, hand rolled 48 degrees: {z:.2f}x closer, turn {turn:+.2f} rad")
+    assert 0.95 < z < 1.05 and abs(turn) > 0.3, "Safari's twist does not turn the island"
+
     # and the compass is the way round the island: hold it and slide
     az0 = pg.evaluate("raro3d.view.az")
     spun = pg.evaluate("""()=>{

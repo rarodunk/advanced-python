@@ -2163,15 +2163,21 @@ function endGesture(id){
   }
   if (!pts.size) orbiting = false;
 }
+// a gesture that never ends — interrupted by a call, a notification, a switch
+// away — would otherwise leave the map deaf to every finger that follows
+function gestureStale(){
+  if (gesturing && performance.now() - gSeen > 1200){ gesturing = false; clearTimeout(gEndTimer); }
+  return gesturing;
+}
 stage.addEventListener("pointerdown", ev => {
-  if (!window.mode3d) return;
+  if (!window.mode3d || gestureStale()) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
   flight = null;
   orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
   pinch = null; twoMid = null; twist = null; moved3d = 0;
 }, true);
 stage.addEventListener("pointermove", ev => {
-  if (!window.mode3d) return;
+  if (!window.mode3d || gestureStale()) return;
   // A mouse that is moving with no button down is not dragging, whatever we
   // think we heard: a pointerup swallowed by another element, a drag that
   // ended outside the window, an alt-tab mid-drag. Believe the mouse.
@@ -2304,15 +2310,64 @@ stage.addEventListener("wheel", ev => {
   zoomAt(Math.exp(ev.deltaY * unit * 0.0016), ev.clientX, ev.clientY);
 }, { passive:false, capture:true });
 
-// Safari fires its own pinch and rotate gestures on top of the pointer events
-// that every other browser gives you, for the same two fingers. Acting on both
-// meant every pinch was applied twice, and the gesture's own scale is measured
-// from where the fingers started rather than from the last event, so it
-// compounded: a gentle pinch dropped you out of the sky. These now do one
-// thing only, which is to stop Safari zooming the page underneath us. The
-// camera is driven by the pointer events, once.
-for (const g of ["gesturestart", "gesturechange", "gestureend"])
-  addEventListener(g, ev => { if (window.mode3d) ev.preventDefault(); }, { passive: false });
+/* ---------- Safari's own two-finger gestures ----------
+   iOS does not simply add gesture events alongside the pointer events every
+   other browser gives you: once it recognises a pinch it cancels the pointers
+   it was sending, so the two-finger code above stops hearing anything at all.
+   That leaves Safari's gestures as the only account of what the hand is doing
+   on an iPhone, and they have to drive the camera.
+
+   The trap is that ev.scale and ev.rotation are measured from where the
+   fingers started, not from the last event. Applying them as though they were
+   increments compounds: each event multiplies the zoom again, and a gentle
+   pinch drops you out of the sky. That was the runaway. So this keeps the
+   previous reading and works from the difference, and the pointer path stands
+   down while a gesture is running so nothing is applied twice. */
+let gesturing = false, gScale = 1, gRot = 0, gX = 0, gY = 0, gEndTimer = 0, gSeen = 0;
+const gestureCentre = ev => ({
+  x: ev.clientX != null ? ev.clientX : innerWidth / 2,
+  y: ev.clientY != null ? ev.clientY : innerHeight * 0.5
+});
+addEventListener("gesturestart", ev => {
+  if (!window.mode3d) return;
+  ev.preventDefault();
+  const c = gestureCentre(ev);
+  gesturing = true; gScale = ev.scale || 1; gRot = ev.rotation || 0;
+  gX = c.x; gY = c.y; gSeen = performance.now();
+  endGesture(null);                       // the pointer path lets go
+  clearTimeout(gEndTimer);
+}, { passive: false });
+addEventListener("gesturechange", ev => {
+  if (!window.mode3d || !gesturing) return;
+  ev.preventDefault();
+  const c = gestureCentre(ev);
+  const s = ev.scale || 1, r = ev.rotation || 0;
+
+  // zoom, from the change since the last event, damped the same way a pinch is
+  const step = gScale / (s || gScale);
+  if (isFinite(step) && step > 0 && Math.abs(step - 1) > 0.001)
+    zoomAt(Math.pow(Math.max(0.6, Math.min(1.6, step)), 0.55), c.x, c.y);
+
+  // turn, past the same deadzone, so a pinch that rolls the hand a little does
+  // not also spin the island
+  const dRot = (r - gRot) * Math.PI / 180;
+  if (Math.abs(r) > 12 && Math.abs(dRot) > 0.0005) turnBy(-dRot, 0);
+
+  // and sideways, so you can pinch towards something off to one side
+  if (Math.abs(c.x - gX) > 0.5) panBy(c.x - gX, 0, gX, gY);
+
+  gScale = s; gRot = r; gX = c.x; gY = c.y; gSeen = performance.now();
+  camDirty = true;
+}, { passive: false });
+for (const g of ["gestureend", "gesturecancel"])
+  addEventListener(g, ev => {
+    if (!window.mode3d) return;
+    ev.preventDefault();
+    // a beat before the pointer path takes over again, because Safari sends a
+    // last pointer event or two after the gesture ends
+    clearTimeout(gEndTimer);
+    gEndTimer = setTimeout(() => { gesturing = false; }, 120);
+  }, { passive: false });
 
 // the arrow keys move you about, which is the one control everybody tries
 addEventListener("keydown", ev => {
