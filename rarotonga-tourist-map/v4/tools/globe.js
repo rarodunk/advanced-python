@@ -61,6 +61,19 @@ Object.assign(canvas.style, { position:"absolute", inset:"0", width:"100%", heig
                               display:"none", touchAction:"none" });
 stage.insertBefore(canvas, document.getElementById("markers"));
 
+// A phone that runs out of graphics memory takes the context away. Everything
+// we hold — textures, buffers, programs — dies with it, so carrying on draws
+// nothing at all. Better to say so and hand the island back to the flat map.
+canvas.addEventListener("webglcontextlost", ev => {
+  ev.preventDefault();
+  ready = false;
+  const credit = document.getElementById("credit");
+  if (credit) credit.textContent = "3D paused: this device ran out of graphics memory.";
+  const btn = document.getElementById("d3Btn");
+  if (btn) btn.disabled = true;
+  if (window.mode3d && window.setMode3D) setMode3D(false);
+}, false);
+
 let gl = canvas.getContext("webgl2", { antialias:true, alpha:false });
 let uint32 = !!gl;
 if (!gl){
@@ -567,33 +580,79 @@ function paintMaterials(){
 // roof image is projected straight down onto the roof planes. A model wearing
 // its own front stops looking like a model.
 const FACADES = (typeof FACADE_ART !== "undefined" && FACADE_ART) || {};
+/* ---------- the painted elevations ----------
+   Seventy places, three elevations each: two hundred and ten textures, and
+   they were all uploaded the moment the page opened. On a desktop that is
+   merely wasteful. On a phone it is fatal — iOS treats texture memory as
+   purgeable, and under that much pressure it throws away whatever it likes,
+   including the island's own base map, which then draws black. A black island
+   in a blue sea is what this looked like.
+
+   So they arrive when you are near enough to see them and are let go when you
+   are not: eight places at a time, nearest first, which is at most two dozen
+   textures and a few megabytes. */
 const facadeTex = {};
+let blankTex = null, facadeLive = new Map();     // pid -> [keys]
 function loadFacades(){
-  const blank = gl.createTexture();          // stands in until the art arrives
-  gl.bindTexture(gl.TEXTURE_2D, blank);
+  blankTex = gl.createTexture();                 // stands in until the art arrives
+  gl.bindTexture(gl.TEXTURE_2D, blankTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                 new Uint8Array([255, 255, 255, 255]));
-  for (const pid of Object.keys(FACADES)){
-    for (const face of Object.keys(FACADES[pid])){
-      const key = pid + ":" + face;
-      facadeTex[key] = blank;
-      const img = new Image();
-      img.onload = () => {
-        const t = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, t);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texSource(img));
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        facadeTex[key] = t;
-        camDirty = true;
-      };
-      img.src = FACADES[pid][face].src;
-    }
+  for (const pid of Object.keys(FACADES))
+    for (const face of Object.keys(FACADES[pid])) facadeTex[pid + ":" + face] = blankTex;
+}
+function facadeLoad(pid){
+  if (facadeLive.has(pid)) return;
+  const keys = [];
+  facadeLive.set(pid, keys);
+  for (const face of Object.keys(FACADES[pid])){
+    const key = pid + ":" + face;
+    const img = new Image();
+    img.onload = () => {
+      if (!facadeLive.has(pid)) return;          // we moved on while it loaded
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texSource(img));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      facadeTex[key] = t;
+      keys.push(key);
+      camDirty = true;
+    };
+    img.src = FACADES[pid][face].src;
   }
+}
+function facadeDrop(pid){
+  const keys = facadeLive.get(pid);
+  if (!keys) return;
+  facadeLive.delete(pid);
+  for (const key of keys){
+    const t = facadeTex[key];
+    if (t && t !== blankTex) gl.deleteTexture(t);
+    facadeTex[key] = blankTex;
+  }
+}
+// the eight nearest places that are close enough to read, and nothing else
+function tendFacades(){
+  const want = new Set();
+  if (view.dist < 2500){
+    const near = [];
+    const reach = Math.max(500, view.dist * 1.6);
+    for (const p of PLACES){
+      if (!FACADES[p.id] || !p.latlon) continue;
+      const d = Math.hypot((p.latlon.lat - view.lat) * KM_LAT_M,
+                           (p.latlon.lon - view.lon) * M_LON);
+      if (d < reach) near.push([d, p.id]);
+    }
+    near.sort((a, b) => a[0] - b[0]);
+    for (const [, id] of near.slice(0, 8)) want.add(id);
+  }
+  for (const id of want) facadeLoad(id);
+  for (const id of [...facadeLive.keys()]) if (!want.has(id)) facadeDrop(id);
 }
 
 /* ---------- buildings ---------- */
@@ -1492,6 +1551,7 @@ function tendVegetation(){
 function drawBuildings(mvp, e, sun){
   if (!bldCount) return;
   tendVegetation();
+  tendFacades();
   const a = 1 - Math.max(0, Math.min(1, (view.dist - B_NEAR) / (B_FAR - B_NEAR)));
   if (a <= 0.01) return;
   gl.useProgram(bldProg);
@@ -1597,7 +1657,25 @@ const tImg = new Image();
 tImg.onload = () => {
   decodeTerrain(tImg);
   const sat = new Image();
+  // The island must never be a black silhouette. If the base map does not
+  // arrive, or arrives empty, the mesh gets a plausible green and blue of its
+  // own and says so, rather than drawing nothing and looking broken.
+  const fallbackTexture = why => {
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 64;
+    const g2 = cv.getContext("2d");
+    g2.fillStyle = (IMAGERY.edge && IMAGERY.edge.top) || "#0d3f63";
+    g2.fillRect(0, 0, 64, 64);
+    g2.fillStyle = "#3f6b3a";
+    g2.beginPath(); g2.ellipse(32, 32, 26, 20, 0, 0, Math.PI * 2); g2.fill();
+    uploadTexture(cv);
+    console.warn("the base map did not load:", why);
+    const credit = document.getElementById("credit");
+    if (credit) credit.textContent = "Base map unavailable on this device.";
+  };
+  sat.onerror = () => { fallbackTexture("the image failed to load"); };
   sat.onload = () => {
+    if (!sat.naturalWidth || !sat.naturalHeight) return fallbackTexture("it decoded empty");
     uploadTexture(sat);
     buildShade();
     buildPuff();
@@ -1787,6 +1865,7 @@ window.raro3d = { view, centre: [C_LAT, C_LON],
                   get dist(){ return view.dist; },
                   get camY(){ return camY; },
                   get glVersion(){ return GL2 ? 2 : 1; },
+                  get facadesHeld(){ return facadeLive.size; },
                   // where a screen pixel lands on the ground the camera is
                   // looking at, which is also how the drag is worked out
                   groundLL(sx, sy){
@@ -2225,20 +2304,15 @@ stage.addEventListener("wheel", ev => {
   zoomAt(Math.exp(ev.deltaY * unit * 0.0016), ev.clientX, ev.clientY);
 }, { passive:false, capture:true });
 
-// Safari hands trackpad and touch rotation over directly, which is the
-// gesture people actually reach for on a Mac
-let gStart = 0;
-addEventListener("gesturestart", ev => {
-  if (!window.mode3d) return;
-  ev.preventDefault(); gStart = view.az;
-}, { passive:false });
-addEventListener("gesturechange", ev => {
-  if (!window.mode3d) return;
-  ev.preventDefault();
-  view.az = gStart - (ev.rotation || 0) * Math.PI / 180;
-  if (ev.scale) zoomAt(1 / Math.max(0.5, Math.min(2, ev.scale)), innerWidth / 2, innerHeight / 2);
-  camDirty = true;
-}, { passive:false });
+// Safari fires its own pinch and rotate gestures on top of the pointer events
+// that every other browser gives you, for the same two fingers. Acting on both
+// meant every pinch was applied twice, and the gesture's own scale is measured
+// from where the fingers started rather than from the last event, so it
+// compounded: a gentle pinch dropped you out of the sky. These now do one
+// thing only, which is to stop Safari zooming the page underneath us. The
+// camera is driven by the pointer events, once.
+for (const g of ["gesturestart", "gesturechange", "gestureend"])
+  addEventListener(g, ev => { if (window.mode3d) ev.preventDefault(); }, { passive: false });
 
 // the arrow keys move you about, which is the one control everybody tries
 addEventListener("keydown", ev => {

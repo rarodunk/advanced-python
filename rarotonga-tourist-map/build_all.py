@@ -24,6 +24,31 @@ STEPS = [
     ("v4 satellite map",         ["v4/tools/build.py"],      None),
 ]
 
+# The page is assembled from hand-written JavaScript, and a stray brace in it
+# fails silently: the browser stops at the syntax error, the 3D setting never
+# starts, and the page looks merely disappointing rather than broken. Node is
+# not required to build, but when it is here it costs nothing to ask.
+def check_js():
+    import shutil
+    node = shutil.which("node")
+    if not node:
+        return []
+    bad = []
+    for js in sorted(HERE.glob("v*/tools/*.js")):
+        r = subprocess.run([node, "--check", str(js)], capture_output=True, text=True)
+        if r.returncode:
+            first = (r.stderr.strip().splitlines() or ["failed"])[-1]
+            bad.append(f"{js.relative_to(HERE)}: {first}")
+    return bad
+
+
+js_errors = check_js()
+if js_errors:
+    print("\nthe JavaScript will not parse:")
+    for line in js_errors:
+        print("  " + line)
+    sys.exit(1)
+
 failed = []
 for label, args, have in STEPS:
     if have and (HERE / have).exists():
