@@ -182,6 +182,47 @@ with sync_playwright() as pw:
     assert hov["before"] == "none" and shown == "block", "hovering a pin does not name it"
     pg.mouse.move(4, 4)
 
+    # A pinch is a pinch, not a pinch and a spin and a tilt at once. Nobody
+    # spreads two fingers without also turning their hand a few degrees and
+    # sliding the middle of the gesture, and applying all three literally is
+    # what made a phone impossible to fly.
+    def two_finger(kind, steps=30):
+        pg.evaluate("""()=>{const v=raro3d.view; v.lat=-21.2349; v.lon=-159.7776;
+            v.dist=4000; v.az=0.4; v.el=0.4; window.pan3D(0.0001,0);}""")
+        pg.wait_for_timeout(300)
+        was = pg.evaluate("({d:raro3d.view.dist, az:raro3d.view.az, el:raro3d.view.el})")
+        pg.evaluate("""([kind, steps]) => {
+          const el = document.getElementById('stage');
+          const mk = (t, pts) => pts.map(([id,x,y]) => new PointerEvent(t,
+              {pointerId:id, pointerType:'touch', clientX:x, clientY:y, bubbles:true, isPrimary:id===1}));
+          const cx = innerWidth/2, cy = innerHeight/2;
+          const at = (r,a) => [[1, cx-r*Math.cos(a), cy-r*Math.sin(a)],
+                               [2, cx+r*Math.cos(a), cy+r*Math.sin(a)]];
+          let r = 60, a = 0;
+          mk('pointerdown', at(r,a)).forEach(e => el.dispatchEvent(e));
+          for (let i = 1; i <= steps; i++){
+            if (kind === 'pinch') r = 60 + i*4;
+            if (kind === 'twist') a = i*0.03;
+            let pts = at(r,a);
+            // a real gesture is never clean: a little drift and a little turn
+            if (kind === 'pinch') pts = pts.map(([id,x,y]) => [id, x+i*0.35, y+i*0.5]);
+            mk('pointermove', pts).forEach(e => el.dispatchEvent(e));
+          }
+          mk('pointerup', at(r,a)).forEach(e => el.dispatchEvent(e));
+        }""", [kind, steps])
+        pg.wait_for_timeout(200)
+        now = pg.evaluate("({d:raro3d.view.dist, az:raro3d.view.az, el:raro3d.view.el})")
+        return was["d"] / now["d"], now["az"] - was["az"], now["el"] - was["el"]
+
+    z, turn, tilt = two_finger("pinch")
+    print(f"a pinch three times apart: zoom {z:.2f}x, turn {turn:+.3f} rad, tilt {tilt:+.3f}")
+    assert 1.8 < z < 3.2, "the pinch does not track the fingers"
+    assert abs(turn) < 0.05 and abs(tilt) < 0.05, "a pinch also spun or tilted the view"
+    z, turn, tilt = two_finger("twist")
+    print(f"a twist of fifty degrees: zoom {z:.2f}x, turn {turn:+.3f} rad")
+    assert 0.95 < z < 1.05, "a twist also zoomed"
+    assert abs(turn) > 0.3, "the twist did not turn the camera"
+
     # Opening a place puts you on the water looking back at it.
     wet = []
     for pid in ("traderjacks", "palace", "sheraton", "murilagoon"):

@@ -1902,6 +1902,8 @@ window.flyTo3D = function(lat, lon, dist, el, faceDeg){
 // never get to a place, only spin past it.
 const pts = new Map();
 let pinch = null, twoMid = null, twist = null, orbiting = false, moved3d = 0;
+// what the two-finger gesture turned out to be, and where it started
+let gate = 0, twoKey = "", pinch0 = 0, twist0 = 0, mid0 = null;
 
 function groundPerPixel(){
   return (2 * view.dist * Math.tan(46 * Math.PI / 360)) / Math.max(1, innerHeight);
@@ -1934,6 +1936,30 @@ function groundAt(sx, sy, e, t){
   const k = (t[1] - e[1]) / d[1];
   if (k <= 0 || k > view.dist * 8) return null;        // near the horizon, unusable
   return [e[0] + d[0]*k, t[1], e[2] + d[2]*k];
+}
+// Zoom towards a point on the screen rather than the middle of it: pinching
+// the corner of the map and watching the island rush past the middle is most
+// of why this was hard to fly. Held to a leash, though — at a shallow tilt the
+// ray through the middle of the screen lands kilometres away, near the
+// horizon, and chasing that point turns a pinch into a flight across the
+// island. So the aim drifts you towards what you pinched rather than
+// flying you to it: a third of the camera's distance, no further.
+function zoomAt(ratio, sx, sy){
+  const g = groundUnder(sx, sy);
+  const was = view.dist;
+  view.dist = Math.max(45, Math.min(40000, view.dist * ratio));
+  const closed = 1 - view.dist / was;              // how much of the way we came in
+  if (g && closed > 0){
+    let dx = g[0] - toWorldX(view.lon), dz = g[2] - toWorldZ(view.lat);
+    const len = Math.hypot(dx, dz), leash = view.dist * 0.35;
+    if (len > leash){ dx *= leash / len; dz *= leash / len; }
+    moveFocus(dx * closed, dz * closed);
+  }
+  camDirty = true;
+}
+function groundUnder(sx, sy){
+  const { e, t } = eyeAndTarget();
+  return groundAt(sx, sy, e, t);
 }
 function panBy(dxPx, dyPx, fromX, fromY){
   const { e, t } = eyeAndTarget();
@@ -1969,7 +1995,16 @@ const orbitBy = turnBy;
 window.pan3D = panBy;
 
 stage.addEventListener("contextmenu", ev => { if (window.mode3d) ev.preventDefault(); });
+// touch-action keeps Android from scrolling the page under the gesture, but
+// Safari on iOS zooms the page on a pinch regardless of it. Two fingers on the
+// island are for the island: without this the browser zooms the whole page at
+// the same time as the camera zooms, and the two together are unflyable.
+stage.addEventListener("touchmove", ev => {
+  if (window.mode3d && ev.touches && ev.touches.length > 1) ev.preventDefault();
+}, { passive: false, capture: true });
 function endGesture(id){
+  // the pair is gone or changed either way: measure the next one afresh
+  pinch = null; twist = null; twoMid = null; twoKey = ""; gate = 0;
   if (id == null){
     for (const k of pts.keys()) try { stage.releasePointerCapture(k); } catch(e){}
     pts.clear();
@@ -1977,7 +2012,6 @@ function endGesture(id){
     try { if (stage.hasPointerCapture(id)) stage.releasePointerCapture(id); } catch(e){}
     pts.delete(id);
   }
-  if (pts.size < 2){ pinch = null; twoMid = null; twist = null; }
   if (!pts.size) orbiting = false;
 }
 stage.addEventListener("pointerdown", ev => {
@@ -2008,24 +2042,52 @@ stage.addEventListener("pointermove", ev => {
     try { stage.setPointerCapture(ev.pointerId); } catch(e){}
   }
   if (pts.size >= 2){
-    const [a, b] = [...pts.values()];
+    // Always the same two fingers, in the same order: taking whichever two the
+    // map happens to hold means a third finger landing, or one of three
+    // lifting, silently swaps the pair and the distance between them jumps
+    // from one frame to the next. That jump went straight into the zoom.
+    const ids = [...pts.keys()].sort((x, y) => x - y).slice(0, 2);
+    const a = pts.get(ids[0]), b = pts.get(ids[1]);
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
     const mid = { x:(a.x + b.x) / 2, y:(a.y + b.y) / 2 };
-    if (pinch) view.dist *= pinch / d;                     // pinch: closer or further
-    if (twist != null){                                    // twist: go around the island
-      let dt = ang - twist;
-      while (dt > Math.PI) dt -= 2 * Math.PI;
-      while (dt < -Math.PI) dt += 2 * Math.PI;
-      turnBy(-dt, 0);
+    if (pinch == null || twoKey !== ids.join()){
+      // a new pair: start measuring from here rather than from the old one
+      pinch = d; twist = ang; twoMid = mid; twoKey = ids.join();
+      pinch0 = d; twist0 = ang; mid0 = mid; gate = 0;
+    } else {
+      // Nobody pinches without also turning their hand a few degrees and
+      // sliding the middle of the gesture a few pixels. Applied literally that
+      // is a zoom, a spin and a tilt at once from what the hand meant as one
+      // of the three, which is what made this impossible to fly. So each
+      // channel has to be asked for before it answers.
+      const spread = Math.abs(Math.log(d / pinch0));
+      let turned = ang - twist0;
+      while (turned > Math.PI) turned -= 2 * Math.PI;
+      while (turned < -Math.PI) turned += 2 * Math.PI;
+      const slid = Math.hypot(mid.x - mid0.x, mid.y - mid0.y);
+      if (!gate){
+        if (spread > 0.16) gate = 1;                       // about a sixth apart
+        else if (Math.abs(turned) > 0.28) gate = 2;        // about sixteen degrees
+        else if (slid > 26) gate = 3;
+      }
+      if (gate === 1){
+        // one to one with the fingers, but never more than a doubling in a
+        // single event, whatever the browser reports
+        const r = Math.max(0.6, Math.min(1.7, pinch / d));
+        zoomAt(r, mid.x, mid.y);
+      } else if (gate === 2){
+        let dt = ang - twist;
+        while (dt > Math.PI) dt -= 2 * Math.PI;
+        while (dt < -Math.PI) dt += 2 * Math.PI;
+        turnBy(-dt, 0);
+      } else if (gate === 3){
+        // two fingers together: sideways moves you, up and down tilts
+        panBy(mid.x - twoMid.x, 0, twoMid.x, twoMid.y);
+        view.el += (mid.y - twoMid.y) * 0.004;
+      }
+      pinch = d; twist = ang; twoMid = mid;
     }
-    if (twoMid){
-      // two fingers: sideways moves you, up and down tilts, since one finger
-      // already moves you and the tilt has nowhere else to live on a phone
-      panBy(mid.x - twoMid.x, 0, twoMid.x, twoMid.y);
-      view.el += (mid.y - twoMid.y) * 0.004;
-    }
-    pinch = d; twist = ang; twoMid = mid;
   } else if (orbiting){
     turnBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
   } else {
@@ -2052,8 +2114,7 @@ stage.addEventListener("wheel", ev => {
     return;
   }
   if (ev.shiftKey){ orbitBy(ev.deltaY * unit * 0.004, 0); return; }
-  view.dist *= Math.exp(ev.deltaY * unit * 0.0016);
-  camDirty = true;
+  zoomAt(Math.exp(ev.deltaY * unit * 0.0016), ev.clientX, ev.clientY);
 }, { passive:false, capture:true });
 
 // Safari hands trackpad and touch rotation over directly, which is the
@@ -2067,7 +2128,7 @@ addEventListener("gesturechange", ev => {
   if (!window.mode3d) return;
   ev.preventDefault();
   view.az = gStart - (ev.rotation || 0) * Math.PI / 180;
-  if (ev.scale) view.dist /= Math.max(0.5, Math.min(2, ev.scale));
+  if (ev.scale) zoomAt(1 / Math.max(0.5, Math.min(2, ev.scale)), innerWidth / 2, innerHeight / 2);
   camDirty = true;
 }, { passive:false });
 
