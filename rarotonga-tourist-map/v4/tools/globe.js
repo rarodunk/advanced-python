@@ -239,10 +239,12 @@ void main(){
   c = mix(c, ground, uClose * 0.82);
   // and it is a surface, not an airbrush: two octaves of grain at a metre and
   // at three, which is the difference between grass and a green gradient
-  float g1 = vnoise(vPos.xz * 0.75), g2 = vnoise(vPos.xz * 2.9);
-  float grain = (g1 * 0.62 + g2 * 0.38) - 0.5;
-  c *= 1.0 + grain * 0.22 * uClose * land;
-  c += vec3(0.05, 0.06, 0.01) * grain * uClose * land;
+  if (uClose > 0.01){
+    float g1 = vnoise(vPos.xz * 0.75), g2 = vnoise(vPos.xz * 2.9);
+    float grain = (g1 * 0.62 + g2 * 0.38) - 0.5;
+    c *= 1.0 + grain * 0.22 * uClose * land;
+    c += vec3(0.05, 0.06, 0.01) * grain * uClose * land;
+  }
 
   // a little contrast, the way a photograph is graded
   c = clamp((c - 0.5) * 1.12 + 0.5, 0.0, 1.4);
@@ -434,7 +436,12 @@ function buildShade(){
 /* ---------- geometry ---------- */
 let bufs = {};
 function buildMesh(){
-  const maxSeg = uint32 ? 512 : 254;
+  // The grid behind this is 594 by 468 posts, so 512 segments a side was
+  // inventing detail that is not there and charging half a million triangles a
+  // frame for it. A phone pays that in frame rate, and frame rate is what
+  // makes a drag feel like the map is stuck to your finger.
+  const PHONE = innerWidth < 900;
+  const maxSeg = uint32 ? (PHONE ? 224 : 384) : 254;
   const N = Math.min(maxSeg, Math.max(TW, TH) - 1);
   const n1 = N + 1;
   const pos = new Float32Array(n1 * n1 * 3);
@@ -1518,7 +1525,7 @@ function upload(b){
    Rebuilt when you have moved a quarter of the radius, and thrown away
    entirely once you are far enough out that the painting reads better than
    ten thousand little trees would. */
-const VEG_R = 780;
+const VEG_R = (typeof innerWidth !== "undefined" && innerWidth < 900) ? 520 : 780;
 function tendVegetation(){
   if (!ready) return;
   if (view.dist > 2200){
@@ -1530,7 +1537,7 @@ function tendVegetation(){
   }
   if (vegAt){
     const moved = Math.hypot((view.lat - vegAt[0]) * KM_LAT_M, (view.lon - vegAt[1]) * M_LON);
-    if (moved < VEG_R * 0.38) return;     // resowing costs a frame, so not often
+    if (moved < VEG_R * 0.5) return;      // resowing costs a frame, so not often
   }
   if (vegBusy) return;
   vegBusy = true;
@@ -1575,10 +1582,21 @@ function drawBuildings(mvp, e, sun){
   // the painting says it better than seven thousand grey boxes would.
   const osmA = a * (1 - Math.max(0, Math.min(1, (view.dist - 900) / 1800)));
   const OSMTEX = { osmroad: "ground", osmwall: "wall", osmroof: "roof" };
+  // Blending every triangle is what a phone's GPU is worst at, and almost all
+  // of this is opaque almost all of the time: the alpha is only there for the
+  // fade in and out at the edges of each layer's range.
+  let blending = true;
+  const setBlend = on => {
+    if (on === blending) return;
+    blending = on;
+    if (on) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
+  };
   for (const g of bldGroups.concat(vegGroups)){
     const isOsm = OSMTEX[g.name] !== undefined;
     if (isOsm && osmA <= 0.01) continue;
-    gl.uniform1f(BP.alpha, isOsm ? osmA : a);
+    const alpha = isOsm ? osmA : a;
+    setBlend(alpha < 0.995);
+    gl.uniform1f(BP.alpha, alpha);
     gl.bindTexture(gl.TEXTURE_2D, matTex[OSMTEX[g.name]] || matTex[g.name] || facadeTex[g.name] || matTex.wall);
     bindTo(g.pos, BP.pos, 3); bindTo(g.nrm, BP.nrm, 3);
     bindTo(g.col, BP.col, 3); bindTo(g.uv, BP.uv, 2);
@@ -1766,7 +1784,10 @@ function draw(){
   if (!ready) return;
   stepFlight();
   settleCamera(performance.now());
-  const dpr = Math.min(devicePixelRatio || 1, 2);
+  // a phone screen at full pixel ratio is four million fragments of a shader
+  // that carries shadows, occlusion and haze; three quarters of that is
+  // indistinguishable in the hand and runs half again as fast
+  const dpr = Math.min(devicePixelRatio || 1, innerWidth < 900 ? 1.5 : 2);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
   gl.viewport(0, 0, w, h);
@@ -1865,6 +1886,7 @@ window.raro3d = { view, centre: [C_LAT, C_LON],
                   get dist(){ return view.dist; },
                   get camY(){ return camY; },
                   get glVersion(){ return GL2 ? 2 : 1; },
+                  get terrainTris(){ return indexCount / 3; },
                   get facadesHeld(){ return facadeLive.size; },
                   // where a screen pixel lands on the ground the camera is
                   // looking at, which is also how the drag is worked out
@@ -2111,7 +2133,9 @@ function panBy(dxPx, dyPx, fromX, fromY){
       // up by the horizon throws you across the island; this keeps the ground
       // under your finger without letting one flick become a flight.
       let dx = a[0] - b[0], dz = a[2] - b[2];
-      const len = Math.hypot(dx, dz), cap = view.dist * 0.08;
+      // wide enough that a quick swipe still tracks the finger; the leash is
+      // only here to stop a grab near the horizon becoming a flight
+      const len = Math.hypot(dx, dz), cap = view.dist * 0.35;
       if (len > cap){ dx *= cap / len; dz *= cap / len; }
       moveFocus(dx, dz);
       return;
