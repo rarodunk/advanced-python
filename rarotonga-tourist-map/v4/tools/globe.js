@@ -68,6 +68,35 @@ if (!gl){
   uint32 = !!(gl && gl.getExtension("OES_element_index_uint"));
 }
 if (!gl){ console.warn("no WebGL; the 3D setting stays off"); return; }
+const GL2 = !!(window.WebGL2RenderingContext && gl instanceof WebGL2RenderingContext);
+
+/* ---------- handing an image to the card ----------
+   WebGL 1 will not mipmap an image whose sides are not powers of two. It does
+   not complain: it draws the texture black. The island mosaic is 2200 by 1860
+   and every painted elevation is whatever size it was saved at, so on a phone
+   that falls back to WebGL 1 — which iOS does under memory pressure — the
+   whole island came out as a black silhouette in a blue sea. WebGL 2 has no
+   such rule, which is why every desktop looked right.
+
+   So on WebGL 1 the image is redrawn onto a power-of-two canvas first. The
+   texture coordinates run zero to one either way, so the stretch is invisible,
+   and the mipmaps that keep the island from shimmering at distance survive. */
+const MAXTEX = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE) || 2048);
+function pot(n){
+  let v = 1;
+  while (v * 2 <= n) v *= 2;
+  return Math.max(64, Math.min(MAXTEX, v));
+}
+function texSource(img){
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const two = v => (v & (v - 1)) === 0;
+  if (GL2 && w <= MAXTEX && h <= MAXTEX) return img;
+  if (two(w) && two(h) && w <= MAXTEX && h <= MAXTEX) return img;
+  const cv = document.createElement("canvas");
+  cv.width = pot(w); cv.height = pot(h);
+  cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+  return cv;
+}
 
 /* ---------- small matrix helpers ---------- */
 function perspective(fovy, aspect, near, far){
@@ -553,7 +582,7 @@ function loadFacades(){
         const t = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, t);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texSource(img));
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -1554,7 +1583,7 @@ const tex = gl.createTexture();
 function uploadTexture(img){
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, texSource(img));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -1757,6 +1786,7 @@ window.raro3d = { view, centre: [C_LAT, C_LON],
                   get buildings(){ return bldCount / 3; },
                   get dist(){ return view.dist; },
                   get camY(){ return camY; },
+                  get glVersion(){ return GL2 ? 2 : 1; },
                   // where a screen pixel lands on the ground the camera is
                   // looking at, which is also how the drag is worked out
                   groundLL(sx, sy){
@@ -1934,7 +1964,7 @@ function groundAt(sx, sy, e, t){
                   f[2] + right[2]*nx + up[2]*ny]);
   if (d[1] > -1e-4) return null;                       // that ray is sky
   const k = (t[1] - e[1]) / d[1];
-  if (k <= 0 || k > view.dist * 8) return null;        // near the horizon, unusable
+  if (k <= 0 || k > view.dist * 3.0) return null;      // near the horizon, unusable
   return [e[0] + d[0]*k, t[1], e[2] + d[2]*k];
 }
 // Zoom towards a point on the screen rather than the middle of it: pinching
@@ -1966,7 +1996,17 @@ function panBy(dxPx, dyPx, fromX, fromY){
   if (fromX != null){
     const a = groundAt(fromX, fromY, e, t);
     const b = groundAt(fromX + dxPx, fromY + dyPx, e, t);
-    if (a && b){ moveFocus(a[0] - b[0], a[2] - b[2]); return; }
+    if (a && b){
+      // Perspective means a pixel near the top of the screen covers far more
+      // ground than one near the bottom. Held to exactly, a drag that starts
+      // up by the horizon throws you across the island; this keeps the ground
+      // under your finger without letting one flick become a flight.
+      let dx = a[0] - b[0], dz = a[2] - b[2];
+      const len = Math.hypot(dx, dz), cap = view.dist * 0.08;
+      if (len > cap){ dx *= cap / len; dz *= cap / len; }
+      moveFocus(dx, dz);
+      return;
+    }
   }
   // fallback for the flat case and for drags that started against the sky
   const mpp = groundPerPixel();
@@ -2056,37 +2096,32 @@ stage.addEventListener("pointermove", ev => {
       pinch = d; twist = ang; twoMid = mid; twoKey = ids.join();
       pinch0 = d; twist0 = ang; mid0 = mid; gate = 0;
     } else {
-      // Nobody pinches without also turning their hand a few degrees and
-      // sliding the middle of the gesture a few pixels. Applied literally that
-      // is a zoom, a spin and a tilt at once from what the hand meant as one
-      // of the three, which is what made this impossible to fly. So each
-      // channel has to be asked for before it answers.
+      // Zoom always follows the fingers: that is the one thing a pinch is for,
+      // and gating it made the map feel dead. Turning needs to be asked for,
+      // because nobody spreads two fingers without rolling their hand a few
+      // degrees. Tilting is the two fingers travelling together, up or down,
+      // which is a different shape of gesture again.
       const spread = Math.abs(Math.log(d / pinch0));
       let turned = ang - twist0;
       while (turned > Math.PI) turned -= 2 * Math.PI;
       while (turned < -Math.PI) turned += 2 * Math.PI;
-      const slid = Math.hypot(mid.x - mid0.x, mid.y - mid0.y);
-      if (!gate){
-        if (spread > 0.16) gate = 1;                       // about a sixth apart
-        else if (Math.abs(turned) > 0.28) gate = 2;        // about sixteen degrees
-        else if (slid > 26) gate = 3;
-      }
-      if (gate === 1){
-        // one to one with the fingers, but never more than a doubling in a
-        // single event, whatever the browser reports
-        const r = Math.max(0.6, Math.min(1.7, pinch / d));
-        zoomAt(r, mid.x, mid.y);
-      } else if (gate === 2){
+      const dmid = { x: mid.x - twoMid.x, y: mid.y - twoMid.y };
+      const ratio = pinch / d;
+
+      if (spread > 0.1) zoomAt(Math.max(0.7, Math.min(1.45, ratio)), mid.x, mid.y);
+      if (Math.abs(turned) > 0.3){                    // about seventeen degrees
         let dt = ang - twist;
         while (dt > Math.PI) dt -= 2 * Math.PI;
         while (dt < -Math.PI) dt += 2 * Math.PI;
         turnBy(-dt, 0);
-      } else if (gate === 3){
-        // two fingers together: sideways moves you, up and down tilts
-        panBy(mid.x - twoMid.x, 0, twoMid.x, twoMid.y);
-        view.el += (mid.y - twoMid.y) * 0.004;
+      }
+      // both fingers travelling the same way, and not spreading: a tilt
+      if (spread < 0.06 && Math.abs(turned) < 0.25 &&
+          Math.abs(mid.y - mid0.y) > 18 && Math.abs(dmid.y) > Math.abs(dmid.x)){
+        view.el += dmid.y * 0.0035;
       }
       pinch = d; twist = ang; twoMid = mid;
+      camDirty = true;
     }
   } else if (orbiting){
     turnBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
@@ -2095,8 +2130,41 @@ stage.addEventListener("pointermove", ev => {
   }
   camDirty = true;
 }, true);
+let tapAt = 0, tapX = 0, tapY = 0, tapCount = 0;
+function flyZoom(ratio, sx, sy){
+  // the same aim as a pinch, but eased, because a tap has no travel to follow
+  const g = groundUnder(sx, sy);
+  const to = { lat: view.lat, lon: view.lon, az: view.az, el: view.el,
+               dist: Math.max(45, Math.min(40000, view.dist * ratio)) };
+  const closed = 1 - to.dist / view.dist;
+  if (g && closed > 0){
+    let dx = g[0] - toWorldX(view.lon), dz = g[2] - toWorldZ(view.lat);
+    const len = Math.hypot(dx, dz), leash = view.dist * 0.5;
+    if (len > leash){ dx *= leash / len; dz *= leash / len; }
+    to.lon += dx * closed / M_LON;
+    to.lat -= dz * closed / KM_LAT_M;
+    to.lat = Math.max(TB_S + 0.004, Math.min(TB_N - 0.004, to.lat));
+    to.lon = Math.max(TB_W + 0.004, Math.min(TB_E - 0.004, to.lon));
+  }
+  flyTo(to, 320);
+}
 ["pointerup","pointercancel","lostpointercapture"].forEach(e =>
-  stage.addEventListener(e, ev => endGesture(ev.pointerId), true));
+  stage.addEventListener(e, ev => {
+    if (window.mode3d && e === "pointerup" && moved3d < 12){
+      const now = performance.now();
+      const near = Math.abs(ev.clientX - tapX) < 44 && Math.abs(ev.clientY - tapY) < 44;
+      if (pts.size >= 2){
+        // two fingers tapped together: back out one step
+        if (!tapCount){ tapCount = 1; setTimeout(() => { tapCount = 0; }, 60); flyZoom(1.9, innerWidth / 2, innerHeight / 2); }
+      } else if (now - tapAt < 320 && near){
+        flyZoom(0.5, ev.clientX, ev.clientY);        // double tap: one step in
+        tapAt = 0;
+      } else {
+        tapAt = now; tapX = ev.clientX; tapY = ev.clientY;
+      }
+    }
+    endGesture(ev.pointerId);
+  }, true));
 // and if the page loses the plot entirely, drop every pointer we are holding
 addEventListener("blur", () => endGesture(null));
 document.addEventListener("visibilitychange", () => { if (document.hidden) endGesture(null); });
@@ -2203,7 +2271,7 @@ window.setMode3D = function(on){
 // the first few times you switch over, and then stops.
 const hint = document.createElement("div");
 hint.id = "navHint";
-hint.textContent = "Drag to move \u00b7 twist two fingers to turn \u00b7 pinch or scroll to zoom";
+hint.textContent = "Drag to move \u00b7 pinch or double-tap to zoom \u00b7 twist two fingers to turn";
 hint.hidden = true;
 document.body.appendChild(hint);
 let hintTimer = 0;

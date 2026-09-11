@@ -247,5 +247,42 @@ with sync_playwright() as pw:
     assert d < 0.01, "switching modes moved the map"
     assert not errs, errs
     b.close()
+
+    # ---- and the same page on WebGL 1 ----
+    # WebGL 1 will not mipmap a texture whose sides are not powers of two: it
+    # draws it black, without complaint. The island mosaic is 2200 by 1860, so
+    # on a phone that falls back — which iOS does — the island was a black
+    # silhouette in a blue sea while every desktop looked fine.
+    b = pw.chromium.launch(executable_path="/opt/pw-browsers/chromium",
+                           args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
+    pg = b.new_context(viewport={"width": 900, "height": 600}).new_page()
+    errs = []; pg.on("pageerror", lambda e: errs.append(str(e)[:250]))
+    pg.add_init_script("""
+      const real = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(kind, opts){
+        if (kind === 'webgl2') return null;
+        return real.call(this, kind, opts);
+      };""")
+    pg.goto("http://127.0.0.1:8905/v4/index.html"); pg.wait_for_timeout(9000)
+    pg.evaluate("closeSheet()")
+    pg.keyboard.press("3"); pg.wait_for_timeout(4000)
+    assert pg.evaluate("raro3d.glVersion") == 1, "the WebGL 1 fallback did not take"
+    pg.evaluate("""()=>{const v=raro3d.view; v.lat=-21.2349; v.lon=-159.7776;
+        v.dist=9000; v.el=0.45; v.az=0.3; window.pan3D(0.0001,0);}""")
+    pg.wait_for_timeout(1500)
+    pg.evaluate("()=>{document.querySelectorAll('.mk').forEach(m=>m.style.display='none');}")
+    pg.wait_for_timeout(400)
+    shot = pathlib.Path(tempfile.gettempdir()) / "raro_gl1.png"
+    pg.screenshot(path=str(shot))
+    from PIL import Image
+    im = Image.open(shot).convert("RGB")
+    w, h = im.size
+    band = [im.getpixel((int(w * x), int(h * 0.55))) for x in (0.35, 0.42, 0.5, 0.58, 0.66)]
+    lit = sum(sum(px) for px in band) / (3 * len(band))
+    green = sum(1 for px in band if px[1] > px[2] and px[1] > 20)
+    print(f"on WebGL 1 the island reads {lit:.0f} bright, {green}/5 samples green")
+    assert lit > 25 and green >= 3, "the island is black on WebGL 1"
+    assert not errs, errs
+    b.close()
 srv.shutdown()
 print("\n3D setting passes")
