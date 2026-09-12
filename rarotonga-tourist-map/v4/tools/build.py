@@ -206,11 +206,15 @@ GALLERY_CSS = """
   #compass svg{width:27px;height:27px}
   .isle .stats{display:none}
   .isle .thumb{width:64px;height:44px}
-  #districts{padding:9px 8px;gap:4px}
-  #districts .arw{width:46px;height:46px;font-size:24px}
-  #districts .mid{min-width:130px}
-  #districts b{font-size:16px}
-  #districts .dots i{width:6px;height:6px}
+  /* the strip ran under the right-hand controls, which put the minus button
+     and everything below it out of reach */
+  #districts{left:12px;right:84px;transform:none;padding:7px 6px;gap:2px;
+    justify-content:space-between}
+  #districts .arw{width:40px;height:40px;font-size:21px}
+  #districts .mid{min-width:0;flex:1}
+  #districts b{font-size:15px}
+  #districts .dots{gap:4px;margin-top:3px}
+  #districts .dots i{width:5px;height:5px}
   /* clear of the district strip, which sits at 86px on a phone */
   .credit{bottom:calc(160px + env(safe-area-inset-bottom));max-width:58vw}
 }

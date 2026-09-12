@@ -301,6 +301,33 @@ with sync_playwright() as pw:
     print(f"Safari's own twist, hand rolled 48 degrees: {z:.2f}x closer, turn {turn:+.2f} rad")
     assert 0.95 < z < 1.05 and abs(turn) > 0.3, "Safari's twist does not turn the island"
 
+    # After a pinch, the finger still resting on the glass has to keep working.
+    # iOS cancels the pointers when it takes the gesture, so that finger never
+    # sent a pointerdown we heard: ignoring it left the map dead to the hand
+    # until you lifted and touched again, which reads as the drag not working.
+    pg.evaluate("""()=>{const v=raro3d.view; v.lat=-21.2349; v.lon=-159.7776;
+        v.dist=1500; v.el=0.44; window.pan3D(0.0001,0);}""")
+    pg.wait_for_timeout(300)
+    pg.evaluate("""()=>{
+      const fire=(t,p)=>{const e=new Event(t,{bubbles:true,cancelable:true});
+        Object.assign(e,p); window.dispatchEvent(e);};
+      fire('gesturestart',{scale:1,rotation:0,clientX:innerWidth/2,clientY:innerHeight/2});
+      for(let i=1;i<=8;i++) fire('gesturechange',{scale:1+i*0.05,rotation:0,
+        clientX:innerWidth/2, clientY:innerHeight/2});
+      fire('gestureend',{scale:1.4,rotation:0,clientX:innerWidth/2,clientY:innerHeight/2});
+    }""")
+    pg.wait_for_timeout(400)
+    before = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    pg.evaluate("""()=>{const el=document.getElementById('stage');
+      const mk=(x,y)=>new PointerEvent('pointermove',{pointerId:77, pointerType:'touch',
+          clientX:x, clientY:y, bubbles:true, isPrimary:true});
+      for (let i=0;i<=10;i++) el.dispatchEvent(mk(innerWidth*0.7 - i*20, innerHeight*0.6));}""")
+    pg.wait_for_timeout(250)
+    after = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    moved = (((after["lon"]-before["lon"])*103800)**2 + ((after["lat"]-before["lat"])*110570)**2) ** 0.5
+    print(f"a drag by the finger still down after a pinch moved {moved:.0f} m")
+    assert moved > 50, "the map is deaf to a finger that was down during a pinch"
+
     # and the compass is the way round the island: hold it and slide
     az0 = pg.evaluate("raro3d.view.az")
     spun = pg.evaluate("""()=>{
@@ -385,6 +412,42 @@ with sync_playwright() as pw:
     green = sum(1 for px in band if px[1] > px[2] and px[1] > 20)
     print(f"on WebGL 1 the island reads {lit:.0f} bright, {green}/5 samples green")
     assert lit > 25 and green >= 3, "the island is black on WebGL 1"
+    assert not errs, errs
+    b.close()
+
+    # ---- and a device that will not sample the base map at all ----
+    # Every black island so far has been a texture the device refused to
+    # sample, and none of them reported an error. The page checks its own work
+    # a few frames in: if the land reads black while the sky does not, it
+    # re-uploads without mipmaps, and failing that paints the stand-in. This
+    # stands in for the phone, which is the only place it has ever happened.
+    b = pw.chromium.launch(executable_path="/opt/pw-browsers/chromium",
+                           args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
+    pg = b.new_context(viewport={"width": 390, "height": 844}).new_page()
+    errs = []; pg.on("pageerror", lambda e: errs.append(str(e)[:250]))
+    pg.add_init_script("""
+      const realGet = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(kind, opts){
+        const ctx = realGet.call(this, kind, opts);
+        if (ctx && (kind === 'webgl' || kind === 'webgl2') && !ctx.__broken){
+          ctx.__broken = true;
+          const mip = ctx.generateMipmap.bind(ctx);
+          ctx.generateMipmap = function(t){
+            ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, 1, 1, 0, ctx.RGBA,
+                           ctx.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+            mip(t);
+          };
+        }
+        return ctx;
+      };""")
+    pg.goto("http://127.0.0.1:8905/v4/index.html"); pg.wait_for_timeout(9000)
+    pg.evaluate("closeSheet()")
+    pg.keyboard.press("3"); pg.wait_for_timeout(6000)
+    report = pg.evaluate("raro3d.report()")
+    line = [l for l in report.splitlines() if l.startswith("probe:")][0]
+    print("on a device that blacks a mipmapped texture:", line.strip())
+    assert "0 dark" in line or "lit / 0" in line, "the island stayed black: " + line
+    assert "linear" in report, "the page never tried the safer upload"
     assert not errs, errs
     b.close()
 srv.shutdown()

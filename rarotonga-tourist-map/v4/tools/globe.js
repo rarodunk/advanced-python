@@ -1658,15 +1658,18 @@ function decodeTerrain(img){
   }
 }
 const tex = gl.createTexture();
+let satImg = null, texMode = "mipmap";
 function uploadTexture(img){
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, texSource(img));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  const mip = texMode === "mipmap";
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                   mip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.generateMipmap(gl.TEXTURE_2D);
+  if (mip) gl.generateMipmap(gl.TEXTURE_2D);
   const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
   if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT,
                               Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
@@ -1674,7 +1677,7 @@ function uploadTexture(img){
 const tImg = new Image();
 tImg.onload = () => {
   decodeTerrain(tImg);
-  const sat = new Image();
+  const sat = satImg = new Image();
   // The island must never be a black silhouette. If the base map does not
   // arrive, or arrives empty, the mesh gets a plausible green and blue of its
   // own and says so, rather than drawing nothing and looking broken.
@@ -1692,6 +1695,7 @@ tImg.onload = () => {
     if (credit) credit.textContent = "Base map unavailable on this device.";
   };
   sat.onerror = () => { fallbackTexture("the image failed to load"); };
+  window.__raroFallback = fallbackTexture;
   sat.onload = () => {
     if (!sat.naturalWidth || !sat.naturalHeight) return fallbackTexture("it decoded empty");
     uploadTexture(sat);
@@ -1776,6 +1780,66 @@ function horizonNDC(m, e, t){
   if (w <= 0) return 0.5;
   const y = m[1]*p[0] + m[5]*p[1] + m[9]*p[2] + m[13];
   return Math.max(0, Math.min(1, y / w * 0.5 + 0.5));
+}
+
+/* ---------- is the island actually there? ----------
+   Every black island so far has been a texture that the device would not
+   sample: a size WebGL 1 will not mipmap, memory the phone reclaimed, a
+   format a driver refused. They all look identical from here and none of them
+   reports an error. So the page checks its own work: a few frames in, it reads
+   the middle of the picture back off the card. If the island is black while
+   the sky is not, it re-uploads the base map the simplest way there is — no
+   mipmaps, plain filtering — and looks again. If that fails too it paints the
+   stand-in, which is at least a green island in a blue sea. What it does NOT
+   do any more is quietly show black.
+
+   This runs three times and then never again. */
+let probeLeft = 6, probeWhen = 0, probeNote = "not checked yet", probeFix = 0, probePts = null;
+// a dozen points that are definitely land, found once from the elevation grid
+function probePoints(){
+  if (probePts) return probePts;
+  probePts = [];
+  for (let i = 0; i < 400 && probePts.length < 12; i++){
+    const lat = TB_S + (TB_N - TB_S) * (0.2 + 0.6 * ((i * 37) % 100) / 100);
+    const lon = TB_W + (TB_E - TB_W) * (0.2 + 0.6 * ((i * 61) % 100) / 100);
+    if (heightAtLL(lat, lon) > 40) probePts.push([lat, lon]);
+  }
+  return probePts;
+}
+function probeFrame(w, h){
+  if (probeLeft <= 0 || !window.mode3d || !mvp) return;
+  if (probeWhen && performance.now() - probeWhen < 400) return;
+  probeWhen = performance.now();
+  probeLeft--;
+  const px = new Uint8Array(4);
+  const sample = (sx, sy) => {                 // GL reads from the bottom up
+    gl.readPixels(Math.round(sx), Math.round(h - sy), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px[0] + px[1] + px[2];
+  };
+  let dark = 0, lit = 0;
+  for (const [lat, lon] of probePoints()){
+    const s2 = window.project3D({ latlon: { lat, lon } });
+    if (!s2) continue;
+    const sx = s2.x * (w / innerWidth), sy = s2.y * (h / innerHeight);
+    if (sx < 2 || sy < 2 || sx > w - 2 || sy > h - 2) continue;
+    if (sample(sx, sy) < 24) dark++; else lit++;
+  }
+  const sky = sample(w * 0.5, h * 0.06);
+  probeNote = `land ${lit} lit / ${dark} dark, sky ${sky}`;
+  if (dark >= 4 && dark >= (lit + dark) * 0.8 && sky > 40){
+    if (texMode === "mipmap" && satImg){
+      texMode = "linear";
+      uploadTexture(satImg);
+      probeFix = 1;
+      probeLeft = Math.max(probeLeft, 3);
+      probeNote += " -> re-uploaded without mipmaps";
+    } else if (probeFix < 2){
+      probeFix = 2;
+      if (window.__raroFallback) window.__raroFallback("the island read back black");
+      probeNote += " -> painted stand-in";
+    }
+    camDirty = true;
+  }
 }
 
 let mvp = null;
@@ -1879,6 +1943,8 @@ function draw(){
   }
   gl.depthMask(true);
   gl.disable(gl.BLEND);
+  probeFrame(w, h);
+
 }
 window.draw3D = draw;
 // a handle for the tests, and for anyone poking at the scene from a console
@@ -1888,6 +1954,22 @@ window.raro3d = { view, centre: [C_LAT, C_LON],
                   get camY(){ return camY; },
                   get glVersion(){ return GL2 ? 2 : 1; },
                   get terrainTris(){ return indexCount / 3; },
+                  report(){
+                    const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+                    return [
+                      "WebGL " + (GL2 ? 2 : 1),
+                      dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "renderer unknown",
+                      "canvas " + canvas.width + "x" + canvas.height +
+                        " dpr " + (devicePixelRatio || 1) + " win " + innerWidth + "x" + innerHeight,
+                      "base map " + texMode + (satImg ? " " + satImg.naturalWidth + "x" + satImg.naturalHeight
+                                                     : " (none)"),
+                      "probe: " + probeNote,
+                      "terrain " + (indexCount / 3) + " tris, buildings " + (bldCount / 3 | 0) +
+                        ", elevations " + facadeLive.size,
+                      "gl error " + gl.getError(),
+                      "dist " + Math.round(view.dist) + " m"
+                    ].join("\n");
+                  },
                   get facadesHeld(){ return facadeLive.size; },
                   // where a screen pixel lands on the ground the camera is
                   // looking at, which is also how the drag is worked out
@@ -2247,7 +2329,17 @@ stage.addEventListener("pointermove", ev => {
     endGesture(ev.pointerId);
     return;
   }
-  const prev = pts.get(ev.pointerId); if (!prev) return;
+  // A finger that was already down when Safari took the gesture is a finger we
+  // never got a pointerdown for, because the gesture cancelled it. Ignoring it
+  // means that after any pinch the map is dead to the hand still resting on
+  // it: you lift, touch again, and only then does it move. So adopt it.
+  let prev = pts.get(ev.pointerId);
+  if (!prev){
+    if (ev.pointerType === "mouse" && ev.buttons === 0) return;
+    prev = { x:ev.clientX, y:ev.clientY };
+    pts.set(ev.pointerId, prev);
+    return;                                  // this event only tells us where it is
+  }
   const cur = { x:ev.clientX, y:ev.clientY };
   moved3d += Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y);
   pts.set(ev.pointerId, cur);
@@ -2563,6 +2655,28 @@ window.openPlace = function(id, fly){
   }
   return r;
 };
+
+// Tapping the credit line shows what the card is actually doing. This device
+// is the only place several of these faults happen, and a screenshot of this
+// settles in one go what would otherwise take a day of guessing.
+const creditEl = document.getElementById("credit");
+if (creditEl){
+  creditEl.style.pointerEvents = "auto";
+  creditEl.style.cursor = "pointer";
+  let panel = null;
+  creditEl.addEventListener("click", () => {
+    if (panel){ panel.remove(); panel = null; return; }
+    panel = document.createElement("pre");
+    panel.textContent = window.raro3d ? raro3d.report() : "the 3D setting never started";
+    Object.assign(panel.style, {
+      position: "fixed", left: "8px", right: "8px", bottom: "calc(200px + env(safe-area-inset-bottom))",
+      zIndex: 9999, margin: "0", padding: "10px 12px", borderRadius: "12px",
+      background: "rgba(4,16,28,.94)", color: "#dfeaf2", font: "11px/1.45 ui-monospace,monospace",
+      whiteSpace: "pre-wrap", border: "1px solid rgba(255,255,255,.18)"
+    });
+    document.body.appendChild(panel);
+  });
+}
 
 document.getElementById("d3Btn").onclick = () => setMode3D(!window.mode3d);
 addEventListener("keydown", e => {
