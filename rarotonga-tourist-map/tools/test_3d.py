@@ -328,6 +328,30 @@ with sync_playwright() as pw:
     print(f"a drag by the finger still down after a pinch moved {moved:.0f} m")
     assert moved > 50, "the map is deaf to a finger that was down during a pinch"
 
+    # The ocean has to be ocean: a gradient from the water near the island out
+    # to the haze at the horizon. It is drawn in kilometres rather than metres
+    # because a phone's mediump float stops at 65504 and the plane is a quarter
+    # of a million metres across — and while fixing that I briefly moved the
+    # measurement to the vertex shader, where a four-corner quad has no
+    # gradient left to interpolate and the whole sea came out sky-coloured.
+    pg.evaluate("""()=>{const m=document.getElementById('markers'); if(m) m.style.display='none';
+        const v=raro3d.view; v.lat=-21.2500; v.lon=-159.7500; v.dist=16000; v.el=0.18; v.az=0.4;
+        window.pan3D(0.0001,0);}""")
+    pg.wait_for_timeout(1200)
+    sea = pg.evaluate("""()=>new Promise(res=>{requestAnimationFrame(()=>{
+        const cv = document.querySelector('#stage canvas');
+        const g = cv.getContext('webgl2') || cv.getContext('webgl');
+        const px = new Uint8Array(4);
+        const at = (fx, fy) => { g.readPixels(Math.round(cv.width*fx), Math.round(cv.height*fy),
+            1, 1, g.RGBA, g.UNSIGNED_BYTE, px); return [px[0],px[1],px[2]]; };
+        res({near: at(0.5, 0.18), far: at(0.5, 0.42), sky: at(0.5, 0.92)});
+      });})""")
+    spread = sum(abs(a - b) for a, b in zip(sea["near"], sea["far"]))
+    print(f"sea near {sea['near']}, far {sea['far']}, sky {sea['sky']}")
+    assert spread > 12, "the ocean has no gradient across it"
+    assert sum(abs(a - b) for a, b in zip(sea["near"], sea["sky"])) > 60, "the sea is the colour of the sky"
+    assert sea["near"][2] > sea["near"][0], "the sea is not blue"
+
     # and the compass is the way round the island: hold it and slide
     az0 = pg.evaluate("raro3d.view.az")
     spun = pg.evaluate("""()=>{

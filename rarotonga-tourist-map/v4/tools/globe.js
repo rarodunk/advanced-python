@@ -272,17 +272,39 @@ void main(){
   gl_FragColor = vec4(mix(uHazeSky, uTop, t), 1.0);
 }`);
 
+// The ocean plane is a hundred and eighty kilometres across, and the fragment
+// shader used to measure distance across it in mediump. A desktop GPU quietly
+// computes mediump at full precision so it looks perfect; a phone's mediump is
+// a real sixteen-bit float whose largest value is 65504. Half the plane was
+// past that, and the rest of it was carrying a step size of tens of metres, so
+// the colour of the water jumped from frame to frame as the camera moved --
+// water that flashes and flutters, on a phone, and only on a phone.
+//
+// The distance is now worked out in the vertex shader and handed over as a
+// fraction between nought and one, which any precision can hold.
 const seaProg = build(`
 attribute vec2 aP; uniform mat4 uMVP; uniform float uSize;
-varying vec2 vXZ;
-void main(){ vXZ = aP * uSize; gl_Position = uMVP * vec4(vXZ.x, -2.0, vXZ.y, 1.0); }`, `
+varying vec2 vKm;
+void main(){
+  vec2 xz = aP * uSize;
+  vKm = xz * 0.001;                     // kilometres, which mediump can hold
+  gl_Position = uMVP * vec4(xz.x, -8.0, xz.y, 1.0);
+}`, `
 precision mediump float;
 uniform vec3 uNear; uniform vec3 uFar; uniform vec3 uHazeSky;
-varying vec2 vXZ;
+varying vec2 vKm;
 void main(){
-  float d = length(vXZ);
-  vec3 c = mix(uNear, uFar, smoothstep(7000.0, 45000.0, d));
-  c = mix(c, uHazeSky, smoothstep(30000.0, 150000.0, d));   // into the horizon
+  // The plane is a hundred and eighty kilometres across, and this used to
+  // measure it in metres: a quarter of a million of them, in mediump. A
+  // desktop GPU computes mediump at full precision so it looked perfect; a
+  // phone's mediump is a real sixteen-bit float that stops at 65504, so the
+  // far half of the ocean overflowed and the near half carried a step size of
+  // tens of metres. The colour of the water jumped about from frame to frame
+  // as the camera moved — flashing, fluttering water, on a phone and only on
+  // a phone. In kilometres the whole plane fits with room to spare.
+  float d = length(vKm);
+  vec3 c = mix(uNear, uFar, smoothstep(7.0, 45.0, d));
+  c = mix(c, uHazeSky, smoothstep(30.0, 150.0, d));       // into the horizon
   gl_FragColor = vec4(c, 1.0);
 }`);
 
@@ -680,7 +702,11 @@ uniform mat4 uMVP;
 varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos; varying vec2 vUV;
 void main(){ vNrm = aNrm; vCol = aCol; vPos = aPos; vUV = aUV;
              gl_Position = uMVP * vec4(aPos, 1.0); }`, `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 uniform sampler2D uTex; uniform vec3 uSun; uniform vec3 uHaze; uniform vec2 uFog;
 uniform vec3 uEye; uniform float uAlpha;
 varying vec3 vNrm; varying vec3 vCol; varying vec3 vPos; varying vec2 vUV;
@@ -1662,10 +1688,19 @@ let satImg = null, texMode = "mipmap";
 function uploadTexture(img){
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, texSource(img));
+  let src = texSource(img);
+  if (texMode === "small"){
+    // a thousand-pixel square is a quarter of the memory and still mipmaps,
+    // which matters: an unmipmapped base map shimmers whenever you move
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 1024;
+    cv.getContext("2d").drawImage(img, 0, 0, 1024, 1024);
+    src = cv;
+  }
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const mip = texMode === "mipmap";
+  const mip = texMode !== "linear";
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
                    mip ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -1696,6 +1731,7 @@ tImg.onload = () => {
   };
   sat.onerror = () => { fallbackTexture("the image failed to load"); };
   window.__raroFallback = fallbackTexture;
+  window.__forceLinear = () => { texMode = "linear"; uploadTexture(sat); camDirty = true; };
   sat.onload = () => {
     if (!sat.naturalWidth || !sat.naturalHeight) return fallbackTexture("it decoded empty");
     uploadTexture(sat);
@@ -1828,7 +1864,13 @@ function probeFrame(w, h){
   probeNote = `land ${lit} lit / ${dark} dark, sky ${sky}`;
   if (dark >= 4 && dark >= (lit + dark) * 0.8 && sky > 40){
     if (texMode === "mipmap" && satImg){
-      texMode = "linear";
+      texMode = "small";                        // a smaller square, still mipmapped
+      uploadTexture(satImg);
+      probeFix = 1;
+      probeLeft = Math.max(probeLeft, 3);
+      probeNote += " -> re-uploaded at 1024 square";
+    } else if (texMode === "small" && satImg){
+      texMode = "linear";                       // and if that fails, no mipmaps
       uploadTexture(satImg);
       probeFix = 1;
       probeLeft = Math.max(probeLeft, 3);
@@ -1876,9 +1918,15 @@ function draw(){
   gl.uniform1f(S.horizon, horizonNDC(mvp, e, t));
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-  // the open ocean the island sits in
+  // The open ocean the island sits in. It is drawn without writing depth, and
+  // that is the whole point: the plane sits two metres under the terrain's own
+  // sea, which at twenty kilometres is finer than the depth buffer can tell
+  // apart. The two surfaces then swap places from frame to frame and the water
+  // flashes and flutters whenever the camera moves. Leaving the depth buffer
+  // alone means the island simply paints over the ocean and there is nothing
+  // to argue about. The plane also drops to eight metres down, for margin.
   gl.enable(gl.DEPTH_TEST);
-  gl.depthMask(true);
+  gl.depthMask(false);
   gl.useProgram(seaProg);
   attach("quad", O.p, 2);
   gl.uniformMatrix4fv(O.mvp, false, new Float32Array(mvp));
@@ -1887,6 +1935,7 @@ function draw(){
   gl.uniform3fv(O.far, SEA_FAR);
   gl.uniform3fv(O.haze, SKY_HAZE);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.depthMask(true);
 
   // the island
   gl.useProgram(terrainProg);
@@ -2238,7 +2287,7 @@ function groundUnder(sx, sy){
 // moves half again as far as the finger does. It is no longer strictly stuck
 // to your thumb, and it is the difference between crossing the island in three
 // swipes and in ten.
-const PAN_GAIN = () => (innerWidth < 900 ? 1.6 : 1.0);
+const PAN_GAIN = () => (innerWidth < 900 ? 1.45 : 1.0);
 function panBy(dxPx, dyPx, fromX, fromY){
   const { e, t } = eyeAndTarget();
   if (fromX != null){
