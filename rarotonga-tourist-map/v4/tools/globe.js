@@ -1783,6 +1783,7 @@ const t0 = performance.now();
 function draw(){
   if (!ready) return;
   stepFlight();
+  stepGlide(performance.now());
   settleCamera(performance.now());
   // a phone screen at full pixel ratio is four million fragments of a shader
   // that carries shadows, occlusion and haze; three quarters of that is
@@ -2014,6 +2015,7 @@ function seaSideAtRadius(lat, lon, r, orDry, prefer){
 }
 let flight = null;
 function flyTo(to, ms){
+  glide = null;                                 // a throw must not fight a flight
   const from = { lat:view.lat, lon:view.lon, az:view.az, el:view.el, dist:view.dist };
   let d = to.az - from.az;                      // turn the short way round
   while (d > Math.PI) d -= 2 * Math.PI;
@@ -2051,6 +2053,7 @@ window.flyTo3D = function(lat, lon, dist, el, faceDeg){
   // the eye wants to stand where the building is looking: bearing b sits at
   // an azimuth of pi minus b
   const prefer = faceDeg == null ? null : Math.PI - faceDeg * Math.PI / 180;
+  glide = null;
   flyTo({ lat, lon, az: seaSideAz(lat, lon, dist, el, prefer), el, dist }, 900);
   return true;
 };
@@ -2062,6 +2065,31 @@ window.flyTo3D = function(lat, lon, dist, el, faceDeg){
 // drag. Orbiting on a plain drag is what made this so hard to fly: you could
 // never get to a place, only spin past it.
 const pts = new Map();
+// A flick should carry on after the finger leaves, the way it does on the flat
+// map and on every map anyone has used. Without it every bit of travel has to
+// be dragged out by hand, which on a phone is a lot of swiping.
+let flickX = 0, flickY = 0, flickAt = 0, flickPt = null, glide = null;
+function stepGlide(now){
+  if (!glide) return;
+  // The decay is wall clock, not frames: on a slow device a frame-counted
+  // decay makes the throw last for seconds and cross the whole island. The
+  // travel per frame is capped instead, so a long frame cannot jump.
+  const real = Math.max(1, now - glide.at);
+  glide.at = now;
+  const move = Math.min(48, real);
+  panBy(glide.vx * move, glide.vy * move, glide.x, glide.y);
+  glide.vx *= Math.exp(-real / 420); glide.vy *= Math.exp(-real / 420);
+  if (Math.hypot(glide.vx, glide.vy) < 0.03) glide = null;
+  camDirty = true;
+}
+function throwIsland(){
+  const speed = Math.hypot(flickX, flickY);
+  if (speed < 0.25 || !flickPt) return;         // a slow release is a stop
+  if (performance.now() - flickAt > 90) return; // the finger had already paused
+  const cap = 4.0;                              // pixels a millisecond, which is a hard flick
+  const k = speed > cap ? cap / speed : 1;
+  glide = { vx: flickX * k, vy: flickY * k, x: flickPt.x, y: flickPt.y, at: performance.now() };
+}
 let pinch = null, twoMid = null, twist = null, orbiting = false, moved3d = 0;
 // what the two-finger gesture turned out to be, and where it started
 let gate = 0, twoKey = "", pinch0 = 0, twist0 = 0, mid0 = null;
@@ -2122,6 +2150,13 @@ function groundUnder(sx, sy){
   const { e, t } = eyeAndTarget();
   return groundAt(sx, sy, e, t);
 }
+// A phone screen is a small window on a large island, and a drag that tracks
+// your finger exactly covers one screen of ground per swipe — which is barely
+// anything when the screen is four hundred pixels wide. On a phone the ground
+// moves half again as far as the finger does. It is no longer strictly stuck
+// to your thumb, and it is the difference between crossing the island in three
+// swipes and in ten.
+const PAN_GAIN = () => (innerWidth < 900 ? 1.6 : 1.0);
 function panBy(dxPx, dyPx, fromX, fromY){
   const { e, t } = eyeAndTarget();
   if (fromX != null){
@@ -2132,7 +2167,8 @@ function panBy(dxPx, dyPx, fromX, fromY){
       // ground than one near the bottom. Held to exactly, a drag that starts
       // up by the horizon throws you across the island; this keeps the ground
       // under your finger without letting one flick become a flight.
-      let dx = a[0] - b[0], dz = a[2] - b[2];
+      const gain = PAN_GAIN();
+      let dx = (a[0] - b[0]) * gain, dz = (a[2] - b[2]) * gain;
       // wide enough that a quick swipe still tracks the finger; the leash is
       // only here to stop a grab near the horizon becoming a flight
       const len = Math.hypot(dx, dz), cap = view.dist * 0.35;
@@ -2145,7 +2181,8 @@ function panBy(dxPx, dyPx, fromX, fromY){
   const mpp = groundPerPixel();
   const rx = Math.cos(view.az), rz = -Math.sin(view.az);      // screen right
   const fx = -Math.sin(view.az), fz = -Math.cos(view.az);     // into the screen
-  moveFocus(-(rx * dxPx + fx * dyPx) * mpp, (rz * dxPx + fz * dyPx) * mpp);
+  const g2 = PAN_GAIN();
+  moveFocus(-(rx * dxPx + fx * dyPx) * mpp * g2, (rz * dxPx + fz * dyPx) * mpp * g2);
 }
 // A twist turns you around the island, not around your own feet: the island
 // is the thing you are looking at. Down among the buildings that would fling
@@ -2196,7 +2233,8 @@ function gestureStale(){
 stage.addEventListener("pointerdown", ev => {
   if (!window.mode3d || gestureStale()) return;
   pts.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
-  flight = null;
+  flight = null; glide = null;
+  flickX = flickY = 0; flickAt = performance.now(); flickPt = null;
   orbiting = ev.button === 2 || ev.button === 1 || ev.shiftKey || ev.altKey;
   pinch = null; twoMid = null; twist = null; moved3d = 0;
 }, true);
@@ -2276,6 +2314,16 @@ stage.addEventListener("pointermove", ev => {
     turnBy(-(cur.x - prev.x) * 0.005, (cur.y - prev.y) * 0.004);
   } else {
     panBy(cur.x - prev.x, cur.y - prev.y, prev.x, prev.y);
+    // remember how fast the finger is travelling, for the throw
+    const now = performance.now(), dt = Math.max(1, now - flickAt);
+    if (dt < 120){
+      const k = Math.min(1, dt / 60);
+      flickX = flickX * (1 - k) + ((cur.x - prev.x) / dt) * k;
+      flickY = flickY * (1 - k) + ((cur.y - prev.y) / dt) * k;
+    } else {
+      flickX = (cur.x - prev.x) / dt; flickY = (cur.y - prev.y) / dt;
+    }
+    flickAt = now; flickPt = cur;
   }
   camDirty = true;
 }, true);
@@ -2312,6 +2360,7 @@ function flyZoom(ratio, sx, sy){
         tapAt = now; tapX = ev.clientX; tapY = ev.clientY;
       }
     }
+    if (window.mode3d && e === "pointerup" && pts.size === 1 && moved3d > 12) throwIsland();
     endGesture(ev.pointerId);
   }, true));
 // and if the page loses the plot entirely, drop every pointer we are holding

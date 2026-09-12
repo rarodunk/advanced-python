@@ -228,6 +228,31 @@ with sync_playwright() as pw:
     assert 1.4 < z < 2.3, "the pinch does not track the fingers"
     assert abs(turn) < 0.05 and abs(tilt) < 0.05, "a pinch also spun or tilted the view"
 
+    # A flick has to carry on after the finger leaves, or every bit of travel
+    # has to be dragged out by hand — which on a phone is a lot of swiping for
+    # very little island.
+    pg.evaluate("""()=>{const v=raro3d.view; v.lat=-21.2349; v.lon=-159.7776;
+        v.dist=1200; v.az=0.3; v.el=0.44; window.pan3D(0.0001,0);}""")
+    pg.wait_for_timeout(400)
+    before = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    pg.evaluate("""()=>{const el=document.getElementById('stage');
+      const mk=(t,x,y)=>new PointerEvent(t,{pointerId:9,pointerType:'touch',
+          clientX:x, clientY:y, bubbles:true, isPrimary:true});
+      const y = innerHeight*0.55;
+      el.dispatchEvent(mk('pointerdown', innerWidth*0.75, y));
+      for (let i=1;i<=12;i++) el.dispatchEvent(mk('pointermove', innerWidth*0.75 - i*(innerWidth*0.05), y));
+      el.dispatchEvent(mk('pointerup', innerWidth*0.15, y));}""")
+    pg.wait_for_timeout(150)
+    mid = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    pg.wait_for_timeout(1400)
+    after = pg.evaluate("({lat:raro3d.view.lat, lon:raro3d.view.lon})")
+    span = lambda a, b: ((a["lon"]-b["lon"])*103800)**2 + ((a["lat"]-b["lat"])*110570)**2
+    carried = span(after, mid) ** 0.5
+    total = span(after, before) ** 0.5
+    print(f"a flick moved {total:.0f} m, of which {carried:.0f} m after the finger left")
+    assert carried > 40, "the flick does not carry"
+    assert total < 40000, "the flick never stops"
+
     # The buttons are the one way in and out that needs no gesture at all, and
     # they have been dead in the 3D setting before now.
     d0 = pg.evaluate("raro3d.view.dist")
