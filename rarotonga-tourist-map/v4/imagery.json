@@ -1,0 +1,30 @@
+{
+  "bbox": [
+    -159.87,
+    -21.3,
+    -159.705,
+    -21.17
+  ],
+  "width": 2200,
+  "height": 1860,
+  "zoom": null,
+  "source": "painted basemap fitted to the coastline",
+  "attribution": "Illustrated base map, fitted to the real coastline.",
+  "edge": {
+    "top": "#023d7e",
+    "bottom": "#033e82"
+  },
+  "terrain": {
+    "bbox": [
+      -159.87,
+      -21.3,
+      -159.705,
+      -21.17
+    ],
+    "width": 594,
+    "height": 468,
+    "zoom": null,
+    "encoding": "terrarium",
+    "source": "Copernicus GLO-30 (AWS Open Data)"
+  }
+}

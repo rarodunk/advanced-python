@@ -1,0 +1,1122 @@
+{
+ "adventuredive": {
+  "colour": {
+   "roof": [
+    135,
+    128,
+    71
+   ],
+   "trim": [
+    250,
+    243,
+    231
+   ],
+   "wall": [
+    163,
+    179,
+    140
+   ]
+  },
+  "eave": 1.4,
+  "face": 270,
+  "palms": 5,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   8,
+   6,
+   3.2
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "airport": {
+  "colour": {
+   "roof": [
+    128,
+    132,
+    134
+   ],
+   "trim": [
+    246,
+    244,
+    238
+   ],
+   "wall": [
+    232,
+    228,
+    216
+   ]
+  },
+  "eave": 2.4,
+  "face": 294,
+  "flag": true,
+  "note": "one terminal, one room: long, flat-roofed, a canopy over the doors",
+  "palms": 10,
+  "pool": false,
+  "roof": "flat",
+  "size": [
+   52,
+   17,
+   7.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "albertos": {
+  "colour": {
+   "roof": [
+    156,
+    97,
+    48
+   ],
+   "trim": [
+    236,
+    231,
+    217
+   ],
+   "wall": [
+    171,
+    144,
+    103
+   ]
+  },
+  "eave": 1.6,
+  "face": 246,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "avatiu": {
+  "colour": {
+   "roof": [
+    120,
+    124,
+    126
+   ],
+   "trim": [
+    214,
+    216,
+    214
+   ],
+   "wall": [
+    186,
+    190,
+    190
+   ]
+  },
+  "deck": 6.0,
+  "eave": 0.9,
+  "face": 252,
+  "note": "the working port: long sheds along the wharf, flat roofs, no planting",
+  "palms": 2,
+  "pool": false,
+  "roof": "flat",
+  "size": [
+   34,
+   14,
+   6.0
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "charlies": {
+  "colour": {
+   "roof": [
+    146,
+    128,
+    93
+   ],
+   "trim": [
+    251,
+    249,
+    239
+   ],
+   "wall": [
+    189,
+    204,
+    207
+   ]
+  },
+  "eave": 1.6,
+  "face": 144,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "cicc": {
+  "colour": {
+   "roof": [
+    124,
+    121,
+    68
+   ],
+   "trim": [
+    249,
+    244,
+    234
+   ],
+   "wall": [
+    201,
+    197,
+    191
+   ]
+  },
+  "eave": 0.6,
+  "face": 0,
+  "palms": 4,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   17,
+   10,
+   8.5
+  ],
+  "spire": 11.0,
+  "storeys": 1,
+  "veranda": false
+ },
+ "diveraro": {
+  "colour": {
+   "roof": [
+    156,
+    158,
+    156
+   ],
+   "trim": [
+    252,
+    248,
+    238
+   ],
+   "wall": [
+    191,
+    197,
+    203
+   ]
+  },
+  "eave": 1.4,
+  "face": 240,
+  "palms": 5,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   8,
+   6,
+   3.2
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "fishingclub": {
+  "colour": {
+   "roof": [
+    72,
+    104,
+    128
+   ],
+   "trim": [
+    244,
+    242,
+    236
+   ],
+   "wall": [
+    228,
+    226,
+    216
+   ]
+  },
+  "deck": 3.5,
+  "eave": 1.6,
+  "face": 0,
+  "flag": true,
+  "note": "the club on the harbour: a plain hall with a deck facing the water",
+  "palms": 5,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   20,
+   11,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "highland": {
+  "colour": {
+   "roof": [
+    145,
+    114,
+    77
+   ],
+   "trim": [
+    245,
+    236,
+    217
+   ],
+   "wall": [
+    200,
+    205,
+    197
+   ]
+  },
+  "eave": 1.8,
+  "face": 234,
+  "palms": 10,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   18,
+   11,
+   5.4
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "hospital": {
+  "colour": {
+   "roof": [
+    115,
+    128,
+    109
+   ],
+   "trim": [
+    253,
+    250,
+    241
+   ],
+   "wall": [
+    200,
+    188,
+    172
+   ]
+  },
+  "eave": 1.0,
+  "face": 300,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   38,
+   18,
+   8.5
+  ],
+  "storeys": 2,
+  "veranda": false
+ },
+ "kikau": {
+  "colour": {
+   "roof": [
+    138,
+    108,
+    68
+   ],
+   "trim": [
+    206,
+    184,
+    148
+   ],
+   "wall": [
+    176,
+    148,
+    108
+   ]
+  },
+  "eave": 2.2,
+  "face": 294,
+  "note": "the thatched roadside hut, deep pitch, open sides",
+  "open": "front",
+  "palms": 8,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   16,
+   11,
+   6.2
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "lbv": {
+  "colour": {
+   "roof": [
+    114,
+    122,
+    90
+   ],
+   "trim": [
+    250,
+    248,
+    239
+   ],
+   "wall": [
+    202,
+    204,
+    192
+   ]
+  },
+  "eave": 1.6,
+  "face": 108,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "licence": {
+  "colour": {
+   "roof": [
+    140,
+    125,
+    110
+   ],
+   "trim": [
+    244,
+    237,
+    222
+   ],
+   "wall": [
+    199,
+    195,
+    193
+   ]
+  },
+  "eave": 0.8,
+  "face": 228,
+  "palms": 3,
+  "pool": false,
+  "roof": "flat",
+  "size": [
+   12,
+   8,
+   4.0
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "mairenui": {
+  "colour": {
+   "roof": [
+    116,
+    121,
+    61
+   ],
+   "trim": [
+    240,
+    237,
+    217
+   ],
+   "wall": [
+    187,
+    187,
+    139
+   ]
+  },
+  "eave": 0.9,
+  "face": 162,
+  "palms": 4,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   6.0
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "matavera": {
+  "colour": {
+   "roof": [
+    130,
+    103,
+    66
+   ],
+   "trim": [
+    252,
+    249,
+    239
+   ],
+   "wall": [
+    190,
+    180,
+    142
+   ]
+  },
+  "eave": 0.6,
+  "face": 60,
+  "palms": 4,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   14,
+   9,
+   7.0
+  ],
+  "spire": 9.0,
+  "storeys": 1,
+  "veranda": false
+ },
+ "mooring": {
+  "colour": {
+   "roof": [
+    206,
+    206,
+    200
+   ],
+   "trim": [
+    236,
+    234,
+    228
+   ],
+   "wall": [
+    58,
+    122,
+    148
+   ]
+  },
+  "eave": 1.8,
+  "face": 96,
+  "note": "from its painted elevations: an open pavilion by the passage, hipped roof on posts, blue counter across the back. Its position is still the Avana passage, not the Muri node OpenStreetMap carries",
+  "open": "front",
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   13,
+   9,
+   5.2
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "murimarket": {
+  "colour": {
+   "roof": [
+    92,
+    82,
+    74
+   ],
+   "trim": [
+    244,
+    240,
+    232
+   ],
+   "wall": [
+    206,
+    198,
+    180
+   ]
+  },
+  "eave": 2.4,
+  "face": 96,
+  "note": "night market: a run of open stalls under one long roof",
+  "open": "front",
+  "palms": 9,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   30,
+   10,
+   4.2
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "museum": {
+  "colour": {
+   "roof": [
+    123,
+    125,
+    78
+   ],
+   "trim": [
+    243,
+    242,
+    235
+   ],
+   "wall": [
+    194,
+    176,
+    143
+   ]
+  },
+  "eave": 0.9,
+  "face": 342,
+  "palms": 4,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   6.0
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "nustall": {
+  "colour": {
+   "roof": [
+    117,
+    118,
+    82
+   ],
+   "trim": [
+    251,
+    248,
+    236
+   ],
+   "wall": [
+    183,
+    200,
+    197
+   ]
+  },
+  "eave": 1.6,
+  "face": 150,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "otb": {
+  "colour": {
+   "roof": [
+    114,
+    123,
+    95
+   ],
+   "trim": [
+    238,
+    238,
+    231
+   ],
+   "wall": [
+    200,
+    182,
+    161
+   ]
+  },
+  "eave": 1.6,
+  "face": 240,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "palace": {
+  "colour": {
+   "roof": [
+    188,
+    190,
+    188
+   ],
+   "trim": [
+    244,
+    242,
+    236
+   ],
+   "wall": [
+    236,
+    232,
+    220
+   ]
+  },
+  "eave": 1.9,
+  "face": 0,
+  "note": "from its painted elevations: a kiosk with a serving counter along the front and a sign board above the roof",
+  "palms": 4,
+  "pool": false,
+  "roof": "flat",
+  "size": [
+   13,
+   7,
+   4.4
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "punanganui": {
+  "colour": {
+   "roof": [
+    70,
+    96,
+    120
+   ],
+   "trim": [
+    246,
+    244,
+    238
+   ],
+   "wall": [
+    214,
+    206,
+    186
+   ]
+  },
+  "eave": 2.6,
+  "face": 0,
+  "note": "from the artwork and the market's own plan: an open market shed, roof on posts, no walls",
+  "open": "front",
+  "palms": 10,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   36,
+   15,
+   4.6
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "rickshaw": {
+  "colour": {
+   "roof": [
+    131,
+    132,
+    83
+   ],
+   "trim": [
+    250,
+    246,
+    232
+   ],
+   "wall": [
+    180,
+    177,
+    142
+   ]
+  },
+  "eave": 1.6,
+  "face": 228,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "sails": {
+  "colour": {
+   "roof": [
+    133,
+    126,
+    126
+   ],
+   "trim": [
+    239,
+    223,
+    199
+   ],
+   "wall": [
+    206,
+    163,
+    150
+   ]
+  },
+  "eave": 1.6,
+  "face": 66,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "sheraton": {
+  "colour": {
+   "roof": [
+    129,
+    121,
+    82
+   ],
+   "trim": [
+    247,
+    242,
+    228
+   ],
+   "wall": [
+    185,
+    195,
+    182
+   ]
+  },
+  "eave": 0.4,
+  "face": 138,
+  "palms": 12,
+  "pool": false,
+  "roof": "flat",
+  "size": [
+   40,
+   18,
+   9.5
+  ],
+  "storeys": 3,
+  "veranda": false
+ },
+ "stay-arorangi": {
+  "colour": {
+   "roof": [
+    117,
+    138,
+    113
+   ],
+   "trim": [
+    253,
+    249,
+    238
+   ],
+   "wall": [
+    204,
+    195,
+    167
+   ]
+  },
+  "eave": 1.4,
+  "face": 258,
+  "palms": 10,
+  "pool": true,
+  "roof": "hip",
+  "size": [
+   20,
+   11,
+   8.5
+  ],
+  "storeys": 2,
+  "veranda": true
+ },
+ "stay-titikaveka": {
+  "colour": {
+   "roof": [
+    110,
+    136,
+    109
+   ],
+   "trim": [
+    255,
+    253,
+    243
+   ],
+   "wall": [
+    201,
+    193,
+    161
+   ]
+  },
+  "eave": 1.4,
+  "face": 222,
+  "palms": 10,
+  "pool": true,
+  "roof": "hip",
+  "size": [
+   20,
+   11,
+   8.5
+  ],
+  "storeys": 2,
+  "veranda": true
+ },
+ "tamarind": {
+  "colour": {
+   "roof": [
+    128,
+    118,
+    55
+   ],
+   "trim": [
+    238,
+    232,
+    215
+   ],
+   "wall": [
+    177,
+    155,
+    98
+   ]
+  },
+  "eave": 1.6,
+  "face": 0,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "tapabar": {
+  "colour": {
+   "roof": [
+    122,
+    96,
+    66
+   ],
+   "trim": [
+    232,
+    222,
+    202
+   ],
+   "wall": [
+    178,
+    150,
+    118
+   ]
+  },
+  "deck": 3.0,
+  "eave": 2.4,
+  "face": 96,
+  "note": "an open pavilion at the quiet end of Muri, roof on posts",
+  "open": "front",
+  "palms": 8,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   14,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "tevaranui": {
+  "colour": {
+   "roof": [
+    179,
+    100,
+    47
+   ],
+   "trim": [
+    227,
+    215,
+    192
+   ],
+   "wall": [
+    223,
+    211,
+    188
+   ]
+  },
+  "eave": 1.8,
+  "face": 144,
+  "palms": 10,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   20,
+   12,
+   5.6
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "titikavekacicc": {
+  "colour": {
+   "roof": [
+    120,
+    136,
+    106
+   ],
+   "trim": [
+    255,
+    253,
+    242
+   ],
+   "wall": [
+    195,
+    197,
+    185
+   ]
+  },
+  "eave": 0.6,
+  "face": 144,
+  "palms": 4,
+  "pool": false,
+  "roof": "gable",
+  "size": [
+   15,
+   9,
+   7.5
+  ],
+  "spire": 9.5,
+  "storeys": 1,
+  "veranda": false
+ },
+ "traderjacks": {
+  "colour": {
+   "roof": [
+    232,
+    232,
+    228
+   ],
+   "trim": [
+    242,
+    240,
+    234
+   ],
+   "wall": [
+    86,
+    116,
+    132
+   ]
+  },
+  "deck": 4.5,
+  "eave": 2.2,
+  "face": 228,
+  "flag": true,
+  "monitor": [
+   0.34,
+   1.3
+  ],
+  "note": "from a photograph of the building: one long low room on the harbour wall, open to the sea, shallow hipped roof with a raised centre, the name painted along the fascia, flagpole at the eastern end",
+  "open": "front",
+  "palms": 9,
+  "pool": false,
+  "roof": "hip",
+  "sign": [
+   188,
+   34,
+   38
+  ],
+  "size": [
+   28,
+   13,
+   5.6
+  ],
+  "storeys": 1,
+  "veranda": false
+ },
+ "vaima": {
+  "colour": {
+   "roof": [
+    161,
+    102,
+    62
+   ],
+   "trim": [
+    252,
+    247,
+    227
+   ],
+   "wall": [
+    215,
+    195,
+    183
+   ]
+  },
+  "eave": 1.6,
+  "face": 156,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "waterline": {
+  "colour": {
+   "roof": [
+    144,
+    114,
+    86
+   ],
+   "trim": [
+    242,
+    233,
+    210
+   ],
+   "wall": [
+    216,
+    158,
+    134
+   ]
+  },
+  "eave": 1.6,
+  "face": 252,
+  "palms": 6,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   17,
+   10,
+   5.0
+  ],
+  "storeys": 1,
+  "veranda": true
+ },
+ "wilsons": {
+  "colour": {
+   "roof": [
+    150,
+    120,
+    95
+   ],
+   "trim": [
+    248,
+    241,
+    215
+   ],
+   "wall": [
+    213,
+    184,
+    147
+   ]
+  },
+  "eave": 1.8,
+  "face": 186,
+  "palms": 7,
+  "pool": false,
+  "roof": "hip",
+  "size": [
+   15,
+   9,
+   4.6
+  ],
+  "storeys": 1,
+  "veranda": true
+ }
+}

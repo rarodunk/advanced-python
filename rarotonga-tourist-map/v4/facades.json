@@ -1,0 +1,1192 @@
+{
+ "adventuredive": {
+  "front": {
+   "eave": 0.3408,
+   "file": "adventuredive-front.webp",
+   "ratio": 0.6653
+  },
+  "roof": {
+   "eave": 0.2832,
+   "file": "adventuredive-roof.webp",
+   "ratio": 0.5504
+  },
+  "side": {
+   "eave": 0.2882,
+   "file": "adventuredive-side.webp",
+   "ratio": 0.69
+  }
+ },
+ "airport": {
+  "front": {
+   "eave": 0.5463,
+   "file": "airport-front.webp",
+   "ratio": 1.3944
+  },
+  "roof": {
+   "eave": 0.7131,
+   "file": "airport-roof.webp",
+   "ratio": 1.1804
+  },
+  "side": {
+   "eave": 0.4716,
+   "file": "airport-side.webp",
+   "ratio": 2.0173
+  }
+ },
+ "airraro": {
+  "front": {
+   "eave": 0.3692,
+   "file": "airraro-front.webp",
+   "ratio": 1.6205
+  },
+  "roof": {
+   "eave": 0.251,
+   "file": "airraro-roof.webp",
+   "ratio": 1.1333
+  },
+  "side": {
+   "eave": 0.5213,
+   "file": "airraro-side.webp",
+   "ratio": 1.7447
+  }
+ },
+ "aitutaki": {
+  "front": {
+   "eave": 0.5783,
+   "file": "aitutaki-front.webp",
+   "ratio": 1.6928
+  },
+  "roof": {
+   "eave": 0.5714,
+   "file": "aitutaki-roof.webp",
+   "ratio": 0.9511
+  },
+  "side": {
+   "eave": 0.4366,
+   "file": "aitutaki-side.webp",
+   "ratio": 2.3099
+  }
+ },
+ "albertos": {
+  "front": {
+   "eave": 0.2885,
+   "file": "albertos-front.webp",
+   "ratio": 1.3699
+  },
+  "roof": {
+   "eave": 0.2701,
+   "file": "albertos-roof.webp",
+   "ratio": 1.129
+  },
+  "side": {
+   "eave": 0.2514,
+   "file": "albertos-side.webp",
+   "ratio": 1.7588
+  }
+ },
+ "arametua": {
+  "front": {
+   "eave": 0.2376,
+   "file": "arametua-front.webp",
+   "ratio": 1.5
+  },
+  "roof": {
+   "eave": 0.203,
+   "file": "arametua-roof.webp",
+   "ratio": 1.1203
+  },
+  "side": {
+   "eave": 0.8079,
+   "file": "arametua-side.webp",
+   "ratio": 1.6158
+  }
+ },
+ "aroa": {
+  "front": {
+   "eave": 0.134,
+   "file": "aroa-front.webp",
+   "ratio": 1.3732
+  },
+  "roof": {
+   "eave": 0.2276,
+   "file": "aroa-roof.webp",
+   "ratio": 1.2398
+  },
+  "side": {
+   "eave": 0.8517,
+   "file": "aroa-side.webp",
+   "ratio": 1.1148
+  }
+ },
+ "avana": {
+  "front": {
+   "eave": 0.3143,
+   "file": "avana-front.webp",
+   "ratio": 1.4524
+  },
+  "roof": {
+   "eave": 0.0977,
+   "file": "avana-roof.webp",
+   "ratio": 1.1504
+  },
+  "side": {
+   "eave": 0.5829,
+   "file": "avana-side.webp",
+   "ratio": 1.8743
+  }
+ },
+ "avatiu": {
+  "front": {
+   "eave": 0.6762,
+   "file": "avatiu-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.0526,
+   "file": "avatiu-roof.webp",
+   "ratio": 1.1391
+  },
+  "side": {
+   "eave": 0.4545,
+   "file": "avatiu-side.webp",
+   "ratio": 2.4697
+  }
+ },
+ "blackrock": {
+  "front": {
+   "eave": 0.8075,
+   "file": "blackrock-front.webp",
+   "ratio": 1.4925
+  },
+  "roof": {
+   "eave": 0.6322,
+   "file": "blackrock-roof.webp",
+   "ratio": 1.1272
+  },
+  "side": {
+   "eave": 0.6989,
+   "file": "blackrock-side.webp",
+   "ratio": 2.4823
+  }
+ },
+ "bus": {
+  "front": {
+   "eave": 0.3258,
+   "file": "bus-front.webp",
+   "ratio": 1.5217
+  },
+  "roof": {
+   "eave": 0.0539,
+   "file": "bus-roof.webp",
+   "ratio": 2.2727
+  },
+  "side": {
+   "eave": 0.023,
+   "file": "bus-side.webp",
+   "ratio": 2.5735
+  }
+ },
+ "charlies": {
+  "front": {
+   "eave": 0.2571,
+   "file": "charlies-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.2415,
+   "file": "charlies-roof.webp",
+   "ratio": 1.1283
+  },
+  "side": {
+   "eave": 0.4231,
+   "file": "charlies-side.webp",
+   "ratio": 1.5769
+  }
+ },
+ "cicc": {
+  "front": {
+   "eave": 0.6362,
+   "file": "cicc-front.webp",
+   "ratio": 1.6204
+  },
+  "roof": {
+   "eave": 0.2529,
+   "file": "cicc-roof.webp",
+   "ratio": 1.209
+  },
+  "side": {
+   "eave": 0.3732,
+   "file": "cicc-side.webp",
+   "ratio": 2.6923
+  }
+ },
+ "crossisland": {
+  "front": {
+   "eave": 0.819,
+   "file": "crossisland-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.3373,
+   "file": "crossisland-roof.webp",
+   "ratio": 1.1294
+  },
+  "side": {
+   "eave": 0.7389,
+   "file": "crossisland-side.webp",
+   "ratio": 1.5961
+  }
+ },
+ "diveraro": {
+  "front": {
+   "eave": 0.2658,
+   "file": "diveraro-front.webp",
+   "ratio": 1.3972
+  },
+  "roof": {
+   "eave": 0.2414,
+   "file": "diveraro-roof.webp",
+   "ratio": 1.0511
+  },
+  "side": {
+   "eave": 0.3086,
+   "file": "diveraro-side.webp",
+   "ratio": 1.6166
+  }
+ },
+ "fishingclub": {
+  "front": {
+   "eave": 0.3316,
+   "file": "fishingclub-front.webp",
+   "ratio": 1.6373
+  },
+  "roof": {
+   "eave": 0.121,
+   "file": "fishingclub-roof.webp",
+   "ratio": 1.2258
+  },
+  "side": {
+   "eave": 0.4403,
+   "file": "fishingclub-side.webp",
+   "ratio": 2.0629
+  }
+ },
+ "fridaynight": {
+  "front": {
+   "eave": 0.1932,
+   "file": "fridaynight-front.webp",
+   "ratio": 1.5266
+  },
+  "roof": {
+   "eave": 0.2344,
+   "file": "fridaynight-roof.webp",
+   "ratio": 1.1523
+  },
+  "side": {
+   "eave": 0.3474,
+   "file": "fridaynight-side.webp",
+   "ratio": 1.7263
+  }
+ },
+ "fruits": {
+  "front": {
+   "eave": 0.5,
+   "file": "fruits-front.webp",
+   "ratio": 1.7955
+  },
+  "roof": {
+   "eave": 0.1579,
+   "file": "fruits-roof.webp",
+   "ratio": 1.3026
+  },
+  "side": {
+   "eave": 0.5203,
+   "file": "fruits-side.webp",
+   "ratio": 2.561
+  }
+ },
+ "gamefish": {
+  "front": {
+   "eave": 0.6875,
+   "file": "gamefish-front.webp",
+   "ratio": 0.5434
+  },
+  "roof": {
+   "eave": 0.6598,
+   "file": "gamefish-roof.webp",
+   "ratio": 0.5009
+  },
+  "side": {
+   "eave": 0.717,
+   "file": "gamefish-side.webp",
+   "ratio": 0.8518
+  }
+ },
+ "golf": {
+  "front": {
+   "eave": 0.2786,
+   "file": "golf-front.webp",
+   "ratio": 1.5174
+  },
+  "roof": {
+   "eave": 0.4604,
+   "file": "golf-roof.webp",
+   "ratio": 1.1358
+  },
+  "side": {
+   "eave": 0.43,
+   "file": "golf-side.webp",
+   "ratio": 1.64
+  }
+ },
+ "highland": {
+  "front": {
+   "eave": 0.3507,
+   "file": "highland-front.webp",
+   "ratio": 1.4894
+  },
+  "roof": {
+   "eave": 0.5523,
+   "file": "highland-roof.webp",
+   "ratio": 1.2281
+  },
+  "side": {
+   "eave": 0.3981,
+   "file": "highland-side.webp",
+   "ratio": 2.2436
+  }
+ },
+ "honesty": {
+  "front": {
+   "eave": 0.1449,
+   "file": "honesty-front.webp",
+   "ratio": 1.5266
+  },
+  "roof": {
+   "eave": 0.1916,
+   "file": "honesty-roof.webp",
+   "ratio": 1.0805
+  },
+  "side": {
+   "eave": 0.7656,
+   "file": "honesty-side.webp",
+   "ratio": 1.5694
+  }
+ },
+ "hospital": {
+  "front": {
+   "eave": 0.3673,
+   "file": "hospital-front.webp",
+   "ratio": 1.6122
+  },
+  "roof": {
+   "eave": 0.0927,
+   "file": "hospital-roof.webp",
+   "ratio": 1.1583
+  },
+  "side": {
+   "eave": 0.2138,
+   "file": "hospital-side.webp",
+   "ratio": 2.0629
+  }
+ },
+ "islandnight": {
+  "front": {
+   "eave": 0.32,
+   "file": "islandnight-front.webp",
+   "ratio": 1.58
+  },
+  "roof": {
+   "eave": 0.2857,
+   "file": "islandnight-roof.webp",
+   "ratio": 1.0789
+  },
+  "side": {
+   "eave": 0.2651,
+   "file": "islandnight-side.webp",
+   "ratio": 1.9759
+  }
+ },
+ "kikau": {
+  "front": {
+   "eave": 0.3275,
+   "file": "kikau-front.webp",
+   "ratio": 1.6204
+  },
+  "roof": {
+   "eave": 0.2297,
+   "file": "kikau-roof.webp",
+   "ratio": 1.1309
+  },
+  "side": {
+   "eave": 0.4125,
+   "file": "kikau-side.webp",
+   "ratio": 1.6018
+  }
+ },
+ "kitesurf": {
+  "front": {
+   "eave": 0.3238,
+   "file": "kitesurf-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.1556,
+   "file": "kitesurf-roof.webp",
+   "ratio": 1.1712
+  },
+  "side": {
+   "eave": 0.4762,
+   "file": "kitesurf-side.webp",
+   "ratio": 1.4667
+  }
+ },
+ "koka": {
+  "front": {
+   "eave": 0.1554,
+   "file": "koka-front.webp",
+   "ratio": 1.6373
+  },
+  "roof": {
+   "eave": 0.4737,
+   "file": "koka-roof.webp",
+   "ratio": 1.1391
+  },
+  "side": {
+   "eave": 0.3316,
+   "file": "koka-side.webp",
+   "ratio": 1.754
+  }
+ },
+ "lagooncruise": {
+  "front": {
+   "eave": 0.6087,
+   "file": "lagooncruise-front.webp",
+   "ratio": 1.9255
+  },
+  "roof": {
+   "eave": 0.6466,
+   "file": "lagooncruise-roof.webp",
+   "ratio": 0.9098
+  },
+  "side": {
+   "eave": 0.4741,
+   "file": "lagooncruise-side.webp",
+   "ratio": 2.4296
+  }
+ },
+ "licence": {
+  "front": {
+   "eave": 0.4232,
+   "file": "licence-front.webp",
+   "ratio": 1.6949
+  },
+  "roof": {
+   "eave": 0.1689,
+   "file": "licence-roof.webp",
+   "ratio": 1.275
+  },
+  "side": {
+   "eave": 0.3665,
+   "file": "licence-side.webp",
+   "ratio": 2.4221
+  }
+ },
+ "mairenui": {
+  "front": {
+   "eave": 0.219,
+   "file": "mairenui-front.webp",
+   "ratio": 1.4952
+  },
+  "roof": {
+   "eave": 0.1306,
+   "file": "mairenui-roof.webp",
+   "ratio": 1.0939
+  },
+  "side": {
+   "eave": 0.3429,
+   "file": "mairenui-side.webp",
+   "ratio": 1.8743
+  }
+ },
+ "maraearai": {
+  "front": {
+   "eave": 0.7333,
+   "file": "maraearai-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.3372,
+   "file": "maraearai-roof.webp",
+   "ratio": 1.1724
+  },
+  "side": {
+   "eave": 0.7579,
+   "file": "maraearai-side.webp",
+   "ratio": 1.7263
+  }
+ },
+ "matavera": {
+  "front": {
+   "eave": 0.7143,
+   "file": "matavera-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.1278,
+   "file": "matavera-roof.webp",
+   "ratio": 1.1316
+  },
+  "side": {
+   "eave": 0.2567,
+   "file": "matavera-side.webp",
+   "ratio": 1.754
+  }
+ },
+ "matutu": {
+  "front": {
+   "eave": 0.163,
+   "file": "matutu-front.webp",
+   "ratio": 1.7011
+  },
+  "roof": {
+   "eave": 0.0388,
+   "file": "matutu-roof.webp",
+   "ratio": 1.1279
+  },
+  "side": {
+   "eave": 0.2262,
+   "file": "matutu-side.webp",
+   "ratio": 1.9524
+  }
+ },
+ "money": {
+  "front": {
+   "eave": 0.0302,
+   "file": "money-front.webp",
+   "ratio": 1.4523
+  },
+  "roof": {
+   "eave": 0.8452,
+   "file": "money-roof.webp",
+   "ratio": 1.1339
+  },
+  "side": {
+   "eave": 0.9548,
+   "file": "money-side.webp",
+   "ratio": 1.2814
+  }
+ },
+ "mooring": {
+  "front": {
+   "eave": 0.3082,
+   "file": "mooring-front.webp",
+   "ratio": 2.4823
+  },
+  "roof": {
+   "eave": 0.1467,
+   "file": "mooring-roof.webp",
+   "ratio": 1.2027
+  },
+  "side": {
+   "eave": 0.2697,
+   "file": "mooring-side.webp",
+   "ratio": 2.6718
+  }
+ },
+ "murilagoon": {
+  "front": {
+   "eave": 0.2396,
+   "file": "murilagoon-front.webp",
+   "ratio": 1.6458
+  },
+  "roof": {
+   "eave": 0.2146,
+   "file": "murilagoon-roof.webp",
+   "ratio": 1.1533
+  },
+  "side": {
+   "eave": 0.3194,
+   "file": "murilagoon-side.webp",
+   "ratio": 2.2778
+  }
+ },
+ "murimarket": {
+  "front": {
+   "eave": 0.2553,
+   "file": "murimarket-front.webp",
+   "ratio": 1.6809
+  },
+  "roof": {
+   "eave": 0.015,
+   "file": "murimarket-roof.webp",
+   "ratio": 1.1429
+  },
+  "side": {
+   "eave": 0.4142,
+   "file": "murimarket-side.webp",
+   "ratio": 1.9408
+  }
+ },
+ "museum": {
+  "front": {
+   "eave": 0.5181,
+   "file": "museum-front.webp",
+   "ratio": 1.7632
+  },
+  "roof": {
+   "eave": 0.0218,
+   "file": "museum-roof.webp",
+   "ratio": 1.3233
+  },
+  "side": {
+   "eave": 0.5106,
+   "file": "museum-side.webp",
+   "ratio": 2.1875
+  }
+ },
+ "nikaobeach": {
+  "front": {
+   "eave": 0.0857,
+   "file": "nikaobeach-front.webp",
+   "ratio": 1.4952
+  },
+  "roof": {
+   "eave": 0.4528,
+   "file": "nikaobeach-roof.webp",
+   "ratio": 1.1509
+  },
+  "side": {
+   "eave": 0.3959,
+   "file": "nikaobeach-side.webp",
+   "ratio": 1.665
+  }
+ },
+ "nustall": {
+  "front": {
+   "eave": 0.0,
+   "file": "nustall-front.webp",
+   "ratio": 1.5812
+  },
+  "roof": {
+   "eave": 0.1594,
+   "file": "nustall-roof.webp",
+   "ratio": 1.1713
+  },
+  "side": {
+   "eave": 0.246,
+   "file": "nustall-side.webp",
+   "ratio": 1.5775
+  }
+ },
+ "otb": {
+  "front": {
+   "eave": 0.2571,
+   "file": "otb-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.1128,
+   "file": "otb-roof.webp",
+   "ratio": 1.1504
+  },
+  "side": {
+   "eave": 0.3575,
+   "file": "otb-side.webp",
+   "ratio": 1.5845
+  }
+ },
+ "palace": {
+  "front": {
+   "eave": 0.2485,
+   "file": "palace-front.webp",
+   "ratio": 2.1407
+  },
+  "roof": {
+   "eave": 0.0021,
+   "file": "palace-roof.webp",
+   "ratio": 1.1327
+  },
+  "side": {
+   "eave": 0.2873,
+   "file": "palace-side.webp",
+   "ratio": 2.6316
+  }
+ },
+ "pastrek": {
+  "front": {
+   "eave": 0.2577,
+   "file": "pastrek-front.webp",
+   "ratio": 0.5862
+  },
+  "roof": {
+   "eave": 0.1456,
+   "file": "pastrek-roof.webp",
+   "ratio": 0.5199
+  },
+  "side": {
+   "eave": 0.7114,
+   "file": "pastrek-side.webp",
+   "ratio": 0.6423
+  }
+ },
+ "progressive": {
+  "front": {
+   "eave": 0.3158,
+   "file": "progressive-front.webp",
+   "ratio": 0.6905
+  },
+  "roof": {
+   "eave": 0.0918,
+   "file": "progressive-roof.webp",
+   "ratio": 0.6228
+  },
+  "side": {
+   "eave": 0.3681,
+   "file": "progressive-side.webp",
+   "ratio": 0.7007
+  }
+ },
+ "punanganui": {
+  "front": {
+   "eave": 0.5307,
+   "file": "punanganui-front.webp",
+   "ratio": 1.7327
+  },
+  "roof": {
+   "eave": 0.6733,
+   "file": "punanganui-roof.webp",
+   "ratio": 1.1945
+  },
+  "side": {
+   "eave": 0.5382,
+   "file": "punanganui-side.webp",
+   "ratio": 2.6217
+  }
+ },
+ "raemaru": {
+  "front": {
+   "eave": 0.8381,
+   "file": "raemaru-front.webp",
+   "ratio": 1.4619
+  },
+  "roof": {
+   "eave": 0.3667,
+   "file": "raemaru-roof.webp",
+   "ratio": 1.2125
+  },
+  "side": {
+   "eave": 0.8325,
+   "file": "raemaru-side.webp",
+   "ratio": 1.5888
+  }
+ },
+ "rarosafari": {
+  "front": {
+   "eave": 0.5596,
+   "file": "rarosafari-front.webp",
+   "ratio": 1.4286
+  },
+  "roof": {
+   "eave": 0.0728,
+   "file": "rarosafari-roof.webp",
+   "ratio": 0.9439
+  },
+  "side": {
+   "eave": 0.4162,
+   "file": "rarosafari-side.webp",
+   "ratio": 2.3026
+  }
+ },
+ "reefkit": {
+  "front": {
+   "eave": 0.3048,
+   "file": "reefkit-front.webp",
+   "ratio": 1.5
+  },
+  "roof": {
+   "eave": 0.2556,
+   "file": "reefkit-roof.webp",
+   "ratio": 1.1278
+  },
+  "side": {
+   "eave": 0.3682,
+   "file": "reefkit-side.webp",
+   "ratio": 1.6318
+  }
+ },
+ "rickshaw": {
+  "front": {
+   "eave": 0.4214,
+   "file": "rickshaw-front.webp",
+   "ratio": 1.3487
+  },
+  "roof": {
+   "eave": 0.3244,
+   "file": "rickshaw-roof.webp",
+   "ratio": 1.1382
+  },
+  "side": {
+   "eave": 0.4594,
+   "file": "rickshaw-side.webp",
+   "ratio": 1.8277
+  }
+ },
+ "sails": {
+  "front": {
+   "eave": 0.6699,
+   "file": "sails-front.webp",
+   "ratio": 1.512
+  },
+  "roof": {
+   "eave": 0.7918,
+   "file": "sails-roof.webp",
+   "ratio": 1.249
+  },
+  "side": {
+   "eave": 0.6834,
+   "file": "sails-side.webp",
+   "ratio": 1.6482
+  }
+ },
+ "saturdaysport": {
+  "front": {
+   "eave": 0.5746,
+   "file": "saturdaysport-front.webp",
+   "ratio": 1.7293
+  },
+  "roof": {
+   "eave": 0.1278,
+   "file": "saturdaysport-roof.webp",
+   "ratio": 1.0752
+  },
+  "side": {
+   "eave": 0.7143,
+   "file": "saturdaysport-side.webp",
+   "ratio": 1.5619
+  }
+ },
+ "selfcater": {
+  "front": {
+   "eave": 0.3981,
+   "file": "selfcater-front.webp",
+   "ratio": 1.534
+  },
+  "roof": {
+   "eave": 0.5097,
+   "file": "selfcater-roof.webp",
+   "ratio": 1.1737
+  },
+  "side": {
+   "eave": 0.2384,
+   "file": "selfcater-side.webp",
+   "ratio": 2.1722
+  }
+ },
+ "sheraton": {
+  "front": {
+   "eave": 0.5238,
+   "file": "sheraton-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.2481,
+   "file": "sheraton-roof.webp",
+   "ratio": 1.1278
+  },
+  "side": {
+   "eave": 0.4581,
+   "file": "sheraton-side.webp",
+   "ratio": 1.8324
+  }
+ },
+ "shipwreck": {
+  "front": {
+   "eave": 0.3959,
+   "file": "shipwreck-front.webp",
+   "ratio": 1.6041
+  },
+  "roof": {
+   "eave": 0.0,
+   "file": "shipwreck-roof.webp",
+   "ratio": 1.0526
+  },
+  "side": {
+   "eave": 0.359,
+   "file": "shipwreck-side.webp",
+   "ratio": 1.6821
+  }
+ },
+ "stay-arorangi": {
+  "front": {
+   "eave": 0.3059,
+   "file": "stay-arorangi-front.webp",
+   "ratio": 0.6272
+  },
+  "roof": {
+   "eave": 0.1189,
+   "file": "stay-arorangi-roof.webp",
+   "ratio": 0.5402
+  },
+  "side": {
+   "eave": 0.6333,
+   "file": "stay-arorangi-side.webp",
+   "ratio": 0.6583
+  }
+ },
+ "stay-titikaveka": {
+  "front": {
+   "eave": 0.5486,
+   "file": "stay-titikaveka-front.webp",
+   "ratio": 0.6248
+  },
+  "roof": {
+   "eave": 0.1027,
+   "file": "stay-titikaveka-roof.webp",
+   "ratio": 0.5593
+  },
+  "side": {
+   "eave": 0.6457,
+   "file": "stay-titikaveka-side.webp",
+   "ratio": 0.622
+  }
+ },
+ "storytellers": {
+  "front": {
+   "eave": 0.2658,
+   "file": "storytellers-front.webp",
+   "ratio": 1.3283
+  },
+  "roof": {
+   "eave": 0.5276,
+   "file": "storytellers-roof.webp",
+   "ratio": 1.072
+  },
+  "side": {
+   "eave": 0.2929,
+   "file": "storytellers-side.webp",
+   "ratio": 1.7812
+  }
+ },
+ "takitumu": {
+  "front": {
+   "eave": 0.2049,
+   "file": "takitumu-front.webp",
+   "ratio": 1.5366
+  },
+  "roof": {
+   "eave": 0.2605,
+   "file": "takitumu-roof.webp",
+   "ratio": 1.1303
+  },
+  "side": {
+   "eave": 0.3094,
+   "file": "takitumu-side.webp",
+   "ratio": 1.8122
+  }
+ },
+ "tamarind": {
+  "front": {
+   "eave": 0.309,
+   "file": "tamarind-front.webp",
+   "ratio": 1.8277
+  },
+  "roof": {
+   "eave": 0.5673,
+   "file": "tamarind-roof.webp",
+   "ratio": 1.1765
+  },
+  "side": {
+   "eave": 0.3532,
+   "file": "tamarind-side.webp",
+   "ratio": 2.2951
+  }
+ },
+ "tapabar": {
+  "front": {
+   "eave": 0.4179,
+   "file": "tapabar-front.webp",
+   "ratio": 1.5721
+  },
+  "roof": {
+   "eave": 0.1181,
+   "file": "tapabar-roof.webp",
+   "ratio": 1.1535
+  },
+  "side": {
+   "eave": 0.0851,
+   "file": "tapabar-side.webp",
+   "ratio": 2.3262
+  }
+ },
+ "temanga": {
+  "front": {
+   "eave": 0.4667,
+   "file": "temanga-front.webp",
+   "ratio": 1.4381
+  },
+  "roof": {
+   "eave": 0.3383,
+   "file": "temanga-roof.webp",
+   "ratio": 1.1429
+  },
+  "side": {
+   "eave": 0.5349,
+   "file": "temanga-side.webp",
+   "ratio": 1.907
+  }
+ },
+ "tevaranui": {
+  "front": {
+   "eave": 0.402,
+   "file": "tevaranui-front.webp",
+   "ratio": 1.4902
+  },
+  "roof": {
+   "eave": 0.4302,
+   "file": "tevaranui-roof.webp",
+   "ratio": 1.0075
+  },
+  "side": {
+   "eave": 0.5963,
+   "file": "tevaranui-side.webp",
+   "ratio": 2.0373
+  }
+ },
+ "titikavekacicc": {
+  "front": {
+   "eave": 0.7476,
+   "file": "titikavekacicc-front.webp",
+   "ratio": 1.4757
+  },
+  "roof": {
+   "eave": 0.3759,
+   "file": "titikavekacicc-roof.webp",
+   "ratio": 1.1391
+  },
+  "side": {
+   "eave": 0.2189,
+   "file": "titikavekacicc-side.webp",
+   "ratio": 1.6318
+  }
+ },
+ "traderjacks": {
+  "front": {
+   "eave": 0.6243,
+   "file": "traderjacks-front.webp",
+   "ratio": 2.0772
+  },
+  "roof": {
+   "eave": 0.2545,
+   "file": "traderjacks-roof.webp",
+   "ratio": 1.25
+  },
+  "side": {
+   "eave": 0.676,
+   "file": "traderjacks-side.webp",
+   "ratio": 1.983
+  }
+ },
+ "vaima": {
+  "front": {
+   "eave": 0.2929,
+   "file": "vaima-front.webp",
+   "ratio": 1.596
+  },
+  "roof": {
+   "eave": 0.0,
+   "file": "vaima-roof.webp",
+   "ratio": 1.1278
+  },
+  "side": {
+   "eave": 0.3897,
+   "file": "vaima-side.webp",
+   "ratio": 1.6821
+  }
+ },
+ "waterline": {
+  "front": {
+   "eave": 0.4952,
+   "file": "waterline-front.webp",
+   "ratio": 1.9553
+  },
+  "roof": {
+   "eave": 0.2302,
+   "file": "waterline-roof.webp",
+   "ratio": 1.1925
+  },
+  "side": {
+   "eave": 0.3704,
+   "file": "waterline-side.webp",
+   "ratio": 2.1538
+  }
+ },
+ "whalecentre": {
+  "front": {
+   "eave": 0.532,
+   "file": "whalecentre-front.webp",
+   "ratio": 1.5567
+  },
+  "roof": {
+   "eave": 0.3813,
+   "file": "whalecentre-roof.webp",
+   "ratio": 1.1907
+  },
+  "side": {
+   "eave": 0.2938,
+   "file": "whalecentre-side.webp",
+   "ratio": 1.8531
+  }
+ },
+ "whales": {
+  "front": {
+   "eave": 0.6305,
+   "file": "whales-front.webp",
+   "ratio": 1.5567
+  },
+  "roof": {
+   "eave": 0.6692,
+   "file": "whales-roof.webp",
+   "ratio": 0.8421
+  },
+  "side": {
+   "eave": 0.6736,
+   "file": "whales-side.webp",
+   "ratio": 1.6218
+  }
+ },
+ "wigmores": {
+  "front": {
+   "eave": 0.6667,
+   "file": "wigmores-front.webp",
+   "ratio": 1.4429
+  },
+  "roof": {
+   "eave": 0.3609,
+   "file": "wigmores-roof.webp",
+   "ratio": 1.1241
+  },
+  "side": {
+   "eave": 0.9238,
+   "file": "wigmores-side.webp",
+   "ratio": 1.5381
+  }
+ },
+ "wilsons": {
+  "front": {
+   "eave": 0.3429,
+   "file": "wilsons-front.webp",
+   "ratio": 1.5048
+  },
+  "roof": {
+   "eave": 0.1429,
+   "file": "wilsons-roof.webp",
+   "ratio": 1.0301
+  },
+  "side": {
+   "eave": 0.3315,
+   "file": "wilsons-side.webp",
+   "ratio": 1.8122
+  }
+ }
+}

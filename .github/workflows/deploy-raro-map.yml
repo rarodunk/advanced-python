@@ -1,0 +1,47 @@
+name: Deploy Raro Live Map
+
+on:
+  push:
+    branches: [master, main, claude/roartanga-island-tourist-map-86dv6n]
+    paths: ['rarotonga-tourist-map/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild the app from index.html
+        working-directory: rarotonga-tourist-map
+        run: python3 build.py
+      - name: Fail if app/ was stale
+        working-directory: rarotonga-tourist-map
+        run: |
+          if ! git diff --quiet -- app/; then
+            echo "app/ is out of date with index.html — run 'python3 build.py' and commit."
+            git diff --stat -- app/
+            exit 1
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: rarotonga-tourist-map/app
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
